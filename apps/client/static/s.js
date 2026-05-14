@@ -11,18 +11,14 @@
   }
 
   function send(path) {
-    fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      credentials: "omit",
-      keepalive: true,
-      body: JSON.stringify({
-        path: path || location.pathname,
-        referrer: document.referrer || "",
-        language: navigator.language || "",
-        visitor_id: visitorId()
-      })
-    });
+    var data = {
+      path: path || location.pathname,
+      referrer: document.referrer || "",
+      language: navigator.language || "",
+      visitor_id: visitorId()
+    };
+    var img = new Image();
+    img.src = endpoint + "?data=" + encodeURIComponent(JSON.stringify(data));
   }
 
   send();
