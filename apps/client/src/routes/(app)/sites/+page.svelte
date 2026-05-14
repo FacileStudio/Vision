@@ -31,6 +31,8 @@
 	}
 </script>
 
+<svelte:head><title>Sites — Vision</title></svelte:head>
+
 <h1 class="text-2xl font-bold mb-6">Sites</h1>
 
 <form onsubmit={addSite} class="flex gap-2 mb-6">

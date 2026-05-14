@@ -2,7 +2,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { isAuthenticated, clearToken } from '$lib';
+	import { api, isAuthenticated, clearToken } from '$lib';
+	import type { UserProfile } from '$lib';
 	import Icon from '@iconify/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
@@ -13,10 +14,26 @@
 
 	let { children } = $props();
 
-	onMount(() => {
+	let user = $state<UserProfile | null>(null);
+
+	function getInitials(name: string): string {
+		return name
+			.split(' ')
+			.map((w) => w[0])
+			.filter(Boolean)
+			.slice(0, 2)
+			.join('')
+			.toUpperCase();
+	}
+
+	onMount(async () => {
 		if (!isAuthenticated()) {
 			goto('/login');
+			return;
 		}
+		try {
+			user = await api.auth.me();
+		} catch {}
 	});
 
 	function logout() {
@@ -40,7 +57,7 @@
 
 		<nav class="flex flex-1 flex-col gap-1 px-3">
 			{#each navLinks as link}
-				{@const active = page.url.pathname === link.href}
+				{@const active = page.url.pathname === link.href || page.url.pathname.startsWith(link.href + '/')}
 				<a
 					href={link.href}
 					class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors {active
@@ -56,6 +73,18 @@
 		<Separator />
 
 		<div class="flex flex-col gap-2 p-4">
+			<a
+				href="/profile"
+				class="flex items-center gap-3 rounded-lg border border-border/70 bg-muted/40 p-2.5 transition-colors hover:bg-muted"
+			>
+				<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-foreground text-xs font-semibold text-background">
+					{user ? getInitials(user.name || user.email) : '..'}
+				</div>
+				<div class="min-w-0 flex-1">
+					<p class="truncate text-sm font-medium">{user?.name || 'Set your profile'}</p>
+					<p class="truncate text-xs text-muted-foreground">{user?.email ?? ''}</p>
+				</div>
+			</a>
 			<Button
 				variant="ghost"
 				size="sm"

@@ -315,6 +315,7 @@
 </script>
 
 {#if site}
+	<svelte:head><title>{site.name} — Vision</title></svelte:head>
 	<div class="mb-8 flex items-center justify-between">
 		<div>
 			<div class="flex items-center gap-3">

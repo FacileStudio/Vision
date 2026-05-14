@@ -253,6 +253,7 @@
 		<p class="text-muted-foreground">This share link may have been revoked or is invalid.</p>
 	</div>
 {:else if overview}
+	<svelte:head><title>{siteName} — Vision</title></svelte:head>
 	<div class="mx-auto max-w-7xl px-4 py-8">
 		<div class="mb-8 flex items-center justify-between">
 			<div>
