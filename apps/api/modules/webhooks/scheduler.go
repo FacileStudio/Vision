@@ -31,29 +31,43 @@ func StartScheduler(orm *gorm.DB, analyticsService *analytics.Service) {
 }
 
 func processDueWebhooks(orm *gorm.DB, analyticsService *analytics.Service) {
-	var webhooks []schemas.Webhook
-	if err := orm.Where("enabled = ?", true).Find(&webhooks).Error; err != nil {
+	var allWebhooks []schemas.Webhook
+	if err := orm.Where("enabled = ?", true).Find(&allWebhooks).Error; err != nil {
 		slog.Error("failed to load webhooks", slog.Any("error", err))
 		return
 	}
 
 	now := time.Now().UTC()
-	for i := range webhooks {
-		wh := &webhooks[i]
+	for i := range allWebhooks {
+		wh := &allWebhooks[i]
 		if !isDue(wh, now) {
 			continue
 		}
 
-		if err := sendReport(orm, analyticsService, 0, wh.SiteID, wh.ID); err != nil {
-			slog.Error("failed to send webhook report",
+		var sites []schemas.Site
+		if err := orm.Where("owner_id = ?", wh.OwnerID).Find(&sites).Error; err != nil {
+			slog.Error("failed to load sites for webhook",
 				slog.Int64("webhook_id", wh.ID),
-				slog.Int64("site_id", wh.SiteID),
 				slog.Any("error", err),
 			)
 			continue
 		}
 
-		orm.Model(wh).Update("last_sent_at", now)
+		failed := false
+		for _, site := range sites {
+			if err := sendSiteReport(orm, analyticsService, wh, &site); err != nil {
+				slog.Error("failed to send webhook report",
+					slog.Int64("webhook_id", wh.ID),
+					slog.Int64("site_id", site.ID),
+					slog.Any("error", err),
+				)
+				failed = true
+			}
+		}
+
+		if !failed {
+			orm.Model(wh).Update("last_sent_at", now)
+		}
 	}
 }
 
@@ -75,32 +89,33 @@ func isDue(wh *schemas.Webhook, now time.Time) bool {
 	return false
 }
 
-func sendReport(orm *gorm.DB, analyticsService *analytics.Service, ownerID int64, siteID int64, webhookID int64) error {
+func testWebhookReport(orm *gorm.DB, analyticsService *analytics.Service, ownerID int64, webhookID int64) error {
 	var wh schemas.Webhook
-	if err := orm.Where("id = ? AND site_id = ?", webhookID, siteID).First(&wh).Error; err != nil {
+	if err := orm.Where("id = ? AND owner_id = ?", webhookID, ownerID).First(&wh).Error; err != nil {
 		return errors.NotFound("webhook not found")
 	}
 
-	if ownerID > 0 {
-		var count int64
-		orm.Table("sites").Where("id = ? AND owner_id = ?", siteID, ownerID).Count(&count)
-		if count == 0 {
-			return errors.NotFound("site not found")
+	var sites []schemas.Site
+	if err := orm.Where("owner_id = ?", ownerID).Find(&sites).Error; err != nil {
+		return errors.Internal("failed to load sites", err)
+	}
+
+	for _, site := range sites {
+		if err := sendSiteReport(orm, analyticsService, &wh, &site); err != nil {
+			return err
 		}
 	}
+	return nil
+}
 
-	var site schemas.Site
-	if err := orm.First(&site, siteID).Error; err != nil {
-		return errors.NotFound("site not found")
-	}
-
+func sendSiteReport(orm *gorm.DB, analyticsService *analytics.Service, wh *schemas.Webhook, site *schemas.Site) error {
 	now := time.Now().UTC()
 	from := periodStart(wh.Period, now)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	overview, err := analyticsService.Overview(ctx, siteID, from, now)
+	overview, err := analyticsService.Overview(ctx, site.ID, from, now)
 	if err != nil {
 		return err
 	}

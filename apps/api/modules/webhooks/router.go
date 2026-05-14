@@ -14,17 +14,12 @@ import (
 )
 
 func RegisterRoutes(router chi.Router, service *Service, analyticsService *analytics.Service, authService middleware.Authenticator) {
-	router.Route("/sites/{siteId}/webhooks", func(router chi.Router) {
+	router.Route("/webhooks", func(router chi.Router) {
 		router.Use(middleware.RequireAuth(authService))
 
 		router.Post("/", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			ownerID, _ := strconv.ParseInt(identity.UserID, 10, 64)
-			siteID, err := strconv.ParseInt(chi.URLParam(request, "siteId"), 10, 64)
-			if err != nil {
-				httpjson.WriteError(w, errors.Invalid("invalid site ID"))
-				return
-			}
 
 			var req CreateWebhookRequest
 			if err := httpjson.DecodeJSON(w, request, &req); err != nil {
@@ -32,7 +27,7 @@ func RegisterRoutes(router chi.Router, service *Service, analyticsService *analy
 				return
 			}
 
-			resp, err := service.create(request.Context(), ownerID, siteID, &req)
+			resp, err := service.create(request.Context(), ownerID, &req)
 			if err != nil {
 				httpjson.WriteError(w, err)
 				return
@@ -43,13 +38,8 @@ func RegisterRoutes(router chi.Router, service *Service, analyticsService *analy
 		router.Get("/", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			ownerID, _ := strconv.ParseInt(identity.UserID, 10, 64)
-			siteID, err := strconv.ParseInt(chi.URLParam(request, "siteId"), 10, 64)
-			if err != nil {
-				httpjson.WriteError(w, errors.Invalid("invalid site ID"))
-				return
-			}
 
-			resp, err := service.list(request.Context(), ownerID, siteID)
+			resp, err := service.list(request.Context(), ownerID)
 			if err != nil {
 				httpjson.WriteError(w, err)
 				return
@@ -60,18 +50,13 @@ func RegisterRoutes(router chi.Router, service *Service, analyticsService *analy
 		router.Get("/{id}", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			ownerID, _ := strconv.ParseInt(identity.UserID, 10, 64)
-			siteID, err := strconv.ParseInt(chi.URLParam(request, "siteId"), 10, 64)
-			if err != nil {
-				httpjson.WriteError(w, errors.Invalid("invalid site ID"))
-				return
-			}
 			webhookID, err := strconv.ParseInt(chi.URLParam(request, "id"), 10, 64)
 			if err != nil {
 				httpjson.WriteError(w, errors.Invalid("invalid webhook ID"))
 				return
 			}
 
-			resp, err := service.get(request.Context(), ownerID, siteID, webhookID)
+			resp, err := service.get(request.Context(), ownerID, webhookID)
 			if err != nil {
 				httpjson.WriteError(w, err)
 				return
@@ -82,11 +67,6 @@ func RegisterRoutes(router chi.Router, service *Service, analyticsService *analy
 		router.Put("/{id}", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			ownerID, _ := strconv.ParseInt(identity.UserID, 10, 64)
-			siteID, err := strconv.ParseInt(chi.URLParam(request, "siteId"), 10, 64)
-			if err != nil {
-				httpjson.WriteError(w, errors.Invalid("invalid site ID"))
-				return
-			}
 			webhookID, err := strconv.ParseInt(chi.URLParam(request, "id"), 10, 64)
 			if err != nil {
 				httpjson.WriteError(w, errors.Invalid("invalid webhook ID"))
@@ -99,7 +79,7 @@ func RegisterRoutes(router chi.Router, service *Service, analyticsService *analy
 				return
 			}
 
-			resp, err := service.update(request.Context(), ownerID, siteID, webhookID, &req)
+			resp, err := service.update(request.Context(), ownerID, webhookID, &req)
 			if err != nil {
 				httpjson.WriteError(w, err)
 				return
@@ -110,18 +90,13 @@ func RegisterRoutes(router chi.Router, service *Service, analyticsService *analy
 		router.Delete("/{id}", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			ownerID, _ := strconv.ParseInt(identity.UserID, 10, 64)
-			siteID, err := strconv.ParseInt(chi.URLParam(request, "siteId"), 10, 64)
-			if err != nil {
-				httpjson.WriteError(w, errors.Invalid("invalid site ID"))
-				return
-			}
 			webhookID, err := strconv.ParseInt(chi.URLParam(request, "id"), 10, 64)
 			if err != nil {
 				httpjson.WriteError(w, errors.Invalid("invalid webhook ID"))
 				return
 			}
 
-			err = service.delete(request.Context(), ownerID, siteID, webhookID)
+			err = service.delete(request.Context(), ownerID, webhookID)
 			if err != nil {
 				httpjson.WriteError(w, err)
 				return
@@ -132,18 +107,13 @@ func RegisterRoutes(router chi.Router, service *Service, analyticsService *analy
 		router.Post("/{id}/test", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			ownerID, _ := strconv.ParseInt(identity.UserID, 10, 64)
-			siteID, err := strconv.ParseInt(chi.URLParam(request, "siteId"), 10, 64)
-			if err != nil {
-				httpjson.WriteError(w, errors.Invalid("invalid site ID"))
-				return
-			}
 			webhookID, err := strconv.ParseInt(chi.URLParam(request, "id"), 10, 64)
 			if err != nil {
 				httpjson.WriteError(w, errors.Invalid("invalid webhook ID"))
 				return
 			}
 
-			err = sendReport(service.orm, analyticsService, ownerID, siteID, webhookID)
+			err = testWebhookReport(service.orm, analyticsService, ownerID, webhookID)
 			if err != nil {
 				httpjson.WriteError(w, err)
 				return

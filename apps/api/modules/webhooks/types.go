@@ -15,7 +15,6 @@ type UpdateWebhookRequest struct {
 
 type WebhookResponse struct {
 	ID         int64   `json:"id"`
-	SiteID     int64   `json:"site_id"`
 	URL        string  `json:"url"`
 	Period     string  `json:"period"`
 	Enabled    bool    `json:"enabled"`
@@ -25,15 +24,15 @@ type WebhookResponse struct {
 }
 
 type ReportPayload struct {
-	EventType    string       `json:"event_type"`
-	Site         ReportSite   `json:"site"`
-	Period       ReportPeriod `json:"period"`
+	EventType    string        `json:"event_type"`
+	Site         ReportSite    `json:"site"`
+	Period       ReportPeriod  `json:"period"`
 	Metrics      ReportMetrics `json:"metrics"`
-	TopPages     []TopItem    `json:"top_pages"`
-	TopReferrers []TopItem    `json:"top_referrers"`
-	TopCountries []TopItem    `json:"top_countries"`
-	TopBrowsers  []TopItem    `json:"top_browsers"`
-	TopDevices   []TopItem    `json:"top_devices"`
+	TopPages     []TopItem     `json:"top_pages"`
+	TopReferrers []TopItem     `json:"top_referrers"`
+	TopCountries []TopItem     `json:"top_countries"`
+	TopBrowsers  []TopItem     `json:"top_browsers"`
+	TopDevices   []TopItem     `json:"top_devices"`
 }
 
 type ReportSite struct {

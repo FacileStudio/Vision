@@ -61,14 +61,14 @@ export const api = {
 		create: (name: string, domain: string) => request<Site>('POST', '/sites', { name, domain }),
 		update: (id: number, name: string, domain: string) =>
 			request<Site>('PUT', `/sites/${id}`, { name, domain }),
-		delete: (id: number) => request<void>('DELETE', `/sites/${id}`),
-		webhooks: {
-			list: (siteId: number) => request<Webhook[]>('GET', `/sites/${siteId}/webhooks`),
-			create: (siteId: number, data: CreateWebhookRequest) => request<Webhook>('POST', `/sites/${siteId}/webhooks`, data),
-			update: (siteId: number, id: number, data: UpdateWebhookRequest) => request<Webhook>('PUT', `/sites/${siteId}/webhooks/${id}`, data),
-			delete: (siteId: number, id: number) => request<void>('DELETE', `/sites/${siteId}/webhooks/${id}`),
-			test: (siteId: number, id: number) => request<void>('POST', `/sites/${siteId}/webhooks/${id}/test`)
-		}
+		delete: (id: number) => request<void>('DELETE', `/sites/${id}`)
+	},
+	webhooks: {
+		list: () => request<Webhook[]>('GET', '/webhooks'),
+		create: (data: CreateWebhookRequest) => request<Webhook>('POST', '/webhooks', data),
+		update: (id: number, data: UpdateWebhookRequest) => request<Webhook>('PUT', `/webhooks/${id}`, data),
+		delete: (id: number) => request<void>('DELETE', `/webhooks/${id}`),
+		test: (id: number) => request<void>('POST', `/webhooks/${id}/test`)
 	},
 	analytics: {
 		overview: (siteId: number, from?: string, to?: string) => {
@@ -104,7 +104,6 @@ export interface Site {
 
 export interface Webhook {
 	id: number;
-	site_id: number;
 	url: string;
 	period: string;
 	enabled: boolean;

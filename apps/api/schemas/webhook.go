@@ -4,7 +4,7 @@ import "time"
 
 type Webhook struct {
 	ID         int64      `gorm:"column:id;primaryKey"`
-	SiteID     int64      `gorm:"column:site_id;index"`
+	OwnerID    int64      `gorm:"column:owner_id;index"`
 	URL        string     `gorm:"column:url"`
 	Secret     string     `gorm:"column:secret"`
 	Period     string     `gorm:"column:period"`
