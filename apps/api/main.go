@@ -59,6 +59,7 @@ func main() {
 	authService := auth.NewService(db)
 	siteService := sites.NewService(db)
 	eventHub := events.NewHub()
+	activeTracker := events.NewActiveTracker()
 	eventService := events.NewService(db)
 	eventService.SetHub(eventHub)
 	analyticsService := analytics.NewService(db)
@@ -96,8 +97,8 @@ func main() {
 
 	auth.RegisterRoutes(router, authService, appEnv)
 	sites.RegisterRoutes(router, siteService, authService)
-	events.RegisterRoutes(router, eventService, eventHub, authService, db)
-	analytics.RegisterRoutes(router, analyticsService, db, authService)
+	events.RegisterRoutes(router, eventService, eventHub, activeTracker, authService, db)
+	analytics.RegisterRoutes(router, analyticsService, activeTracker, db, authService)
 
 	addr := ":" + appEnv.Port
 	server := &http.Server{

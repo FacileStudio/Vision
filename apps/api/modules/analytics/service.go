@@ -221,15 +221,3 @@ func (s *Service) overview(ctx context.Context, siteID int64, from time.Time, to
 	}, nil
 }
 
-func (s *Service) realtimeVisitors(ctx context.Context, siteID int64) (int64, error) {
-	var count int64
-	err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Where("site_id = ? AND created_at >= ? AND visitor_id != ''", siteID, time.Now().Add(-5*time.Minute)).
-		Distinct("visitor_id").
-		Count(&count).Error
-	if err != nil {
-		return 0, errors.Internal("failed to count realtime visitors", err)
-	}
-	return count, nil
-}

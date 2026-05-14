@@ -9,12 +9,13 @@ import (
 	"api/internal/errors"
 	"api/internal/httpjson"
 	"api/internal/middleware"
+	"api/modules/events"
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 )
 
-func RegisterRoutes(router chi.Router, service *Service, orm *gorm.DB, authService middleware.Authenticator) {
+func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveTracker, orm *gorm.DB, authService middleware.Authenticator) {
 	router.Route("/analytics", func(router chi.Router) {
 		router.Use(middleware.RequireAuth(authService))
 
@@ -59,11 +60,7 @@ func RegisterRoutes(router chi.Router, service *Service, orm *gorm.DB, authServi
 				return
 			}
 
-			visitors, err := service.realtimeVisitors(request.Context(), siteID)
-			if err != nil {
-				httpjson.WriteError(w, err)
-				return
-			}
+			visitors := tracker.Count(siteID)
 			httpjson.WriteJSON(w, http.StatusOK, map[string]int64{"visitors": visitors})
 		})
 	})

@@ -23,7 +23,7 @@ var pixel = []byte{
 	0x01, 0x00, 0x3b,
 }
 
-func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService middleware.Authenticator, orm *gorm.DB) {
+func RegisterRoutes(router chi.Router, service *Service, hub *Hub, tracker *ActiveTracker, authService middleware.Authenticator, orm *gorm.DB) {
 	router.Route("/e", func(router chi.Router) {
 		router.Post("/p", func(w http.ResponseWriter, request *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -49,6 +49,7 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService m
 				httpjson.WriteError(w, err)
 				return
 			}
+			tracker.Touch(site.ID, req.VisitorID)
 
 			httpjson.WriteJSON(w, http.StatusNoContent, nil)
 		})
@@ -82,6 +83,7 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService m
 			userAgent := request.UserAgent()
 			country := request.Header.Get("CF-IPCountry")
 			_ = service.recordPageview(request.Context(), site, &req, userAgent, country)
+			tracker.Touch(site.ID, req.VisitorID)
 
 			w.Header().Set("Content-Type", "image/gif")
 			w.Write(pixel)
@@ -93,6 +95,42 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService m
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 			w.Header().Set("Access-Control-Max-Age", "86400")
 			w.WriteHeader(http.StatusNoContent)
+		})
+
+		router.Get("/h", func(w http.ResponseWriter, request *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Cache-Control", "no-cache, no-store")
+
+			dataParam := request.URL.Query().Get("data")
+			if dataParam == "" {
+				w.Header().Set("Content-Type", "image/gif")
+				w.Write(pixel)
+				return
+			}
+
+			var req struct {
+				Hostname  string `json:"hostname"`
+				VisitorID string `json:"visitor_id"`
+			}
+			if err := json.Unmarshal([]byte(dataParam), &req); err != nil {
+				w.Header().Set("Content-Type", "image/gif")
+				w.Write(pixel)
+				return
+			}
+
+			host := req.Hostname
+			if host == "" {
+				host = extractHost(request.Header.Get("Referer"))
+			}
+			if host != "" {
+				site, err := service.resolveSiteByOrigin(request.Context(), "", "https://"+host)
+				if err == nil {
+					tracker.Touch(site.ID, req.VisitorID)
+				}
+			}
+
+			w.Header().Set("Content-Type", "image/gif")
+			w.Write(pixel)
 		})
 	})
 
