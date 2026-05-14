@@ -493,8 +493,8 @@
 					</Card.Header>
 					<Card.Content>
 						<div class="flex items-center gap-6">
-							<div class="min-h-[200px] w-[200px] shrink-0">
-								<Chart.Container config={trafficConfig} class="h-[200px] w-[200px]">
+							<div class="flex-1 aspect-square max-h-[280px]">
+								<Chart.Container config={trafficConfig} class="h-full w-full">
 									<PieChart
 										data={trafficSourcesData()}
 										key="key"
@@ -504,7 +504,7 @@
 									/>
 								</Chart.Container>
 							</div>
-							<div class="space-y-2">
+							<div class="space-y-2 shrink-0">
 								{#each trafficSourcesData() as source}
 									{@const pct = trafficSourcesTotal() > 0 ? ((source.value / trafficSourcesTotal()) * 100).toFixed(1) : '0'}
 									<div class="flex items-center gap-2 text-sm">

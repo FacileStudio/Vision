@@ -49,9 +49,10 @@
 <div class="space-y-2">
 	{#each sites as site}
 		<div class="flex items-center justify-between rounded-lg border p-4">
-			<a href="/sites/{site.id}" class="hover:underline">
+			<a href="/sites/{site.id}" class="flex items-center gap-3 hover:underline">
+				<img src="https://www.google.com/s2/favicons?domain={site.domain}&sz=32" alt="" class="h-5 w-5 shrink-0 rounded" />
 				<span class="font-medium">{site.name}</span>
-				<span class="text-sm text-muted-foreground ml-2">{site.domain}</span>
+				<span class="text-sm text-muted-foreground">{site.domain}</span>
 			</a>
 			<button onclick={() => deleteSite(site.id)} class="flex items-center gap-1 rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-500/10">
 				<Icon icon="solar:trash-bin-trash-linear" class="h-4 w-4" />
