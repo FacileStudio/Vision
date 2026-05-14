@@ -3,6 +3,7 @@
 	import { api } from '$lib';
 	import type { UserProfile } from '$lib';
 	import Icon from '@iconify/svelte';
+	import { userStore } from '$lib/stores/user.svelte';
 
 	let profile = $state<UserProfile | null>(null);
 	let name = $state('');
@@ -36,6 +37,7 @@
 			profile = await api.auth.updateProfile(name, email);
 			name = profile.name ?? '';
 			email = profile.email;
+			userStore.value = profile;
 			profileSuccess = 'Profile updated.';
 		} catch (e: any) {
 			profileError = e.message;

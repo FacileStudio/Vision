@@ -3,18 +3,16 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { api, isAuthenticated, clearToken } from '$lib';
-	import type { UserProfile } from '$lib';
 	import Icon from '@iconify/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
+	import { userStore } from '$lib/stores/user.svelte';
 	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
 	import Globe from '@lucide/svelte/icons/globe';
 	import Settings from '@lucide/svelte/icons/settings';
 	import LogOut from '@lucide/svelte/icons/log-out';
 
 	let { children } = $props();
-
-	let user = $state<UserProfile | null>(null);
 
 	function getInitials(name: string): string {
 		return name
@@ -32,7 +30,7 @@
 			return;
 		}
 		try {
-			user = await api.auth.me();
+			userStore.value = await api.auth.me();
 		} catch {}
 	});
 
@@ -78,11 +76,11 @@
 				class="flex items-center gap-3 rounded-lg border border-border/70 bg-muted/40 p-2.5 transition-colors hover:bg-muted"
 			>
 				<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-foreground text-xs font-semibold text-background">
-					{user ? getInitials(user.name || user.email) : '..'}
+					{userStore.value ? getInitials(userStore.value.name || userStore.value.email) : '..'}
 				</div>
 				<div class="min-w-0 flex-1">
-					<p class="truncate text-sm font-medium">{user?.name || 'Set your profile'}</p>
-					<p class="truncate text-xs text-muted-foreground">{user?.email ?? ''}</p>
+					<p class="truncate text-sm font-medium">{userStore.value?.name || 'Set your profile'}</p>
+					<p class="truncate text-xs text-muted-foreground">{userStore.value?.email ?? ''}</p>
 				</div>
 			</a>
 			<Button
