@@ -1,65 +1,121 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { api, setToken } from '$lib';
+	import { page } from '$app/state';
+	import { api, setToken, isAuthenticated } from '$lib';
+	import Icon from '@iconify/svelte';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import { Label } from '$lib/components/ui/label';
 
+	let tab = $state<'login' | 'register'>('login');
 	let email = $state('');
 	let password = $state('');
-	let error = $state('');
-	let isRegister = $state(false);
+	let message = $state('');
+	let busy = $state(false);
 
-	async function submit() {
-		error = '';
+	onMount(() => {
+		if (isAuthenticated()) {
+			goto('/dashboard');
+			return;
+		}
+		const raw = page.url.searchParams.get('tab');
+		if (raw === 'register') tab = 'register';
+	});
+
+	async function submit(e: Event) {
+		e.preventDefault();
+		busy = true;
+		message = '';
 		try {
-			const fn = isRegister ? api.auth.register : api.auth.login;
+			const fn = tab === 'register' ? api.auth.register : api.auth.login;
 			const res = await fn(email, password);
 			setToken(res.token);
 			goto('/dashboard');
-		} catch (e: any) {
-			error = e.message;
+		} catch (err) {
+			message = err instanceof Error ? err.message : 'Something went wrong';
+		} finally {
+			busy = false;
 		}
 	}
 </script>
 
-<div class="flex min-h-screen items-center justify-center">
-	<div class="w-full max-w-sm space-y-6 p-8">
-		<h1 class="text-2xl font-bold text-center">Vision</h1>
-		<p class="text-muted-foreground text-center text-sm">
-			{isRegister ? 'Create your account' : 'Sign in to your account'}
+<svelte:head>
+	<title>{tab === 'register' ? 'Create account' : 'Log in'} — Vision</title>
+</svelte:head>
+
+<div class="flex min-h-screen">
+	<div class="hidden lg:flex lg:w-1/2 flex-col bg-black px-12 py-10">
+		<a href="/" class="flex items-center gap-3 mb-auto">
+			<Icon icon="solar:panorama-bold-duotone" class="w-7 h-7 text-white" />
+			<span class="text-xl font-bold tracking-tight text-white">Vision</span>
+		</a>
+
+		<div class="mb-auto">
+			<h2 class="text-4xl font-bold text-white leading-tight tracking-tight">
+				See your traffic.<br />Know your audience.
+			</h2>
+			<p class="mt-4 text-sm text-white/50 max-w-xs leading-relaxed">
+				Lightweight, self-hosted web analytics for your projects.
+			</p>
+		</div>
+
+		<p class="text-xs text-white/30">
+			© {new Date().getFullYear()} Vision by Facile.
 		</p>
+	</div>
 
-		{#if error}
-			<p class="text-destructive text-sm text-center">{error}</p>
-		{/if}
+	<div class="flex w-full lg:w-1/2 flex-col items-center justify-center px-8 py-12 bg-background">
+		<div class="w-full max-w-sm">
+			<div class="mb-8">
+				<h1 class="text-2xl font-bold tracking-tight text-foreground">
+					{tab === 'register' ? 'Create account' : 'Welcome back'}
+				</h1>
+				<p class="mt-1.5 text-sm text-muted-foreground">
+					{tab === 'register'
+						? 'Sign up to start tracking your sites.'
+						: 'Log in to your Vision account.'}
+				</p>
+			</div>
 
-		<form onsubmit={submit} class="space-y-4">
-			<input
-				type="email"
-				placeholder="Email"
-				bind:value={email}
-				class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-				required
-			/>
-			<input
-				type="password"
-				placeholder="Password"
-				bind:value={password}
-				class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-				required
-				minlength={8}
-			/>
-			<button
-				type="submit"
-				class="w-full rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground"
-			>
-				{isRegister ? 'Register' : 'Login'}
-			</button>
-		</form>
+			<div class="mb-6 flex rounded-lg border border-border bg-muted p-1 gap-1">
+				<button
+					class="flex-1 rounded-md py-1.5 text-sm font-medium transition-colors {tab === 'login'
+						? 'bg-background text-foreground shadow-sm'
+						: 'text-muted-foreground hover:text-foreground'}"
+					onclick={() => { tab = 'login'; message = ''; }}
+				>
+					Log in
+				</button>
+				<button
+					class="flex-1 rounded-md py-1.5 text-sm font-medium transition-colors {tab === 'register'
+						? 'bg-background text-foreground shadow-sm'
+						: 'text-muted-foreground hover:text-foreground'}"
+					onclick={() => { tab = 'register'; message = ''; }}
+				>
+					Register
+				</button>
+			</div>
 
-		<button
-			onclick={() => (isRegister = !isRegister)}
-			class="w-full text-center text-sm text-muted-foreground hover:underline"
-		>
-			{isRegister ? 'Already have an account? Login' : "Don't have an account? Register"}
-		</button>
+			<form onsubmit={submit} class="space-y-4">
+				<div class="space-y-1.5">
+					<Label for="email">Email</Label>
+					<Input id="email" type="email" bind:value={email} placeholder="you@example.com" required />
+				</div>
+
+				<div class="space-y-1.5">
+					<Label for="password">Password</Label>
+					<Input id="password" type="password" bind:value={password} placeholder="••••••••" required />
+				</div>
+
+				{#if message}
+					<p class="text-sm text-destructive">{message}</p>
+				{/if}
+
+				<Button type="submit" class="w-full" disabled={busy}>
+					{tab === 'register' ? 'Create account' : 'Log in'}
+				</Button>
+			</form>
+		</div>
 	</div>
 </div>

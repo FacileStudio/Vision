@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { isAuthenticated, clearToken } from '$lib';
+	import Icon from '@iconify/svelte';
+	import { Button } from '$lib/components/ui/button';
+	import { Separator } from '$lib/components/ui/separator';
+	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
+	import Globe from '@lucide/svelte/icons/globe';
+	import Settings from '@lucide/svelte/icons/settings';
+	import LogOut from '@lucide/svelte/icons/log-out';
 
 	let { children } = $props();
 
@@ -15,22 +23,52 @@
 		clearToken();
 		goto('/login');
 	}
+
+	const navLinks = [
+		{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+		{ href: '/sites', label: 'Sites', icon: Globe },
+		{ href: '/settings', label: 'Settings', icon: Settings }
+	];
 </script>
 
-<div class="flex min-h-screen">
-	<nav class="w-56 border-r bg-sidebar p-4 space-y-2">
-		<h2 class="text-lg font-bold mb-6">Vision</h2>
-		<a href="/dashboard" class="block rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent">Dashboard</a>
-		<a href="/sites" class="block rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent">Sites</a>
-		<a href="/settings" class="block rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent">Settings</a>
-		<button
-			onclick={logout}
-			class="block w-full text-left rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent mt-auto"
-		>
-			Logout
-		</button>
-	</nav>
-	<main class="flex-1 p-8">
+<div class="flex h-screen w-full overflow-hidden">
+	<aside class="sticky top-0 flex h-screen w-60 flex-col border-r bg-background">
+		<div class="flex items-center gap-3 px-5 pt-8 pb-6">
+			<Icon icon="solar:panorama-bold-duotone" class="w-7 h-7" />
+			<span class="text-2xl font-bold tracking-tight">Vision</span>
+		</div>
+
+		<nav class="flex flex-1 flex-col gap-1 px-3">
+			{#each navLinks as link}
+				{@const active = page.url.pathname === link.href}
+				<a
+					href={link.href}
+					class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors {active
+						? 'bg-foreground text-background font-medium'
+						: 'text-muted-foreground hover:bg-muted hover:text-foreground'}"
+				>
+					<link.icon class="h-4 w-4 shrink-0" />
+					{link.label}
+				</a>
+			{/each}
+		</nav>
+
+		<Separator />
+
+		<div class="flex flex-col gap-2 p-4">
+			<Button
+				variant="ghost"
+				size="sm"
+				class="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+				onclick={logout}
+			>
+				<LogOut class="h-4 w-4" />
+				Logout
+			</Button>
+		</div>
+	</aside>
+
+	<main class="flex-1 overflow-auto p-8">
 		{@render children()}
 	</main>
 </div>
