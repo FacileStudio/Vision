@@ -1,5 +1,5 @@
 (function () {
-  var endpoint = document.currentScript.src.replace(/\/t\.js.*$/, "/api/event/pageview");
+  var endpoint = document.currentScript.src.replace(/\/s\.js.*$/, "/api/e/p");
 
   function visitorId() {
     var key = "_vs_id";

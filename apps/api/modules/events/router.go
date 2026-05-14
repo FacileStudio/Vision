@@ -24,8 +24,8 @@ var pixel = []byte{
 }
 
 func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService middleware.Authenticator, orm *gorm.DB) {
-	router.Route("/event", func(router chi.Router) {
-		router.Post("/pageview", func(w http.ResponseWriter, request *http.Request) {
+	router.Route("/e", func(router chi.Router) {
+		router.Post("/p", func(w http.ResponseWriter, request *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 
 			origin := request.Header.Get("Origin")
@@ -53,7 +53,7 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService m
 			httpjson.WriteJSON(w, http.StatusNoContent, nil)
 		})
 
-		router.Get("/pageview", func(w http.ResponseWriter, request *http.Request) {
+		router.Get("/p", func(w http.ResponseWriter, request *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Cache-Control", "no-cache, no-store")
 
@@ -84,7 +84,7 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService m
 			w.Write(pixel)
 		})
 
-		router.Options("/pageview", func(w http.ResponseWriter, request *http.Request) {
+		router.Options("/p", func(w http.ResponseWriter, request *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")

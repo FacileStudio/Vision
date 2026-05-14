@@ -8,7 +8,7 @@ var Documentation = documentation.Module{
 	Routes: []documentation.Route{
 		{
 			Method:      "POST",
-			Path:        "/event/pageview",
+			Path:        "/e/p",
 			Summary:     "Record a pageview",
 			Description: "Records a pageview for the site matching the request Origin. Rejects unregistered domains.",
 			Auth:        "none (domain-based)",

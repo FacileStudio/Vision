@@ -8,6 +8,7 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Chart from '$lib/components/ui/chart/index.js';
 	import { Copy, Check } from '@lucide/svelte';
+	import WorldMap from '$lib/components/map/world-map.svelte';
 
 	let site = $state<Site | null>(null);
 	let overview = $state<AnalyticsOverview | null>(null);
@@ -28,7 +29,7 @@
 	} satisfies Chart.ChartConfig;
 
 	function trackingSnippet(): string {
-		return `<script defer src="${page.url.origin}/t.js"><\/script>`;
+		return `<script defer src="${page.url.origin}/s.js"><\/script>`;
 	}
 
 	async function copySnippet() {
@@ -99,7 +100,7 @@
 		<div class="relative group">
 			<pre
 				class="rounded bg-muted p-3 pr-12 text-xs overflow-x-auto"
-				>&lt;script defer src="{page.url.origin}/t.js"&gt;&lt;/script&gt;</pre
+				>&lt;script defer src="{page.url.origin}/s.js"&gt;&lt;/script&gt;</pre
 			>
 			<button
 				onclick={copySnippet}
@@ -161,6 +162,17 @@
 							{/snippet}
 						</AreaChart>
 					</Chart.Container>
+				</Card.Content>
+			</Card.Root>
+		{/if}
+
+		{#if overview.top_countries?.length > 0}
+			<Card.Root class="mb-8">
+				<Card.Header>
+					<Card.Title>Visitors</Card.Title>
+				</Card.Header>
+				<Card.Content>
+					<WorldMap countries={overview.top_countries} />
 				</Card.Content>
 			</Card.Root>
 		{/if}
@@ -229,18 +241,5 @@
 			{/if}
 		</div>
 
-		{#if overview.top_countries?.length > 0}
-			<div class="mb-8">
-				<h2 class="font-semibold mb-3">Top Countries</h2>
-				<div class="space-y-1 rounded-lg border p-4">
-					{#each overview.top_countries as entry}
-						<div class="flex justify-between rounded px-3 py-2 text-sm hover:bg-muted">
-							<span>{entry.country}</span>
-							<span class="text-muted-foreground">{entry.count}</span>
-						</div>
-					{/each}
-				</div>
-			</div>
-		{/if}
 	{/if}
 {/if}
