@@ -98,6 +98,8 @@ export interface Site {
 export interface AnalyticsOverview {
 	total_pageviews: number;
 	unique_visitors: number;
+	prev_total_pageviews: number;
+	prev_unique_visitors: number;
 	top_pages: { path: string; count: number }[];
 	top_referrers: { referrer: string; count: number }[];
 	top_countries: { country: string; count: number }[];
@@ -106,4 +108,6 @@ export interface AnalyticsOverview {
 	top_devices: { device: string; count: number }[];
 	top_screens: { screen: string; count: number }[];
 	pageviews_per_day: { date: string; count: number }[];
+	unique_visitors_per_day: { date: string; count: number }[];
+	hourly_distribution: { hour: number; count: number }[];
 }

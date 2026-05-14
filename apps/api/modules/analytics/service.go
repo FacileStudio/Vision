@@ -129,6 +129,49 @@ func (s *Service) overview(ctx context.Context, siteID int64, from time.Time, to
 		return nil, errors.Internal("failed to query top screens", err)
 	}
 
+	var uniqueVisitorsPerDay []DayStat
+	if err := s.orm.WithContext(ctx).
+		Table("pageviews").
+		Select("to_char(created_at, 'YYYY-MM-DD') as date, count(distinct visitor_id) as count").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND visitor_id != ''", siteID, from, to).
+		Group("date").
+		Order("date asc").
+		Scan(&uniqueVisitorsPerDay).Error; err != nil {
+		return nil, errors.Internal("failed to query unique visitors per day", err)
+	}
+
+	var hourlyDistribution []HourStat
+	if err := s.orm.WithContext(ctx).
+		Table("pageviews").
+		Select("EXTRACT(HOUR FROM created_at)::int as hour, count(*) as count").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ?", siteID, from, to).
+		Group("hour").
+		Order("hour asc").
+		Scan(&hourlyDistribution).Error; err != nil {
+		return nil, errors.Internal("failed to query hourly distribution", err)
+	}
+
+	duration := to.Sub(from)
+	prevFrom := from.Add(-duration)
+	prevTo := from.Add(-time.Nanosecond)
+
+	var prevTotalPageviews int64
+	if err := s.orm.WithContext(ctx).
+		Table("pageviews").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ?", siteID, prevFrom, prevTo).
+		Count(&prevTotalPageviews).Error; err != nil {
+		return nil, errors.Internal("failed to count previous pageviews", err)
+	}
+
+	var prevUniqueVisitors int64
+	if err := s.orm.WithContext(ctx).
+		Table("pageviews").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND visitor_id != ''", siteID, prevFrom, prevTo).
+		Distinct("visitor_id").
+		Count(&prevUniqueVisitors).Error; err != nil {
+		return nil, errors.Internal("failed to count previous visitors", err)
+	}
+
 	if topPages == nil {
 		topPages = []PageStat{}
 	}
@@ -153,6 +196,12 @@ func (s *Service) overview(ctx context.Context, siteID int64, from time.Time, to
 	if topScreens == nil {
 		topScreens = []ScreenStat{}
 	}
+	if uniqueVisitorsPerDay == nil {
+		uniqueVisitorsPerDay = []DayStat{}
+	}
+	if hourlyDistribution == nil {
+		hourlyDistribution = []HourStat{}
+	}
 
 	return &OverviewResponse{
 		TotalPageviews:  totalPageviews,
@@ -163,8 +212,12 @@ func (s *Service) overview(ctx context.Context, siteID int64, from time.Time, to
 		TopBrowsers:     topBrowsers,
 		TopOS:           topOS,
 		TopDevices:      topDevices,
-		PageviewsPerDay: pageviewsPerDay,
-		TopScreens:      topScreens,
+		PageviewsPerDay:      pageviewsPerDay,
+		TopScreens:           topScreens,
+		UniqueVisitorsPerDay: uniqueVisitorsPerDay,
+		HourlyDistribution:   hourlyDistribution,
+		PrevTotalPageviews:   prevTotalPageviews,
+		PrevUniqueVisitors:   prevUniqueVisitors,
 	}, nil
 }
 

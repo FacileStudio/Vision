@@ -36,6 +36,7 @@
 	let tooltipY = $state(0);
 	let tooltipVisible = $state(false);
 
+	let containerEl: HTMLDivElement | undefined = $state();
 	let scale = $state(1);
 	let panX = $state(0);
 	let panY = $state(0);
@@ -65,10 +66,21 @@
 		return `oklch(${isHovered ? Math.max(0.1, lightness - 0.1) : lightness} 0 0)`;
 	}
 
+	function zoomAt(factor: number, cx: number, cy: number) {
+		const newScale = Math.min(8, Math.max(0.5, scale * factor));
+		panX += cx * (1 / newScale - 1 / scale);
+		panY += cy * (1 / newScale - 1 / scale);
+		scale = newScale;
+	}
+
 	function handleWheel(e: WheelEvent) {
 		e.preventDefault();
-		const delta = e.deltaY > 0 ? 0.9 : 1.1;
-		scale = Math.min(8, Math.max(0.5, scale * delta));
+		if (!containerEl) return;
+		const rect = containerEl.getBoundingClientRect();
+		const mx = e.clientX - rect.left;
+		const my = e.clientY - rect.top;
+		const factor = e.deltaY > 0 ? 0.9 : 1.1;
+		zoomAt(factor, mx, my);
 	}
 
 	function handleMouseDown(e: MouseEvent) {
@@ -97,17 +109,22 @@
 	}
 
 	function zoomIn() {
-		scale = Math.min(8, scale * 1.3);
+		if (!containerEl) return;
+		const rect = containerEl.getBoundingClientRect();
+		zoomAt(1.3, rect.width / 2, rect.height / 2);
 	}
 
 	function zoomOut() {
-		scale = Math.max(0.5, scale * 0.7);
+		if (!containerEl) return;
+		const rect = containerEl.getBoundingClientRect();
+		zoomAt(0.7, rect.width / 2, rect.height / 2);
 	}
 </script>
 
 <svelte:window onmouseup={handleMouseUp} onmousemove={handleMouseMove} />
 
 <div
+	bind:this={containerEl}
 	class="relative h-[300px] w-full overflow-hidden rounded-lg sm:h-[400px]"
 	style="cursor: {dragging ? 'grabbing' : 'grab'}"
 >

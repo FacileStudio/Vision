@@ -1,16 +1,20 @@
 package analytics
 
 type OverviewResponse struct {
-	TotalPageviews  int64          `json:"total_pageviews"`
-	UniqueVisitors  int64          `json:"unique_visitors"`
-	TopPages        []PageStat     `json:"top_pages"`
-	TopReferrers    []ReferrerStat `json:"top_referrers"`
-	TopCountries    []CountryStat  `json:"top_countries"`
-	TopBrowsers     []BrowserStat  `json:"top_browsers"`
-	TopOS           []OSStat       `json:"top_os"`
-	TopDevices      []DeviceStat   `json:"top_devices"`
-	PageviewsPerDay []DayStat      `json:"pageviews_per_day"`
-	TopScreens      []ScreenStat   `json:"top_screens"`
+	TotalPageviews       int64          `json:"total_pageviews"`
+	UniqueVisitors       int64          `json:"unique_visitors"`
+	TopPages             []PageStat     `json:"top_pages"`
+	TopReferrers         []ReferrerStat `json:"top_referrers"`
+	TopCountries         []CountryStat  `json:"top_countries"`
+	TopBrowsers          []BrowserStat  `json:"top_browsers"`
+	TopOS                []OSStat       `json:"top_os"`
+	TopDevices           []DeviceStat   `json:"top_devices"`
+	PageviewsPerDay      []DayStat      `json:"pageviews_per_day"`
+	TopScreens           []ScreenStat   `json:"top_screens"`
+	UniqueVisitorsPerDay []DayStat      `json:"unique_visitors_per_day"`
+	HourlyDistribution   []HourStat    `json:"hourly_distribution"`
+	PrevTotalPageviews   int64          `json:"prev_total_pageviews"`
+	PrevUniqueVisitors   int64          `json:"prev_unique_visitors"`
 }
 
 type PageStat struct {
@@ -51,4 +55,9 @@ type DayStat struct {
 type ScreenStat struct {
 	Screen string `json:"screen"`
 	Count  int64  `json:"count"`
+}
+
+type HourStat struct {
+	Hour  int   `json:"hour"`
+	Count int64 `json:"count"`
 }
