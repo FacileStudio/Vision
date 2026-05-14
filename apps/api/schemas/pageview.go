@@ -15,6 +15,11 @@ type Pageview struct {
 	Country   string    `gorm:"column:country"`
 	VisitorID   string    `gorm:"column:visitor_id;index"`
 	ScreenWidth int       `gorm:"column:screen_width"`
+	UTMSource   string    `gorm:"column:utm_source"`
+	UTMMedium   string    `gorm:"column:utm_medium"`
+	UTMCampaign string    `gorm:"column:utm_campaign"`
+	UTMTerm     string    `gorm:"column:utm_term"`
+	UTMContent  string    `gorm:"column:utm_content"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime;index"`
 }
 

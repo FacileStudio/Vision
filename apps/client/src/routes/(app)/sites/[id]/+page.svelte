@@ -26,6 +26,15 @@
 	let customFrom = $state('');
 	let customTo = $state('');
 
+	type Granularity = 'hour' | 'day' | 'week' | 'month';
+	let selectedGranularity = $state<Granularity>('day');
+	const granularities: { key: Granularity; label: string }[] = [
+		{ key: 'hour', label: 'Hourly' },
+		{ key: 'day', label: 'Daily' },
+		{ key: 'week', label: 'Weekly' },
+		{ key: 'month', label: 'Monthly' }
+	];
+
 	let darkMode = $state(false);
 
 	const ranges: { key: RangeKey; label: string }[] = [
@@ -105,7 +114,9 @@
 
 	const chartConfig = {
 		pageviews: { label: 'Pageviews', color: 'var(--chart-1)' },
-		visitors: { label: 'Visitors', color: 'var(--chart-2)' }
+		visitors: { label: 'Visitors', color: 'var(--chart-2)' },
+		prev_pageviews: { label: 'Prev Pageviews', color: 'var(--chart-1)' },
+		prev_visitors: { label: 'Prev Visitors', color: 'var(--chart-2)' }
 	} satisfies Chart.ChartConfig;
 
 	const CHART_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
@@ -161,6 +172,17 @@
 		count: { label: 'Pageviews', color: 'var(--chart-1)' }
 	} satisfies Chart.ChartConfig;
 
+	function sparklinePath(data: { count: number }[], width: number, height: number): string {
+		if (data.length < 2) return '';
+		const max = Math.max(...data.map((d) => d.count), 1);
+		const points = data.map((d, i) => {
+			const x = (i / (data.length - 1)) * width;
+			const y = height - (d.count / max) * height;
+			return `${x},${y}`;
+		});
+		return points.join(' ');
+	}
+
 	function trackingSnippet(): string {
 		return `<script defer src="${page.url.origin}/s.js?v=4"><\/script>`;
 	}
@@ -191,7 +213,7 @@
 	async function refresh(siteId: number) {
 		try {
 			const { from, to } = rangeDates(selectedRange);
-			overview = await api.analytics.overview(siteId, from, to);
+			overview = await api.analytics.overview(siteId, from, to, selectedGranularity);
 			live = true;
 		} catch {
 			live = false;
@@ -237,15 +259,18 @@
 		selectedRange;
 		customFrom;
 		customTo;
+		selectedGranularity;
 		const id = Number(page.params.id);
 		if (id && site) refresh(id);
 	});
 
 	let chartData = $derived(
-		(overview?.pageviews_per_day ?? []).map((d) => ({
+		(overview?.pageviews_per_day ?? []).map((d, i) => ({
 			date: d.date,
 			pageviews: d.count,
-			visitors: overview?.unique_visitors_per_day?.find((v) => v.date === d.date)?.count ?? 0
+			visitors: overview?.unique_visitors_per_day?.find((v) => v.date === d.date)?.count ?? 0,
+			prev_pageviews: overview?.prev_pageviews_per_day?.[i]?.count ?? 0,
+			prev_visitors: overview?.prev_unique_visitors_per_day?.[i]?.count ?? 0
 		}))
 	);
 
@@ -281,6 +306,11 @@
 	let maxOsCount = $derived(Math.max(...osData.map((d) => d.count), 1));
 	let maxPageCount = $derived(Math.max(...topPagesData.map((d) => d.count), 1));
 	let maxReferrerCount = $derived(Math.max(...topReferrersData.map((d) => d.count), 1));
+	let maxEntryCount = $derived(Math.max(...(overview?.top_entry_pages ?? []).map((d) => d.count), 1));
+	let maxExitCount = $derived(Math.max(...(overview?.top_exit_pages ?? []).map((d) => d.count), 1));
+	let maxUTMSourceCount = $derived(Math.max(...(overview?.top_utm_sources ?? []).map((d) => d.count), 1));
+	let maxUTMMediumCount = $derived(Math.max(...(overview?.top_utm_mediums ?? []).map((d) => d.count), 1));
+	let maxUTMCampaignCount = $derived(Math.max(...(overview?.top_utm_campaigns ?? []).map((d) => d.count), 1));
 
 	let pageviewsTrend = $derived(overview ? trendPercent(overview.total_pageviews, overview.prev_total_pageviews) : { text: '—', color: 'text-muted-foreground' });
 	let visitorsTrend = $derived(overview ? trendPercent(overview.unique_visitors, overview.prev_unique_visitors) : { text: '—', color: 'text-muted-foreground' });
@@ -329,6 +359,14 @@
 			</div>
 		</div>
 		<div class="flex items-center gap-3 text-sm">
+			<a
+				href="/api/analytics/{page.params.id}/export?from={rangeDates(selectedRange).from}&to={rangeDates(selectedRange).to}&format=csv"
+				download
+				class="rounded-md p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+				aria-label="Export CSV"
+			>
+				<Icon icon="solar:download-linear" class="h-4 w-4" />
+			</a>
 			<button
 				onclick={toggleDarkMode}
 				class="rounded-md p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -413,11 +451,37 @@
 			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
 				<p class="text-sm text-muted-foreground">Total Pageviews</p>
 				<p class="text-3xl font-bold">{overview.total_pageviews.toLocaleString()}</p>
+				{#if (overview.pageviews_per_day?.length ?? 0) > 1}
+					<svg class="w-full h-8 mt-1" viewBox="0 0 100 24" preserveAspectRatio="none">
+						<polyline
+							points={sparklinePath(overview.pageviews_per_day ?? [], 100, 24)}
+							fill="none"
+							stroke="var(--chart-1)"
+							stroke-width="1.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							opacity="0.6"
+						/>
+					</svg>
+				{/if}
 				<p class="text-xs {pageviewsTrend.color}">{pageviewsTrend.text}</p>
 			</div>
 			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
 				<p class="text-sm text-muted-foreground">Unique Visitors</p>
 				<p class="text-3xl font-bold">{overview.unique_visitors.toLocaleString()}</p>
+				{#if (overview.unique_visitors_per_day?.length ?? 0) > 1}
+					<svg class="w-full h-8 mt-1" viewBox="0 0 100 24" preserveAspectRatio="none">
+						<polyline
+							points={sparklinePath(overview.unique_visitors_per_day ?? [], 100, 24)}
+							fill="none"
+							stroke="var(--chart-2)"
+							stroke-width="1.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							opacity="0.6"
+						/>
+					</svg>
+				{/if}
 				<p class="text-xs {visitorsTrend.color}">{visitorsTrend.text}</p>
 			</div>
 			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
@@ -445,11 +509,27 @@
 		{#if chartData.length > 1}
 			<Card.Root class="mb-8">
 				<Card.Header>
-					<Card.Title>Traffic Over Time</Card.Title>
-					<Card.Description>Pageviews and unique visitors</Card.Description>
+					<div class="flex items-center justify-between">
+						<div>
+							<Card.Title>Traffic Over Time</Card.Title>
+							<Card.Description>Pageviews and unique visitors</Card.Description>
+						</div>
+						<div class="flex gap-1">
+							{#each granularities as g}
+								<button
+									onclick={() => (selectedGranularity = g.key)}
+									class="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors {selectedGranularity === g.key
+										? 'bg-foreground text-background'
+										: 'text-muted-foreground hover:text-foreground'}"
+								>
+									{g.label}
+								</button>
+							{/each}
+						</div>
+					</div>
 				</Card.Header>
 				<Card.Content>
-					<Chart.Container config={chartConfig} class="min-h-[300px] w-full">
+					<Chart.Container config={chartConfig} class="min-h-[300px] w-full [&_.lc-area-path:nth-child(n+3)]:opacity-20">
 						<AreaChart
 							data={chartData}
 							x="date"
@@ -464,6 +544,16 @@
 								{
 									key: 'visitors',
 									label: 'Visitors',
+									color: 'var(--chart-2)'
+								},
+								{
+									key: 'prev_pageviews',
+									label: 'Prev Pageviews',
+									color: 'var(--chart-1)'
+								},
+								{
+									key: 'prev_visitors',
+									label: 'Prev Visitors',
 									color: 'var(--chart-2)'
 								}
 							]}
@@ -557,6 +647,74 @@
 			{/if}
 		</div>
 
+		{#if (overview?.top_utm_sources?.length ?? 0) > 0 || (overview?.top_utm_mediums?.length ?? 0) > 0 || (overview?.top_utm_campaigns?.length ?? 0) > 0}
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+				{#if (overview?.top_utm_sources?.length ?? 0) > 0}
+					<Card.Root>
+						<Card.Header><Card.Title>UTM Sources</Card.Title></Card.Header>
+						<Card.Content>
+							<div class="space-y-1">
+								{#each overview?.top_utm_sources ?? [] as item}
+									<div class="relative">
+										<div
+											class="absolute inset-y-0 left-0 rounded bg-muted/50"
+											style="width: {(item.count / maxUTMSourceCount) * 100}%"
+										></div>
+										<div class="relative flex justify-between px-3 py-1.5 text-sm">
+											<span class="truncate mr-2">{item.value}</span>
+											<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
+										</div>
+									</div>
+								{/each}
+							</div>
+						</Card.Content>
+					</Card.Root>
+				{/if}
+				{#if (overview?.top_utm_mediums?.length ?? 0) > 0}
+					<Card.Root>
+						<Card.Header><Card.Title>UTM Mediums</Card.Title></Card.Header>
+						<Card.Content>
+							<div class="space-y-1">
+								{#each overview?.top_utm_mediums ?? [] as item}
+									<div class="relative">
+										<div
+											class="absolute inset-y-0 left-0 rounded bg-muted/50"
+											style="width: {(item.count / maxUTMMediumCount) * 100}%"
+										></div>
+										<div class="relative flex justify-between px-3 py-1.5 text-sm">
+											<span class="truncate mr-2">{item.value}</span>
+											<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
+										</div>
+									</div>
+								{/each}
+							</div>
+						</Card.Content>
+					</Card.Root>
+				{/if}
+				{#if (overview?.top_utm_campaigns?.length ?? 0) > 0}
+					<Card.Root>
+						<Card.Header><Card.Title>UTM Campaigns</Card.Title></Card.Header>
+						<Card.Content>
+							<div class="space-y-1">
+								{#each overview?.top_utm_campaigns ?? [] as item}
+									<div class="relative">
+										<div
+											class="absolute inset-y-0 left-0 rounded bg-muted/50"
+											style="width: {(item.count / maxUTMCampaignCount) * 100}%"
+										></div>
+										<div class="relative flex justify-between px-3 py-1.5 text-sm">
+											<span class="truncate mr-2">{item.value}</span>
+											<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
+										</div>
+									</div>
+								{/each}
+							</div>
+						</Card.Content>
+					</Card.Root>
+				{/if}
+			</div>
+		{/if}
+
 		{#if overview.top_countries?.length > 0}
 			<Card.Root class="mb-8">
 				<Card.Header>
@@ -566,6 +724,53 @@
 					<WorldMap countries={overview.top_countries} />
 				</Card.Content>
 			</Card.Root>
+		{/if}
+
+		{#if (overview?.top_entry_pages?.length ?? 0) > 0 || (overview?.top_exit_pages?.length ?? 0) > 0}
+			<div class="grid md:grid-cols-2 gap-4 mb-8">
+				{#if (overview?.top_entry_pages?.length ?? 0) > 0}
+					<Card.Root>
+						<Card.Header><Card.Title>Entry Pages</Card.Title></Card.Header>
+						<Card.Content>
+							<div class="space-y-1">
+								{#each overview?.top_entry_pages ?? [] as item}
+									<div class="relative">
+										<div
+											class="absolute inset-y-0 left-0 rounded bg-muted/50"
+											style="width: {(item.count / maxEntryCount) * 100}%"
+										></div>
+										<div class="relative flex justify-between px-3 py-1.5 text-sm">
+											<span class="truncate mr-2">{item.path}</span>
+											<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
+										</div>
+									</div>
+								{/each}
+							</div>
+						</Card.Content>
+					</Card.Root>
+				{/if}
+				{#if (overview?.top_exit_pages?.length ?? 0) > 0}
+					<Card.Root>
+						<Card.Header><Card.Title>Exit Pages</Card.Title></Card.Header>
+						<Card.Content>
+							<div class="space-y-1">
+								{#each overview?.top_exit_pages ?? [] as item}
+									<div class="relative">
+										<div
+											class="absolute inset-y-0 left-0 rounded bg-muted/50"
+											style="width: {(item.count / maxExitCount) * 100}%"
+										></div>
+										<div class="relative flex justify-between px-3 py-1.5 text-sm">
+											<span class="truncate mr-2">{item.path}</span>
+											<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
+										</div>
+									</div>
+								{/each}
+							</div>
+						</Card.Content>
+					</Card.Root>
+				{/if}
+			</div>
 		{/if}
 
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">

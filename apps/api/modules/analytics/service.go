@@ -17,7 +17,19 @@ func NewService(orm *gorm.DB) *Service {
 	return &Service{orm: orm}
 }
 
-func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to time.Time) (*OverviewResponse, error) {
+func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to time.Time, granularity string) (*OverviewResponse, error) {
+	var dateFormat string
+	switch granularity {
+	case "hour":
+		dateFormat = "YYYY-MM-DD HH24:00"
+	case "week":
+		dateFormat = "IYYY-IW"
+	case "month":
+		dateFormat = "YYYY-MM"
+	default:
+		dateFormat = "YYYY-MM-DD"
+	}
+
 	var totalPageviews int64
 	if err := s.orm.WithContext(ctx).
 		Table("pageviews").
@@ -110,7 +122,7 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	var pageviewsPerDay []DayStat
 	if err := s.orm.WithContext(ctx).
 		Table("pageviews").
-		Select("to_char(created_at, 'YYYY-MM-DD') as date, count(*) as count").
+		Select("to_char(created_at, '"+dateFormat+"') as date, count(*) as count").
 		Where("site_id = ? AND created_at >= ? AND created_at <= ?", siteID, from, to).
 		Group("date").
 		Order("date asc").
@@ -132,7 +144,7 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	var uniqueVisitorsPerDay []DayStat
 	if err := s.orm.WithContext(ctx).
 		Table("pageviews").
-		Select("to_char(created_at, 'YYYY-MM-DD') as date, count(distinct visitor_id) as count").
+		Select("to_char(created_at, '"+dateFormat+"') as date, count(distinct visitor_id) as count").
 		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND visitor_id != ''", siteID, from, to).
 		Group("date").
 		Order("date asc").
@@ -218,6 +230,55 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		Where("site_id = ? AND started_at >= ? AND started_at <= ?", siteID, prevFrom, prevTo).
 		Scan(&prevAvgs)
 
+	var topEntryPages []PageStat
+	s.orm.WithContext(ctx).Table("visitor_sessions").
+		Select("entry_path as path, count(*) as count").
+		Where("site_id = ? AND started_at >= ? AND started_at <= ?", siteID, from, to).
+		Group("entry_path").Order("count desc").Limit(10).
+		Scan(&topEntryPages)
+
+	var topExitPages []PageStat
+	s.orm.WithContext(ctx).Table("visitor_sessions").
+		Select("exit_path as path, count(*) as count").
+		Where("site_id = ? AND started_at >= ? AND started_at <= ?", siteID, from, to).
+		Group("exit_path").Order("count desc").Limit(10).
+		Scan(&topExitPages)
+
+	var topUTMSources []UTMStat
+	s.orm.WithContext(ctx).Table("pageviews").
+		Select("utm_source as value, count(*) as count").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND utm_source != ''", siteID, from, to).
+		Group("utm_source").Order("count desc").Limit(10).
+		Scan(&topUTMSources)
+
+	var topUTMMediums []UTMStat
+	s.orm.WithContext(ctx).Table("pageviews").
+		Select("utm_medium as value, count(*) as count").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND utm_medium != ''", siteID, from, to).
+		Group("utm_medium").Order("count desc").Limit(10).
+		Scan(&topUTMMediums)
+
+	var topUTMCampaigns []UTMStat
+	s.orm.WithContext(ctx).Table("pageviews").
+		Select("utm_campaign as value, count(*) as count").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND utm_campaign != ''", siteID, from, to).
+		Group("utm_campaign").Order("count desc").Limit(10).
+		Scan(&topUTMCampaigns)
+
+	var prevPageviewsPerDay []DayStat
+	s.orm.WithContext(ctx).Table("pageviews").
+		Select("to_char(created_at, '"+dateFormat+"') as date, count(*) as count").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ?", siteID, prevFrom, prevTo).
+		Group("date").Order("date asc").
+		Scan(&prevPageviewsPerDay)
+
+	var prevUniqueVisitorsPerDay []DayStat
+	s.orm.WithContext(ctx).Table("pageviews").
+		Select("to_char(created_at, '"+dateFormat+"') as date, count(distinct visitor_id) as count").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND visitor_id != ''", siteID, prevFrom, prevTo).
+		Group("date").Order("date asc").
+		Scan(&prevUniqueVisitorsPerDay)
+
 	if topPages == nil {
 		topPages = []PageStat{}
 	}
@@ -248,6 +309,27 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	if hourlyDistribution == nil {
 		hourlyDistribution = []HourStat{}
 	}
+	if topEntryPages == nil {
+		topEntryPages = []PageStat{}
+	}
+	if topExitPages == nil {
+		topExitPages = []PageStat{}
+	}
+	if topUTMSources == nil {
+		topUTMSources = []UTMStat{}
+	}
+	if topUTMMediums == nil {
+		topUTMMediums = []UTMStat{}
+	}
+	if topUTMCampaigns == nil {
+		topUTMCampaigns = []UTMStat{}
+	}
+	if prevPageviewsPerDay == nil {
+		prevPageviewsPerDay = []DayStat{}
+	}
+	if prevUniqueVisitorsPerDay == nil {
+		prevUniqueVisitorsPerDay = []DayStat{}
+	}
 
 	return &OverviewResponse{
 		TotalPageviews:  totalPageviews,
@@ -267,9 +349,16 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		BounceRate:             bounceRate,
 		AvgSessionDuration:     avgs.AvgDuration,
 		PagesPerSession:        avgs.AvgPages,
-		PrevBounceRate:         prevBounceRate,
-		PrevAvgSessionDuration: prevAvgs.AvgDuration,
-		PrevPagesPerSession:    prevAvgs.AvgPages,
+		PrevBounceRate:           prevBounceRate,
+		PrevAvgSessionDuration:   prevAvgs.AvgDuration,
+		PrevPagesPerSession:      prevAvgs.AvgPages,
+		TopEntryPages:            topEntryPages,
+		TopExitPages:             topExitPages,
+		TopUTMSources:            topUTMSources,
+		TopUTMMediums:            topUTMMediums,
+		TopUTMCampaigns:          topUTMCampaigns,
+		PrevPageviewsPerDay:      prevPageviewsPerDay,
+		PrevUniqueVisitorsPerDay: prevUniqueVisitorsPerDay,
 	}, nil
 }
 

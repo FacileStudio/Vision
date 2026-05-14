@@ -73,10 +73,11 @@ export const api = {
 		test: (id: number) => request<void>('POST', `/webhooks/${id}/test`)
 	},
 	analytics: {
-		overview: (siteId: number, from?: string, to?: string) => {
+		overview: (siteId: number, from?: string, to?: string, granularity?: string) => {
 			const params = new URLSearchParams();
 			if (from) params.set('from', from);
 			if (to) params.set('to', to);
+			if (granularity) params.set('granularity', granularity);
 			const qs = params.toString();
 			return request<AnalyticsOverview>('GET', `/analytics/${siteId}/overview${qs ? `?${qs}` : ''}`);
 		},
@@ -156,8 +157,15 @@ export interface AnalyticsOverview {
 	top_os: { os: string; count: number }[];
 	top_devices: { device: string; count: number }[];
 	top_screens: { screen: string; count: number }[];
+	top_entry_pages: { path: string; count: number }[];
+	top_exit_pages: { path: string; count: number }[];
+	top_utm_sources: { value: string; count: number }[];
+	top_utm_mediums: { value: string; count: number }[];
+	top_utm_campaigns: { value: string; count: number }[];
 	pageviews_per_day: { date: string; count: number }[];
 	unique_visitors_per_day: { date: string; count: number }[];
+	prev_pageviews_per_day: { date: string; count: number }[];
+	prev_unique_visitors_per_day: { date: string; count: number }[];
 	hourly_distribution: { hour: number; count: number }[];
 	bounce_rate: number;
 	avg_session_duration: number;

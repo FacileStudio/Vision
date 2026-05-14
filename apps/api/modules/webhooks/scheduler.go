@@ -115,7 +115,7 @@ func sendSiteReport(orm *gorm.DB, analyticsService *analytics.Service, wh *schem
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	overview, err := analyticsService.Overview(ctx, site.ID, from, now)
+	overview, err := analyticsService.Overview(ctx, site.ID, from, now, "day")
 	if err != nil {
 		return err
 	}

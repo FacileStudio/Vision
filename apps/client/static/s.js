@@ -12,14 +12,31 @@
     return id;
   }
 
+  function getUTM() {
+    var params = new URLSearchParams(location.search);
+    return {
+      utm_source: params.get('utm_source') || '',
+      utm_medium: params.get('utm_medium') || '',
+      utm_campaign: params.get('utm_campaign') || '',
+      utm_term: params.get('utm_term') || '',
+      utm_content: params.get('utm_content') || ''
+    };
+  }
+
   function send(path) {
+    var utm = getUTM();
     var data = {
       hostname: location.hostname,
       path: path || location.pathname,
       referrer: document.referrer || "",
       language: navigator.language || "",
       screen_width: window.innerWidth,
-      visitor_id: visitorId()
+      visitor_id: visitorId(),
+      utm_source: utm.utm_source,
+      utm_medium: utm.utm_medium,
+      utm_campaign: utm.utm_campaign,
+      utm_term: utm.utm_term,
+      utm_content: utm.utm_content
     };
     var img = new Image();
     img.src = endpoint + "?data=" + encodeURIComponent(JSON.stringify(data));

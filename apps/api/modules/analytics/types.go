@@ -18,9 +18,16 @@ type OverviewResponse struct {
 	BounceRate             float64 `json:"bounce_rate"`
 	AvgSessionDuration     float64 `json:"avg_session_duration"`
 	PagesPerSession        float64 `json:"pages_per_session"`
-	PrevBounceRate         float64 `json:"prev_bounce_rate"`
-	PrevAvgSessionDuration float64 `json:"prev_avg_session_duration"`
-	PrevPagesPerSession    float64 `json:"prev_pages_per_session"`
+	PrevBounceRate           float64    `json:"prev_bounce_rate"`
+	PrevAvgSessionDuration   float64    `json:"prev_avg_session_duration"`
+	PrevPagesPerSession      float64    `json:"prev_pages_per_session"`
+	TopEntryPages            []PageStat `json:"top_entry_pages"`
+	TopExitPages             []PageStat `json:"top_exit_pages"`
+	TopUTMSources            []UTMStat  `json:"top_utm_sources"`
+	TopUTMMediums            []UTMStat  `json:"top_utm_mediums"`
+	TopUTMCampaigns          []UTMStat  `json:"top_utm_campaigns"`
+	PrevPageviewsPerDay      []DayStat  `json:"prev_pageviews_per_day"`
+	PrevUniqueVisitorsPerDay []DayStat  `json:"prev_unique_visitors_per_day"`
 }
 
 type PageStat struct {
@@ -66,4 +73,9 @@ type ScreenStat struct {
 type HourStat struct {
 	Hour  int   `json:"hour"`
 	Count int64 `json:"count"`
+}
+
+type UTMStat struct {
+	Value string `json:"value"`
+	Count int64  `json:"count"`
 }

@@ -1,6 +1,8 @@
 package analytics
 
 import (
+	"encoding/csv"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -27,7 +29,11 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 		}
 
 		from, to := parseDateRange(request)
-		resp, err := service.Overview(request.Context(), site.ID, from, to)
+		granularity := request.URL.Query().Get("granularity")
+		if granularity == "" {
+			granularity = "day"
+		}
+		resp, err := service.Overview(request.Context(), site.ID, from, to, granularity)
 		if err != nil {
 			httpjson.WriteError(w, err)
 			return
@@ -75,7 +81,11 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 			}
 
 			from, to := parseDateRange(request)
-			resp, err := service.Overview(request.Context(), siteID, from, to)
+			granularity := request.URL.Query().Get("granularity")
+			if granularity == "" {
+				granularity = "day"
+			}
+			resp, err := service.Overview(request.Context(), siteID, from, to, granularity)
 			if err != nil {
 				httpjson.WriteError(w, err)
 				return
@@ -102,7 +112,66 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 			visitors := tracker.Count(siteID)
 			httpjson.WriteJSON(w, http.StatusOK, map[string]int64{"visitors": visitors})
 		})
+
+		router.Get("/{siteId}/export", func(w http.ResponseWriter, request *http.Request) {
+			identity, _ := authcontext.IdentityFromContext(request.Context())
+			siteID, err := strconv.ParseInt(chi.URLParam(request, "siteId"), 10, 64)
+			if err != nil {
+				httpjson.WriteError(w, errors.Invalid("invalid site ID"))
+				return
+			}
+
+			ownerID, _ := strconv.ParseInt(identity.UserID, 10, 64)
+			var count int64
+			orm.Table("sites").Where("id = ? AND owner_id = ?", siteID, ownerID).Count(&count)
+			if count == 0 {
+				httpjson.WriteError(w, errors.NotFound("site not found"))
+				return
+			}
+
+			from, to := parseDateRange(request)
+			granularity := request.URL.Query().Get("granularity")
+			if granularity == "" {
+				granularity = "day"
+			}
+			resp, err := service.Overview(request.Context(), siteID, from, to, granularity)
+			if err != nil {
+				httpjson.WriteError(w, err)
+				return
+			}
+
+			format := request.URL.Query().Get("format")
+			if format == "csv" {
+				w.Header().Set("Content-Type", "text/csv")
+				w.Header().Set("Content-Disposition", "attachment; filename=vision-export.csv")
+				writeCSV(w, resp)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-Disposition", "attachment; filename=vision-export.json")
+			httpjson.WriteJSON(w, http.StatusOK, resp)
+		})
 	})
+}
+
+func writeCSV(w http.ResponseWriter, resp *OverviewResponse) {
+	writer := csv.NewWriter(w)
+	defer writer.Flush()
+
+	visitorsMap := make(map[string]int64)
+	for _, v := range resp.UniqueVisitorsPerDay {
+		visitorsMap[v.Date] = v.Count
+	}
+
+	writer.Write([]string{"Date", "Pageviews", "Unique Visitors"})
+	for _, d := range resp.PageviewsPerDay {
+		writer.Write([]string{
+			d.Date,
+			fmt.Sprintf("%d", d.Count),
+			fmt.Sprintf("%d", visitorsMap[d.Date]),
+		})
+	}
 }
 
 func parseDateRange(request *http.Request) (time.Time, time.Time) {
