@@ -11,6 +11,7 @@ RUN go mod download
 
 COPY apps/api ./
 
+ARG CACHE_BUST=1
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH:-amd64} go build -o bin/api .
 
 FROM gcr.io/distroless/static-debian12
