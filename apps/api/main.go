@@ -101,7 +101,7 @@ func main() {
 
 	router.Get("/t.js", func(w http.ResponseWriter, request *http.Request) {
 		w.Header().Set("Content-Type", "application/javascript")
-		w.Header().Set("Cache-Control", "public, max-age=86400")
+		w.Header().Set("Cache-Control", "public, max-age=3600")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Write(trackerJS)
 	})

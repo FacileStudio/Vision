@@ -9,7 +9,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			status: res.status,
 			headers: {
 				'Content-Type': 'application/javascript',
-				'Cache-Control': 'public, max-age=86400',
+				'Cache-Control': 'public, max-age=3600',
 				'Access-Control-Allow-Origin': '*'
 			}
 		});
