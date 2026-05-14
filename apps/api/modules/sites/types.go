@@ -1,0 +1,23 @@
+package sites
+
+import "time"
+
+type CreateRequest struct {
+	Name   string `json:"name"`
+	Domain string `json:"domain"`
+}
+
+type UpdateRequest struct {
+	Name   string `json:"name"`
+	Domain string `json:"domain"`
+}
+
+type SiteResponse struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	Domain    string    `json:"domain"`
+	APIKey    string    `json:"api_key"`
+	OwnerID   int64     `json:"owner_id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}

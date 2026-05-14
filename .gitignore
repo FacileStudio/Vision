@@ -1,0 +1,7 @@
+.local/
+apps/api/bin/
+apps/api/vendor/
+apps/client/node_modules/
+apps/client/.svelte-kit/
+apps/client/build/
+.env
