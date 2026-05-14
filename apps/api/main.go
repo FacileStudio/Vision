@@ -10,8 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	_ "embed"
-
 	"api/internal/database"
 	documentation "api/internal/documentation"
 	"api/internal/env"
@@ -27,9 +25,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 )
-
-//go:embed tracker/tracker.js
-var trackerJS []byte
 
 func main() {
 	appEnv, err := env.Load()
@@ -97,13 +92,6 @@ func main() {
 	})
 	router.Get("/docs", func(w http.ResponseWriter, request *http.Request) {
 		httpjson.WriteJSON(w, http.StatusOK, docs)
-	})
-
-	router.Get("/t.js", func(w http.ResponseWriter, request *http.Request) {
-		w.Header().Set("Content-Type", "application/javascript")
-		w.Header().Set("Cache-Control", "public, max-age=3600")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Write(trackerJS)
 	})
 
 	auth.RegisterRoutes(router, authService, appEnv)
