@@ -1,7 +1,5 @@
 (function () {
-  var script = document.currentScript;
-  var endpoint = script.getAttribute("data-api") ||
-    script.src.replace(/\/t\.js.*$/, "/api/event/pageview");
+  var endpoint = document.currentScript.src.replace(/\/t\.js.*$/, "/api/event/pageview");
 
   function visitorId() {
     var key = "_vs_id";
@@ -13,14 +11,18 @@
   }
 
   function send(path) {
-    var data = {
-      path: path || location.pathname,
-      referrer: document.referrer || "",
-      language: navigator.language || "",
-      visitor_id: visitorId()
-    };
-    var img = new Image();
-    img.src = endpoint + "?data=" + encodeURIComponent(JSON.stringify(data));
+    fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      credentials: "omit",
+      keepalive: true,
+      body: JSON.stringify({
+        path: path || location.pathname,
+        referrer: document.referrer || "",
+        language: navigator.language || "",
+        visitor_id: visitorId()
+      })
+    });
   }
 
   send();

@@ -27,10 +27,8 @@
 		count: { label: 'Referrals', color: 'var(--chart-3)' }
 	} satisfies Chart.ChartConfig;
 
-	let trackerSrc = $derived(`${page.url.origin}/t.js`);
-
 	function trackingSnippet(): string {
-		return `<script defer data-api="/v/event/pageview" src="/t.js"><\/script>`;
+		return `<script defer src="${page.url.origin}/t.js"><\/script>`;
 	}
 
 	async function copySnippet() {
@@ -97,13 +95,11 @@
 
 	<div class="mb-8 rounded-lg border p-4">
 		<h2 class="font-semibold mb-2">Tracking Script</h2>
-		<p class="text-sm text-muted-foreground mb-2">1. Download <a href="/t.js" class="underline" download>t.js</a> and host it on your site</p>
-		<p class="text-sm text-muted-foreground mb-2">2. Add a server-side rewrite: <code class="bg-muted px-1 rounded">/v/event/*</code> → <code class="bg-muted px-1 rounded">{page.url.origin}/api/event/*</code></p>
-		<p class="text-sm text-muted-foreground mb-2">3. Add this to your &lt;head&gt;:</p>
+		<p class="text-sm text-muted-foreground mb-2">Add this to your website's &lt;head&gt;:</p>
 		<div class="relative group">
 			<pre
 				class="rounded bg-muted p-3 pr-12 text-xs overflow-x-auto"
-				>&lt;script defer data-api="/v/event/pageview" src="/t.js"&gt;&lt;/script&gt;</pre
+				>&lt;script defer src="{page.url.origin}/t.js"&gt;&lt;/script&gt;</pre
 			>
 			<button
 				onclick={copySnippet}
