@@ -3,10 +3,6 @@ import type { Handle } from '@sveltejs/kit';
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	if (event.url.pathname.match(/^\/api\/events\/\d+\/live/)) {
-		return resolve(event);
-	}
-
 	if (event.url.pathname === '/t.js') {
 		const res = await fetch(`${API_URL}/t.js`);
 		return new Response(res.body, {
@@ -34,18 +30,30 @@ export const handle: Handle = async ({ event, resolve }) => {
 			headers.set('cookie', cookieHeader);
 		}
 
-		const fetchInit: RequestInit & { duplex?: string } = {
+		const res = await fetch(url, {
 			method: event.request.method,
 			headers,
+			body: event.request.method !== 'GET' && event.request.method !== 'HEAD'
+				? event.request.body
+				: undefined,
 			redirect: 'manual',
-		};
+			// @ts-expect-error duplex needed for streaming request body
+			duplex: 'half'
+		});
 
-		if (event.request.method !== 'GET' && event.request.method !== 'HEAD') {
-			fetchInit.body = event.request.body;
-			fetchInit.duplex = 'half';
+		const isSSE = res.headers.get('content-type')?.includes('text/event-stream');
+
+		if (isSSE && res.body) {
+			return new Response(res.body, {
+				status: res.status,
+				headers: {
+					'Content-Type': 'text/event-stream',
+					'Cache-Control': 'no-cache',
+					'Connection': 'keep-alive',
+					'X-Accel-Buffering': 'no'
+				}
+			});
 		}
-
-		const res = await fetch(url, fetchInit as RequestInit);
 
 		const responseHeaders = new Headers();
 		for (const [key, value] of res.headers.entries()) {
