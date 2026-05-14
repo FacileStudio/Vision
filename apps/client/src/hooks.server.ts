@@ -19,9 +19,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 			});
 		}
 
+		const proxyHeaders: Record<string, string> = { 'Content-Type': 'text/plain' };
+		const cfCountry = event.request.headers.get('cf-ipcountry');
+		if (cfCountry) proxyHeaders['CF-IPCountry'] = cfCountry;
+		const userAgent = event.request.headers.get('user-agent');
+		if (userAgent) proxyHeaders['User-Agent'] = userAgent;
+
 		const res = await fetch(url, {
 			method: event.request.method,
-			headers: { 'Content-Type': 'text/plain' },
+			headers: proxyHeaders,
 			body: event.request.method !== 'GET' && event.request.method !== 'HEAD'
 				? await event.request.text()
 				: undefined
