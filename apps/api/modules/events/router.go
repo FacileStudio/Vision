@@ -89,12 +89,6 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService m
 				return
 			}
 
-			flusher, ok := w.(http.Flusher)
-			if !ok {
-				httpjson.WriteError(w, errors.Internal("streaming not supported", nil))
-				return
-			}
-
 			rc := http.NewResponseController(w)
 			_ = rc.SetWriteDeadline(time.Time{})
 
@@ -102,7 +96,10 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService m
 			w.Header().Set("Cache-Control", "no-cache")
 			w.Header().Set("Connection", "keep-alive")
 			w.Header().Set("X-Accel-Buffering", "no")
-			flusher.Flush()
+			if err := rc.Flush(); err != nil {
+				httpjson.WriteError(w, errors.Internal("streaming not supported", err))
+				return
+			}
 
 			ch := hub.Subscribe(siteID)
 			defer hub.Unsubscribe(siteID, ch)
@@ -118,10 +115,10 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService m
 				case event := <-ch:
 					data, _ := json.Marshal(event)
 					fmt.Fprintf(w, "data: %s\n\n", data)
-					flusher.Flush()
+					_ = rc.Flush()
 				case <-keepalive.C:
 					fmt.Fprintf(w, ": keepalive\n\n")
-					flusher.Flush()
+					_ = rc.Flush()
 				}
 			}
 		})
