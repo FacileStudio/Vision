@@ -20,12 +20,12 @@
     });
 
     if (navigator.sendBeacon) {
-      var blob = new Blob([body], { type: "application/json" });
+      var blob = new Blob([body], { type: "text/plain" });
       navigator.sendBeacon(apiUrl + "/event/pageview", blob);
     } else {
       var xhr = new XMLHttpRequest();
       xhr.open("POST", apiUrl + "/event/pageview");
-      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.setRequestHeader("Content-Type", "text/plain");
       xhr.send(body);
     }
   }

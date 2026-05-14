@@ -18,6 +18,8 @@ import (
 func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService middleware.Authenticator, orm *gorm.DB) {
 	router.Route("/event", func(router chi.Router) {
 		router.Post("/pageview", func(w http.ResponseWriter, request *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+
 			origin := request.Header.Get("Origin")
 			referer := request.Header.Get("Referer")
 			site, err := service.resolveSiteByOrigin(request.Context(), origin, referer)
@@ -40,8 +42,6 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService m
 				return
 			}
 
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 			httpjson.WriteJSON(w, http.StatusNoContent, nil)
 		})
 
