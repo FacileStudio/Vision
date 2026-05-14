@@ -29,6 +29,12 @@ func (writer *loggingResponseWriter) Write(body []byte) (int, error) {
 	return n, err
 }
 
+func (writer *loggingResponseWriter) Flush() {
+	if f, ok := writer.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 func (writer *loggingResponseWriter) Unwrap() http.ResponseWriter {
 	return writer.ResponseWriter
 }
