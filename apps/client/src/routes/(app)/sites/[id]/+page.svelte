@@ -13,11 +13,6 @@
 		site = await api.sites.get(id);
 		overview = await api.analytics.overview(id);
 	});
-
-	async function rotateKey() {
-		if (!site) return;
-		site = await api.sites.rotateKey(site.id);
-	}
 </script>
 
 {#if site}
@@ -29,8 +24,7 @@
 	<div class="mb-8 rounded-lg border p-4">
 		<h2 class="font-semibold mb-2">Tracking Script</h2>
 		<p class="text-sm text-muted-foreground mb-2">Add this to your website's &lt;head&gt;:</p>
-		<pre class="rounded bg-muted p-3 text-xs overflow-x-auto">&lt;script defer src="{apiBase}/t/{site.api_key}.js"&gt;&lt;/script&gt;</pre>
-		<button onclick={rotateKey} class="mt-3 text-sm text-destructive hover:underline">Rotate API Key</button>
+		<pre class="rounded bg-muted p-3 text-xs overflow-x-auto">&lt;script defer src="{apiBase}/t.js"&gt;&lt;/script&gt;</pre>
 	</div>
 
 	{#if overview}

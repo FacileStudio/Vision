@@ -50,7 +50,3 @@ func (c *Controller) update(ctx context.Context, ownerID string, siteID string, 
 func (c *Controller) delete(ctx context.Context, ownerID string, siteID string) error {
 	return c.service.deleteSite(ctx, ownerID, siteID)
 }
-
-func (c *Controller) rotateKey(ctx context.Context, ownerID string, siteID string) (*SiteResponse, error) {
-	return c.service.rotateAPIKey(ctx, ownerID, siteID)
-}

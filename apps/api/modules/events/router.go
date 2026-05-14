@@ -2,7 +2,6 @@ package events
 
 import (
 	"net/http"
-	"strings"
 
 	"api/internal/httpjson"
 
@@ -12,8 +11,9 @@ import (
 func RegisterRoutes(router chi.Router, service *Service) {
 	router.Route("/event", func(router chi.Router) {
 		router.Post("/pageview", func(w http.ResponseWriter, request *http.Request) {
-			apiKey := extractAPIKey(request)
-			site, err := service.resolveSite(request.Context(), apiKey)
+			origin := request.Header.Get("Origin")
+			referer := request.Header.Get("Referer")
+			site, err := service.resolveSiteByOrigin(request.Context(), origin, referer)
 			if err != nil {
 				httpjson.WriteError(w, err)
 				return
@@ -34,24 +34,16 @@ func RegisterRoutes(router chi.Router, service *Service) {
 			}
 
 			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 			httpjson.WriteJSON(w, http.StatusNoContent, nil)
 		})
 
 		router.Options("/pageview", func(w http.ResponseWriter, request *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 			w.Header().Set("Access-Control-Max-Age", "86400")
 			w.WriteHeader(http.StatusNoContent)
 		})
 	})
-}
-
-func extractAPIKey(request *http.Request) string {
-	auth := request.Header.Get("Authorization")
-	if strings.HasPrefix(auth, "Bearer ") {
-		return strings.TrimPrefix(auth, "Bearer ")
-	}
-	return request.URL.Query().Get("key")
 }

@@ -97,7 +97,7 @@ func main() {
 		httpjson.WriteJSON(w, http.StatusOK, docs)
 	})
 
-	router.Get("/t/{apiKey}.js", func(w http.ResponseWriter, request *http.Request) {
+	router.Get("/t.js", func(w http.ResponseWriter, request *http.Request) {
 		w.Header().Set("Content-Type", "application/javascript")
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		w.Header().Set("Access-Control-Allow-Origin", "*")

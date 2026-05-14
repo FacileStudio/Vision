@@ -2,8 +2,6 @@ package sites
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	stderrors "errors"
 	"strconv"
 
@@ -26,15 +24,10 @@ func NewService(orm *gorm.DB) *Service {
 
 func (s *Service) createSite(ctx context.Context, ownerID string, name string, domain string) (*SiteResponse, error) {
 	uid, _ := strconv.ParseInt(ownerID, 10, 64)
-	apiKey, err := generateAPIKey()
-	if err != nil {
-		return nil, errors.Internal("failed to generate API key", err)
-	}
 
 	record := &schemas.Site{
 		Name:    name,
 		Domain:  domain,
-		APIKey:  apiKey,
 		OwnerID: uid,
 	}
 	if err := s.orm.WithContext(ctx).Create(record).Error; err != nil {
@@ -97,23 +90,6 @@ func (s *Service) deleteSite(ctx context.Context, ownerID string, siteID string)
 	return nil
 }
 
-func (s *Service) rotateAPIKey(ctx context.Context, ownerID string, siteID string) (*SiteResponse, error) {
-	record, err := s.findOwned(ctx, ownerID, siteID)
-	if err != nil {
-		return nil, err
-	}
-
-	apiKey, err := generateAPIKey()
-	if err != nil {
-		return nil, errors.Internal("failed to generate API key", err)
-	}
-	record.APIKey = apiKey
-	if err := s.orm.WithContext(ctx).Save(record).Error; err != nil {
-		return nil, errors.Internal("failed to rotate API key", err)
-	}
-	return toResponse(record), nil
-}
-
 func (s *Service) findOwned(ctx context.Context, ownerID string, siteID string) (*schemas.Site, error) {
 	uid, _ := strconv.ParseInt(ownerID, 10, 64)
 	sid, _ := strconv.ParseInt(siteID, 10, 64)
@@ -134,17 +110,8 @@ func toResponse(record *schemas.Site) *SiteResponse {
 		ID:        record.ID,
 		Name:      record.Name,
 		Domain:    record.Domain,
-		APIKey:    record.APIKey,
 		OwnerID:   record.OwnerID,
 		CreatedAt: record.CreatedAt,
 		UpdatedAt: record.UpdatedAt,
 	}
-}
-
-func generateAPIKey() (string, error) {
-	b := make([]byte, 24)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return "vs_" + hex.EncodeToString(b), nil
 }

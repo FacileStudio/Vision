@@ -6,7 +6,6 @@ type Site struct {
 	ID        int64     `gorm:"column:id;primaryKey"`
 	Name      string    `gorm:"column:name"`
 	Domain    string    `gorm:"column:domain;uniqueIndex"`
-	APIKey    string    `gorm:"column:api_key;uniqueIndex"`
 	OwnerID   int64     `gorm:"column:owner_id;index"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime"`

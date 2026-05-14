@@ -4,14 +4,14 @@ import documentation "api/internal/documentation"
 
 var Documentation = documentation.Module{
 	Name:        "events",
-	Description: "Public event ingestion endpoints. Authenticated by site API key.",
+	Description: "Public event ingestion. Site resolved from Origin/Referer header — only registered domains are accepted.",
 	Routes: []documentation.Route{
 		{
 			Method:      "POST",
 			Path:        "/event/pageview",
 			Summary:     "Record a pageview",
-			Description: "Records a single pageview event for the site identified by the API key. Called from the tracking script embedded on client websites.",
-			Auth:        "api_key (Bearer or ?key= query param)",
+			Description: "Records a pageview for the site matching the request Origin. Rejects unregistered domains.",
+			Auth:        "none (domain-based)",
 			RequestBody: "PageviewRequest",
 		},
 	},

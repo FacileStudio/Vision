@@ -55,8 +55,7 @@ export const api = {
 		create: (name: string, domain: string) => request<Site>('POST', '/sites', { name, domain }),
 		update: (id: number, name: string, domain: string) =>
 			request<Site>('PUT', `/sites/${id}`, { name, domain }),
-		delete: (id: number) => request<void>('DELETE', `/sites/${id}`),
-		rotateKey: (id: number) => request<Site>('POST', `/sites/${id}/rotate-key`)
+		delete: (id: number) => request<void>('DELETE', `/sites/${id}`)
 	},
 	analytics: {
 		overview: (siteId: number, from?: string, to?: string) => {
@@ -73,7 +72,6 @@ export interface Site {
 	id: number;
 	name: string;
 	domain: string;
-	api_key: string;
 	owner_id: number;
 	created_at: string;
 	updated_at: string;

@@ -1,10 +1,6 @@
 (function () {
   var src = document.currentScript.src;
-  var match = src.match(/\/t\/([^\/]+)\.js/);
-  if (!match) return;
-
-  var apiKey = match[1];
-  var apiUrl = src.replace(/\/t\/[^\/]+\.js.*$/, "");
+  var apiUrl = src.replace(/\/t\.js.*$/, "");
 
   function visitorId() {
     var key = "_vs_id";
@@ -25,10 +21,10 @@
 
     if (navigator.sendBeacon) {
       var blob = new Blob([body], { type: "application/json" });
-      navigator.sendBeacon(apiUrl + "/event/pageview?key=" + apiKey, blob);
+      navigator.sendBeacon(apiUrl + "/event/pageview", blob);
     } else {
       var xhr = new XMLHttpRequest();
-      xhr.open("POST", apiUrl + "/event/pageview?key=" + apiKey);
+      xhr.open("POST", apiUrl + "/event/pageview");
       xhr.setRequestHeader("Content-Type", "application/json");
       xhr.send(body);
     }

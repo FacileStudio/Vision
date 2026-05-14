@@ -73,15 +73,5 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			}
 			w.WriteHeader(http.StatusNoContent)
 		})
-
-		router.Post("/{id}/rotate-key", func(w http.ResponseWriter, request *http.Request) {
-			identity, _ := authcontext.IdentityFromContext(request.Context())
-			resp, err := service.controller.rotateKey(request.Context(), identity.UserID, chi.URLParam(request, "id"))
-			if err != nil {
-				httpjson.WriteError(w, err)
-				return
-			}
-			httpjson.WriteJSON(w, http.StatusOK, resp)
-		})
 	})
 }
