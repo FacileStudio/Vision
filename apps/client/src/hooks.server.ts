@@ -3,18 +3,6 @@ import type { Handle } from '@sveltejs/kit';
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	if (event.url.pathname === '/t.js') {
-		const res = await fetch(`${API_URL}/t.js`);
-		return new Response(res.body, {
-			status: res.status,
-			headers: {
-				'Content-Type': 'application/javascript',
-				'Cache-Control': 'public, max-age=3600',
-				'Access-Control-Allow-Origin': '*'
-			}
-		});
-	}
-
 	if (event.url.pathname.startsWith('/api/')) {
 		const path = event.url.pathname.slice(4);
 		const url = `${API_URL}${path}${event.url.search}`;
