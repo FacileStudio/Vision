@@ -6,11 +6,21 @@ import (
 	"strings"
 )
 
+type OIDCConfig struct {
+	Issuer       string
+	ClientID     string
+	ClientSecret string
+	RedirectURL  string
+	SuccessURL   string
+}
+
 type Config struct {
 	DatabaseURL string
 	Port        string
 	Domain      string
 	LogLevel    string
+	OIDC        *OIDCConfig
+	SSOOnly     bool
 }
 
 func Load() (Config, error) {
@@ -27,6 +37,28 @@ func Load() (Config, error) {
 	}
 	if err := validateLogLevel(env.LogLevel); err != nil {
 		return Config{}, err
+	}
+
+	env.SSOOnly = strings.ToLower(envGet("SSO_ONLY")) == "true"
+
+	if issuer := envGet("OIDC_ISSUER"); issuer != "" {
+		clientID := envGet("OIDC_CLIENT_ID")
+		clientSecret := envGet("OIDC_CLIENT_SECRET")
+		redirectURL := envGet("OIDC_REDIRECT_URL")
+		if clientID == "" || clientSecret == "" || redirectURL == "" {
+			return Config{}, fmt.Errorf("OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, and OIDC_REDIRECT_URL are required when OIDC_ISSUER is set")
+		}
+		successURL := envGet("OIDC_SUCCESS_URL")
+		if successURL == "" {
+			successURL = env.Domain
+		}
+		env.OIDC = &OIDCConfig{
+			Issuer:       issuer,
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
+			RedirectURL:  redirectURL,
+			SuccessURL:   successURL,
+		}
 	}
 
 	return env, nil

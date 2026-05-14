@@ -104,7 +104,7 @@ func main() {
 		w.Write(trackerJS)
 	})
 
-	auth.RegisterRoutes(router, authService)
+	auth.RegisterRoutes(router, authService, appEnv)
 	sites.RegisterRoutes(router, siteService, authService)
 	events.RegisterRoutes(router, eventService)
 	analytics.RegisterRoutes(router, analyticsService, db, authService)
