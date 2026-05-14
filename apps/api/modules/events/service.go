@@ -63,11 +63,16 @@ func (s *Service) recordPageview(ctx context.Context, site *schemas.Site, req *P
 		path = "/"
 	}
 
+	browser, os, device := parseUserAgent(userAgent)
+
 	record := &schemas.Pageview{
 		SiteID:    site.ID,
 		Path:      path,
 		Referrer:  strings.TrimSpace(req.Referrer),
 		UserAgent: userAgent,
+		Browser:   browser,
+		OS:        os,
+		Device:    device,
 		Language:  strings.TrimSpace(req.Language),
 		Country:   country,
 		VisitorID: strings.TrimSpace(req.VisitorID),

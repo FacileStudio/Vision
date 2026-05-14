@@ -8,6 +8,9 @@ type Pageview struct {
 	Path      string    `gorm:"column:path;index"`
 	Referrer  string    `gorm:"column:referrer"`
 	UserAgent string    `gorm:"column:user_agent"`
+	Browser   string    `gorm:"column:browser"`
+	OS        string    `gorm:"column:os"`
+	Device    string    `gorm:"column:device"`
 	Language  string    `gorm:"column:language"`
 	Country   string    `gorm:"column:country"`
 	VisitorID string    `gorm:"column:visitor_id;index"`

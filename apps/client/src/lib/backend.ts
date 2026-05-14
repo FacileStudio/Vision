@@ -97,5 +97,8 @@ export interface AnalyticsOverview {
 	top_pages: { path: string; count: number }[];
 	top_referrers: { referrer: string; count: number }[];
 	top_countries: { country: string; count: number }[];
+	top_browsers: { browser: string; count: number }[];
+	top_os: { os: string; count: number }[];
+	top_devices: { device: string; count: number }[];
 	pageviews_per_day: { date: string; count: number }[];
 }

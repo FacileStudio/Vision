@@ -71,6 +71,42 @@ func (s *Service) overview(ctx context.Context, siteID int64, from time.Time, to
 		return nil, errors.Internal("failed to query top countries", err)
 	}
 
+	var topBrowsers []BrowserStat
+	if err := s.orm.WithContext(ctx).
+		Table("pageviews").
+		Select("browser, count(*) as count").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND browser != ''", siteID, from, to).
+		Group("browser").
+		Order("count desc").
+		Limit(10).
+		Scan(&topBrowsers).Error; err != nil {
+		return nil, errors.Internal("failed to query top browsers", err)
+	}
+
+	var topOS []OSStat
+	if err := s.orm.WithContext(ctx).
+		Table("pageviews").
+		Select("os, count(*) as count").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND os != ''", siteID, from, to).
+		Group("os").
+		Order("count desc").
+		Limit(10).
+		Scan(&topOS).Error; err != nil {
+		return nil, errors.Internal("failed to query top os", err)
+	}
+
+	var topDevices []DeviceStat
+	if err := s.orm.WithContext(ctx).
+		Table("pageviews").
+		Select("device, count(*) as count").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND device != ''", siteID, from, to).
+		Group("device").
+		Order("count desc").
+		Limit(10).
+		Scan(&topDevices).Error; err != nil {
+		return nil, errors.Internal("failed to query top devices", err)
+	}
+
 	var pageviewsPerDay []DayStat
 	if err := s.orm.WithContext(ctx).
 		Table("pageviews").
@@ -94,6 +130,15 @@ func (s *Service) overview(ctx context.Context, siteID int64, from time.Time, to
 	if pageviewsPerDay == nil {
 		pageviewsPerDay = []DayStat{}
 	}
+	if topBrowsers == nil {
+		topBrowsers = []BrowserStat{}
+	}
+	if topOS == nil {
+		topOS = []OSStat{}
+	}
+	if topDevices == nil {
+		topDevices = []DeviceStat{}
+	}
 
 	return &OverviewResponse{
 		TotalPageviews:  totalPageviews,
@@ -101,6 +146,9 @@ func (s *Service) overview(ctx context.Context, siteID int64, from time.Time, to
 		TopPages:        topPages,
 		TopReferrers:    topReferrers,
 		TopCountries:    topCountries,
+		TopBrowsers:     topBrowsers,
+		TopOS:           topOS,
+		TopDevices:      topDevices,
 		PageviewsPerDay: pageviewsPerDay,
 	}, nil
 }
