@@ -1,6 +1,7 @@
 (function () {
-  var src = document.currentScript.src;
-  var endpoint = src.replace(/\/t\.js.*$/, "/api/event/pageview");
+  var script = document.currentScript;
+  var endpoint = script.getAttribute("data-api") ||
+    script.src.replace(/\/t\.js.*$/, "/api/event/pageview");
 
   function visitorId() {
     var key = "_vs_id";
