@@ -63,7 +63,9 @@ func main() {
 
 	authService := auth.NewService(db)
 	siteService := sites.NewService(db)
+	eventHub := events.NewHub()
 	eventService := events.NewService(db)
+	eventService.SetHub(eventHub)
 	analyticsService := analytics.NewService(db)
 	docs := documentation.Response{
 		Modules: []documentation.Module{
@@ -106,7 +108,7 @@ func main() {
 
 	auth.RegisterRoutes(router, authService, appEnv)
 	sites.RegisterRoutes(router, siteService, authService)
-	events.RegisterRoutes(router, eventService)
+	events.RegisterRoutes(router, eventService, eventHub, authService, db)
 	analytics.RegisterRoutes(router, analyticsService, db, authService)
 
 	addr := ":" + appEnv.Port

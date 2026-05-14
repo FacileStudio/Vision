@@ -14,10 +14,15 @@ import (
 
 type Service struct {
 	orm *gorm.DB
+	hub *Hub
 }
 
 func NewService(orm *gorm.DB) *Service {
 	return &Service{orm: orm}
+}
+
+func (s *Service) SetHub(hub *Hub) {
+	s.hub = hub
 }
 
 func (s *Service) resolveSiteByOrigin(ctx context.Context, origin string, referer string) (*schemas.Site, error) {
@@ -70,5 +75,17 @@ func (s *Service) recordPageview(ctx context.Context, site *schemas.Site, req *P
 	if err := s.orm.WithContext(ctx).Create(record).Error; err != nil {
 		return errors.Internal("failed to record pageview", err)
 	}
+
+	if s.hub != nil {
+		s.hub.Broadcast(PageviewEvent{
+			SiteID:    site.ID,
+			Path:      record.Path,
+			Referrer:  record.Referrer,
+			Country:   record.Country,
+			VisitorID: record.VisitorID,
+			Timestamp: record.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		})
+	}
+
 	return nil
 }

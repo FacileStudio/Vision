@@ -45,7 +45,15 @@ export const api = {
 		register: (email: string, password: string) =>
 			request<{ user_id: string; token: string }>('POST', '/auth/register', { email, password }),
 		login: (email: string, password: string) =>
-			request<{ user_id: string; token: string }>('POST', '/auth/login', { email, password })
+			request<{ user_id: string; token: string }>('POST', '/auth/login', { email, password }),
+		me: () => request<UserProfile>('GET', '/auth/me'),
+		updateProfile: (name: string, email: string) =>
+			request<UserProfile>('PUT', '/auth/me', { name, email }),
+		changePassword: (currentPassword: string, newPassword: string) =>
+			request<{ status: string }>('PUT', '/auth/password', {
+				current_password: currentPassword,
+				new_password: newPassword
+			})
 	},
 	sites: {
 		list: () => request<Site[]>('GET', '/sites'),
@@ -63,8 +71,22 @@ export const api = {
 			const qs = params.toString();
 			return request<AnalyticsOverview>('GET', `/analytics/${siteId}/overview${qs ? `?${qs}` : ''}`);
 		}
+	},
+	events: {
+		liveUrl: (siteId: number): string => {
+			const token = getToken();
+			const params = token ? `?token=${encodeURIComponent(token)}` : '';
+			return `/api/events/${siteId}/live${params}`;
+		}
 	}
 };
+
+export interface UserProfile {
+	id: string;
+	email: string;
+	name: string;
+	created_at: string;
+}
 
 export interface Site {
 	id: number;

@@ -18,6 +18,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 			headers.set('cookie', cookieHeader);
 		}
 
+		const isSSE = event.request.headers.get('accept') === 'text/event-stream';
+
 		const res = await fetch(url, {
 			method: event.request.method,
 			headers,
@@ -39,6 +41,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 			for (const cookie of setCookies) {
 				responseHeaders.append('set-cookie', cookie);
 			}
+		}
+
+		if (isSSE) {
+			responseHeaders.set('Content-Type', 'text/event-stream');
+			responseHeaders.set('Cache-Control', 'no-cache');
+			responseHeaders.set('Connection', 'keep-alive');
+			responseHeaders.set('X-Accel-Buffering', 'no');
+			responseHeaders.delete('Content-Length');
 		}
 
 		return new Response(res.body, {

@@ -5,8 +5,10 @@ import (
 	"log/slog"
 	"net/http"
 
+	"api/internal/authcontext"
 	"api/internal/env"
 	"api/internal/httpjson"
+	"api/internal/middleware"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -56,6 +58,49 @@ func RegisterRoutes(router chi.Router, service *Service, appEnv env.Config) {
 				httpjson.WriteJSON(w, http.StatusOK, resp)
 			})
 		}
+
+		router.Group(func(router chi.Router) {
+			router.Use(middleware.RequireAuth(service))
+
+			router.Get("/me", func(w http.ResponseWriter, request *http.Request) {
+				identity, _ := authcontext.IdentityFromContext(request.Context())
+				resp, err := service.controller.getMe(request.Context(), identity.UserID)
+				if err != nil {
+					httpjson.WriteError(w, err)
+					return
+				}
+				httpjson.WriteJSON(w, http.StatusOK, resp)
+			})
+
+			router.Put("/me", func(w http.ResponseWriter, request *http.Request) {
+				identity, _ := authcontext.IdentityFromContext(request.Context())
+				var req UpdateProfileRequest
+				if err := httpjson.DecodeJSON(w, request, &req); err != nil {
+					httpjson.WriteError(w, err)
+					return
+				}
+				resp, err := service.controller.updateMe(request.Context(), identity.UserID, &req)
+				if err != nil {
+					httpjson.WriteError(w, err)
+					return
+				}
+				httpjson.WriteJSON(w, http.StatusOK, resp)
+			})
+
+			router.Put("/password", func(w http.ResponseWriter, request *http.Request) {
+				identity, _ := authcontext.IdentityFromContext(request.Context())
+				var req ChangePasswordRequest
+				if err := httpjson.DecodeJSON(w, request, &req); err != nil {
+					httpjson.WriteError(w, err)
+					return
+				}
+				if err := service.controller.changePassword(request.Context(), identity.UserID, &req); err != nil {
+					httpjson.WriteError(w, err)
+					return
+				}
+				httpjson.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+			})
+		})
 
 		if oidcEnabled {
 			oidc, err := newOIDCHandler(context.Background(), appEnv.OIDC, service)

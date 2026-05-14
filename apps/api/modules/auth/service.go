@@ -156,6 +156,54 @@ func (service *Service) upsertOIDCUser(context context.Context, email string) (u
 	return strconv.FormatInt(record.ID, 10), token, nil
 }
 
+func (service *Service) getUser(context context.Context, userID string) (*schemas.User, error) {
+	var record schemas.User
+	err := service.orm.WithContext(context).Where("id = ?", userID).First(&record).Error
+	if err != nil {
+		return nil, errors.NotFound("user not found")
+	}
+	return &record, nil
+}
+
+func (service *Service) updateUser(context context.Context, userID string, name string, email string) (*schemas.User, error) {
+	var record schemas.User
+	if err := service.orm.WithContext(context).Where("id = ?", userID).First(&record).Error; err != nil {
+		return nil, errors.NotFound("user not found")
+	}
+
+	record.Name = name
+	record.Email = email
+	if err := service.orm.WithContext(context).Save(&record).Error; err != nil {
+		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, errors.Conflict("email already in use")
+		}
+		return nil, errors.Internal("failed to update user", err)
+	}
+	return &record, nil
+}
+
+func (service *Service) changePassword(context context.Context, userID string, currentPassword string, newPassword string) error {
+	var record schemas.User
+	if err := service.orm.WithContext(context).Where("id = ?", userID).First(&record).Error; err != nil {
+		return errors.NotFound("user not found")
+	}
+
+	if !authcrypto.VerifyPassword(currentPassword, record.PasswordHash) {
+		return errors.Unauthorized("current password is incorrect")
+	}
+
+	hash, err := authcrypto.HashPassword(newPassword)
+	if err != nil {
+		return errors.Invalid("invalid password")
+	}
+
+	record.PasswordHash = hash
+	if err := service.orm.WithContext(context).Save(&record).Error; err != nil {
+		return errors.Internal("failed to update password", err)
+	}
+	return nil
+}
+
 func hashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
