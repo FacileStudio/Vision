@@ -3,6 +3,10 @@ import type { Handle } from '@sveltejs/kit';
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
 export const handle: Handle = async ({ event, resolve }) => {
+	if (event.url.pathname.match(/^\/api\/events\/\d+\/live/)) {
+		return resolve(event);
+	}
+
 	if (event.url.pathname.startsWith('/api/')) {
 		const path = event.url.pathname.slice(4);
 		const url = `${API_URL}${path}${event.url.search}`;
@@ -17,8 +21,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 		if (cookieHeader) {
 			headers.set('cookie', cookieHeader);
 		}
-
-		const isSSE = event.request.headers.get('accept')?.includes('text/event-stream');
 
 		const fetchInit: RequestInit & { duplex?: string } = {
 			method: event.request.method,
@@ -43,15 +45,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 			for (const cookie of setCookies) {
 				responseHeaders.append('set-cookie', cookie);
 			}
-		}
-
-		if (isSSE) {
-			responseHeaders.set('Content-Type', 'text/event-stream');
-			responseHeaders.set('Cache-Control', 'no-cache');
-			responseHeaders.set('Connection', 'keep-alive');
-			responseHeaders.set('X-Accel-Buffering', 'no');
-			responseHeaders.delete('Content-Length');
-			responseHeaders.delete('Transfer-Encoding');
 		}
 
 		return new Response(res.body, {
