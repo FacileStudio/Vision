@@ -21,6 +21,28 @@ Self-hosted analytics. Go + SvelteKit.
 - [x] Image pixel tracking (CORS-free)
 - [x] Live polling dashboard (5s)
 - [x] Site management (CRUD)
+- [x] Area chart with dual series (pageviews + unique visitors over time)
+- [x] Extended date presets (today, this week, 7d, this month, 30d, 90d, this year, custom range)
+- [x] Custom date range with inline date inputs
+- [x] Human-readable date range label
+- [x] KPI cards with trend indicators (% change vs previous period)
+- [x] Views per visitor derived metric
+- [x] Bounce rate placeholder (awaiting session tracking)
+- [x] Previous period comparison data from backend
+- [x] Unique visitors per day from backend
+- [x] Traffic sources donut chart (direct, search, social, other)
+- [x] Hourly distribution bar chart (traffic by hour of day)
+- [x] Pie charts for devices and screens
+- [x] Bento grid layout (3-column asymmetric for bottom stats)
+- [x] Pastel glass color system (translucent cards, backdrop blur, OKLch pastels)
+- [x] Map zoom centers on cursor (scroll) and viewport center (buttons)
+- [x] In-memory heartbeat system for accurate realtime visitors (30s pings, 60s window)
+- [x] Tracker visibility detection (pauses heartbeats on hidden tabs)
+- [x] Webhook periodic reports (hourly/daily/weekly/monthly) with HMAC-SHA256 signing
+- [x] System-wide webhook configuration (reports for all sites per webhook)
+- [x] Webhook settings UI in settings page (CRUD, toggle, test)
+- [x] Nook integration (Vision webhook provider for event aggregation)
+- [x] Solar Linear / Iconify icons across UI
 
 ## Short-term
 
@@ -28,9 +50,11 @@ Self-hosted analytics. Go + SvelteKit.
 - [ ] UTM parameter tracking (utm_source, utm_medium, utm_campaign parsed from URL)
 - [ ] Custom event tracking (`vision.track('signup', { plan: 'pro' })`)
 - [ ] Data export (CSV/JSON for raw or aggregated data)
-- [ ] Comparison view (this week vs last week overlay on charts)
+- [ ] Comparison view (this week vs last week ghost overlay on charts)
 - [ ] Goal tracking (mark paths as goals, show conversion rates)
 - [ ] Public shareable dashboard link (read-only, no auth)
+- [ ] Granularity selector on main chart (hourly / daily / weekly / monthly bucketing)
+- [ ] Sparklines in KPI cards (tiny area trends)
 
 ## Medium-term
 
@@ -42,6 +66,7 @@ Self-hosted analytics. Go + SvelteKit.
 - [ ] Entry pages tracking
 - [ ] Filter/search within dashboard (filter by country, browser, path, etc.)
 - [ ] Lightweight embeddable widget (small stats badge for sites)
+- [ ] "See all" drawers for top pages / referrers (paginated, searchable)
 
 ## Long-term / Infrastructure
 
@@ -50,6 +75,6 @@ Self-hosted analytics. Go + SvelteKit.
 - [ ] CDN-hosted tracker script (jsDelivr/unpkg) to eliminate Private Network Access issues
 - [ ] Data retention policies (auto-delete after N months)
 - [ ] GDPR compliance tools (data deletion requests, consent mode)
-- [ ] Webhooks (notify external services on events)
+- [ ] Webhooks for real-time event forwarding (not just periodic reports)
 - [ ] Import data from other analytics tools (Umami, Plausible, GA)
 - [ ] Mobile app / PWA for dashboard
