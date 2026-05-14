@@ -82,6 +82,19 @@ func (s *Service) overview(ctx context.Context, siteID int64, from time.Time, to
 		return nil, errors.Internal("failed to query pageviews per day", err)
 	}
 
+	if topPages == nil {
+		topPages = []PageStat{}
+	}
+	if topReferrers == nil {
+		topReferrers = []ReferrerStat{}
+	}
+	if topCountries == nil {
+		topCountries = []CountryStat{}
+	}
+	if pageviewsPerDay == nil {
+		pageviewsPerDay = []DayStat{}
+	}
+
 	return &OverviewResponse{
 		TotalPageviews:  totalPageviews,
 		UniqueVisitors:  uniqueVisitors,

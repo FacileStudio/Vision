@@ -18,18 +18,20 @@ export const handle: Handle = async ({ event, resolve }) => {
 			headers.set('cookie', cookieHeader);
 		}
 
-		const isSSE = event.request.headers.get('accept') === 'text/event-stream';
+		const isSSE = event.request.headers.get('accept')?.includes('text/event-stream');
 
-		const res = await fetch(url, {
+		const fetchInit: RequestInit & { duplex?: string } = {
 			method: event.request.method,
 			headers,
-			body: event.request.method !== 'GET' && event.request.method !== 'HEAD'
-				? event.request.body
-				: undefined,
 			redirect: 'manual',
-			// @ts-expect-error duplex needed for streaming body
-			duplex: 'half'
-		});
+		};
+
+		if (event.request.method !== 'GET' && event.request.method !== 'HEAD') {
+			fetchInit.body = event.request.body;
+			fetchInit.duplex = 'half';
+		}
+
+		const res = await fetch(url, fetchInit as RequestInit);
 
 		const responseHeaders = new Headers();
 		for (const [key, value] of res.headers.entries()) {
@@ -49,6 +51,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			responseHeaders.set('Connection', 'keep-alive');
 			responseHeaders.set('X-Accel-Buffering', 'no');
 			responseHeaders.delete('Content-Length');
+			responseHeaders.delete('Transfer-Encoding');
 		}
 
 		return new Response(res.body, {

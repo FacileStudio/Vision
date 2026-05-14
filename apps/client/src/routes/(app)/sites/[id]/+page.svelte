@@ -52,6 +52,11 @@
 
 		overview.total_pageviews += 1;
 
+		if (!overview.top_pages) overview.top_pages = [];
+		if (!overview.top_referrers) overview.top_referrers = [];
+		if (!overview.top_countries) overview.top_countries = [];
+		if (!overview.pageviews_per_day) overview.pageviews_per_day = [];
+
 		const knownVisitors = new Set<string>();
 		knownVisitors.add(event.visitor_id);
 		if (knownVisitors.size === 1) {
@@ -320,7 +325,7 @@
 			{/if}
 		</div>
 
-		{#if overview.top_countries.length > 0}
+		{#if overview.top_countries?.length > 0}
 			<div class="mb-8">
 				<h2 class="font-semibold mb-3">Top Countries</h2>
 				<div class="space-y-1 rounded-lg border p-4">
