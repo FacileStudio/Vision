@@ -10,6 +10,7 @@ type OverviewResponse struct {
 	TopOS           []OSStat       `json:"top_os"`
 	TopDevices      []DeviceStat   `json:"top_devices"`
 	PageviewsPerDay []DayStat      `json:"pageviews_per_day"`
+	TopScreens      []ScreenStat   `json:"top_screens"`
 }
 
 type PageStat struct {
@@ -45,4 +46,9 @@ type DeviceStat struct {
 type DayStat struct {
 	Date  string `json:"date"`
 	Count int64  `json:"count"`
+}
+
+type ScreenStat struct {
+	Screen string `json:"screen"`
+	Count  int64  `json:"count"`
 }

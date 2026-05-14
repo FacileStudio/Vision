@@ -118,6 +118,17 @@ func (s *Service) overview(ctx context.Context, siteID int64, from time.Time, to
 		return nil, errors.Internal("failed to query pageviews per day", err)
 	}
 
+	var topScreens []ScreenStat
+	if err := s.orm.WithContext(ctx).
+		Table("pageviews").
+		Select("CASE WHEN screen_width < 768 THEN 'Mobile' WHEN screen_width < 1024 THEN 'Tablet' WHEN screen_width < 1440 THEN 'Laptop' ELSE 'Desktop' END as screen, count(*) as count").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND screen_width > 0", siteID, from, to).
+		Group("screen").
+		Order("count desc").
+		Scan(&topScreens).Error; err != nil {
+		return nil, errors.Internal("failed to query top screens", err)
+	}
+
 	if topPages == nil {
 		topPages = []PageStat{}
 	}
@@ -139,6 +150,9 @@ func (s *Service) overview(ctx context.Context, siteID int64, from time.Time, to
 	if topDevices == nil {
 		topDevices = []DeviceStat{}
 	}
+	if topScreens == nil {
+		topScreens = []ScreenStat{}
+	}
 
 	return &OverviewResponse{
 		TotalPageviews:  totalPageviews,
@@ -150,5 +164,19 @@ func (s *Service) overview(ctx context.Context, siteID int64, from time.Time, to
 		TopOS:           topOS,
 		TopDevices:      topDevices,
 		PageviewsPerDay: pageviewsPerDay,
+		TopScreens:      topScreens,
 	}, nil
+}
+
+func (s *Service) realtimeVisitors(ctx context.Context, siteID int64) (int64, error) {
+	var count int64
+	err := s.orm.WithContext(ctx).
+		Table("pageviews").
+		Where("site_id = ? AND created_at >= ? AND visitor_id != ''", siteID, time.Now().Add(-5*time.Minute)).
+		Distinct("visitor_id").
+		Count(&count).Error
+	if err != nil {
+		return 0, errors.Internal("failed to count realtime visitors", err)
+	}
+	return count, nil
 }

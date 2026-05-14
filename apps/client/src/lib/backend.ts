@@ -70,6 +70,10 @@ export const api = {
 			if (to) params.set('to', to);
 			const qs = params.toString();
 			return request<AnalyticsOverview>('GET', `/analytics/${siteId}/overview${qs ? `?${qs}` : ''}`);
+		},
+		realtime: {
+			visitors: (siteId: number) =>
+				request<{ visitors: number }>('GET', `/analytics/${siteId}/realtime`)
 		}
 	},
 	events: {}
@@ -100,5 +104,6 @@ export interface AnalyticsOverview {
 	top_browsers: { browser: string; count: number }[];
 	top_os: { os: string; count: number }[];
 	top_devices: { device: string; count: number }[];
+	top_screens: { screen: string; count: number }[];
 	pageviews_per_day: { date: string; count: number }[];
 }

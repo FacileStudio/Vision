@@ -75,7 +75,8 @@ func (s *Service) recordPageview(ctx context.Context, site *schemas.Site, req *P
 		Device:    device,
 		Language:  strings.TrimSpace(req.Language),
 		Country:   country,
-		VisitorID: strings.TrimSpace(req.VisitorID),
+		VisitorID:   strings.TrimSpace(req.VisitorID),
+		ScreenWidth: req.ScreenWidth,
 	}
 	if err := s.orm.WithContext(ctx).Create(record).Error; err != nil {
 		return errors.Internal("failed to record pageview", err)

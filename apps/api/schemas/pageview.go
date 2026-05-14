@@ -13,7 +13,8 @@ type Pageview struct {
 	Device    string    `gorm:"column:device"`
 	Language  string    `gorm:"column:language"`
 	Country   string    `gorm:"column:country"`
-	VisitorID string    `gorm:"column:visitor_id;index"`
+	VisitorID   string    `gorm:"column:visitor_id;index"`
+	ScreenWidth int       `gorm:"column:screen_width"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime;index"`
 }
 

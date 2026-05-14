@@ -42,6 +42,30 @@ func RegisterRoutes(router chi.Router, service *Service, orm *gorm.DB, authServi
 			}
 			httpjson.WriteJSON(w, http.StatusOK, resp)
 		})
+
+		router.Get("/{siteId}/realtime", func(w http.ResponseWriter, request *http.Request) {
+			identity, _ := authcontext.IdentityFromContext(request.Context())
+			siteID, err := strconv.ParseInt(chi.URLParam(request, "siteId"), 10, 64)
+			if err != nil {
+				httpjson.WriteError(w, errors.Invalid("invalid site ID"))
+				return
+			}
+
+			ownerID, _ := strconv.ParseInt(identity.UserID, 10, 64)
+			var count int64
+			orm.Table("sites").Where("id = ? AND owner_id = ?", siteID, ownerID).Count(&count)
+			if count == 0 {
+				httpjson.WriteError(w, errors.NotFound("site not found"))
+				return
+			}
+
+			visitors, err := service.realtimeVisitors(request.Context(), siteID)
+			if err != nil {
+				httpjson.WriteError(w, err)
+				return
+			}
+			httpjson.WriteJSON(w, http.StatusOK, map[string]int64{"visitors": visitors})
+		})
 	})
 }
 

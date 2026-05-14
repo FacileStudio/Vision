@@ -16,6 +16,7 @@
       path: path || location.pathname,
       referrer: document.referrer || "",
       language: navigator.language || "",
+      screen_width: window.innerWidth,
       visitor_id: visitorId()
     };
     var img = new Image();
