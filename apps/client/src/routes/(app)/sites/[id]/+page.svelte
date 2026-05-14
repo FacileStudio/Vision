@@ -317,7 +317,10 @@
 {#if site}
 	<div class="mb-8 flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-bold">{site.name}</h1>
+			<div class="flex items-center gap-3">
+				<img src="https://www.google.com/s2/favicons?domain={site.domain}&sz=32" alt="" class="h-6 w-6 shrink-0 rounded" />
+				<h1 class="text-2xl font-bold">{site.name}</h1>
+			</div>
 			<p class="text-muted-foreground">{site.domain}</p>
 			<div class="flex items-center gap-2 mt-2">
 				{#if site.share_token}
