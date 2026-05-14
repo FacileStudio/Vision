@@ -18,10 +18,6 @@ func CORS(domain string) func(http.Handler) http.Handler {
 			}
 
 			if !isAllowedOrigin(origin, domain) {
-				if request.Method == http.MethodOptions {
-					w.WriteHeader(http.StatusForbidden)
-					return
-				}
 				next.ServeHTTP(w, request)
 				return
 			}
