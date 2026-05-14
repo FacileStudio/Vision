@@ -16,10 +16,15 @@ func RegisterRoutes(router chi.Router, service *Service, appEnv env.Config) {
 
 	router.Route("/auth", func(router chi.Router) {
 		router.Get("/config", func(w http.ResponseWriter, r *http.Request) {
-			httpjson.WriteJSON(w, http.StatusOK, map[string]bool{
+			cfg := map[string]any{
 				"sso_only":     appEnv.SSOOnly,
 				"oidc_enabled": oidcEnabled,
-			})
+			}
+			if oidcEnabled {
+				cfg["oidc_redirect_url"] = appEnv.OIDC.RedirectURL
+				cfg["oidc_issuer"] = appEnv.OIDC.Issuer
+			}
+			httpjson.WriteJSON(w, http.StatusOK, cfg)
 		})
 
 		if !appEnv.SSOOnly {
