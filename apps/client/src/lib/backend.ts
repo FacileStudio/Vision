@@ -61,7 +61,9 @@ export const api = {
 		create: (name: string, domain: string) => request<Site>('POST', '/sites', { name, domain }),
 		update: (id: number, name: string, domain: string) =>
 			request<Site>('PUT', `/sites/${id}`, { name, domain }),
-		delete: (id: number) => request<void>('DELETE', `/sites/${id}`)
+		delete: (id: number) => request<void>('DELETE', `/sites/${id}`),
+		share: (id: number) => request<Site>('POST', `/sites/${id}/share`),
+		revokeShare: (id: number) => request<void>('DELETE', `/sites/${id}/share`)
 	},
 	webhooks: {
 		list: () => request<Webhook[]>('GET', '/webhooks'),
@@ -83,6 +85,22 @@ export const api = {
 				request<{ visitors: number }>('GET', `/analytics/${siteId}/realtime`)
 		}
 	},
+	share: {
+		overview: async (token: string, from?: string, to?: string) => {
+			const params = new URLSearchParams();
+			if (from) params.set('from', from);
+			if (to) params.set('to', to);
+			const qs = params.toString();
+			const res = await fetch(`/api/share/${token}${qs ? `?${qs}` : ''}`);
+			if (!res.ok) throw new Error('Not found');
+			return res.json() as Promise<{ site: { name: string; domain: string }; overview: AnalyticsOverview }>;
+		},
+		realtime: async (token: string) => {
+			const res = await fetch(`/api/share/${token}/realtime`);
+			if (!res.ok) throw new Error('Not found');
+			return res.json() as Promise<{ visitors: number }>;
+		}
+	},
 	events: {}
 };
 
@@ -98,6 +116,7 @@ export interface Site {
 	name: string;
 	domain: string;
 	owner_id: number;
+	share_token: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -140,4 +159,10 @@ export interface AnalyticsOverview {
 	pageviews_per_day: { date: string; count: number }[];
 	unique_visitors_per_day: { date: string; count: number }[];
 	hourly_distribution: { hour: number; count: number }[];
+	bounce_rate: number;
+	avg_session_duration: number;
+	pages_per_session: number;
+	prev_bounce_rate: number;
+	prev_avg_session_duration: number;
+	prev_pages_per_session: number;
 }

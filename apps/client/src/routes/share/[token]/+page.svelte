@@ -2,31 +2,25 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { api } from '$lib';
-	import type { Site, AnalyticsOverview } from '$lib';
+	import type { AnalyticsOverview } from '$lib';
 	import { AreaChart, BarChart, PieChart } from 'layerchart';
 	import { scaleBand } from 'd3-scale';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Chart from '$lib/components/ui/chart/index.js';
-	import { Copy, Check, Sun, Moon } from '@lucide/svelte';
 	import Icon from '@iconify/svelte';
 	import WorldMap from '$lib/components/map/world-map.svelte';
 
-	let site = $state<Site | null>(null);
+	let siteName = $state('');
+	let siteDomain = $state('');
 	let overview = $state<AnalyticsOverview | null>(null);
-	let live = $state(false);
-	let copied = $state(false);
 	let realtimeCount = $state(0);
+	let loading = $state(true);
+	let notFound = $state(false);
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 	let realtimeTimer: ReturnType<typeof setInterval> | null = null;
-	let shareCopied = $state(false);
-	let shareUrl = $derived(site?.share_token ? `${page.url.origin}/share/${site.share_token}` : '');
 
-	type RangeKey = 'today' | 'this_week' | '7d' | 'this_month' | '30d' | '90d' | 'this_year' | 'custom';
+	type RangeKey = 'today' | 'this_week' | '7d' | 'this_month' | '30d' | '90d' | 'this_year';
 	let selectedRange = $state<RangeKey>('30d');
-	let customFrom = $state('');
-	let customTo = $state('');
-
-	let darkMode = $state(false);
 
 	const ranges: { key: RangeKey; label: string }[] = [
 		{ key: 'today', label: 'Today' },
@@ -35,8 +29,7 @@
 		{ key: 'this_month', label: 'This Month' },
 		{ key: '30d', label: 'Last 30 Days' },
 		{ key: '90d', label: 'Last 90 Days' },
-		{ key: 'this_year', label: 'This Year' },
-		{ key: 'custom', label: 'Custom' }
+		{ key: 'this_year', label: 'This Year' }
 	];
 
 	function rangeDates(key: RangeKey): { from: string; to: string } {
@@ -60,10 +53,6 @@
 
 		if (key === 'this_year') {
 			return { from: `${now.getFullYear()}-01-01`, to: toStr };
-		}
-
-		if (key === 'custom') {
-			return { from: customFrom || toStr, to: customTo || toStr };
 		}
 
 		const daysMap: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
@@ -161,70 +150,39 @@
 		count: { label: 'Pageviews', color: 'var(--chart-1)' }
 	} satisfies Chart.ChartConfig;
 
-	function trackingSnippet(): string {
-		return `<script defer src="${page.url.origin}/s.js?v=4"><\/script>`;
-	}
-
-	async function generateShare() {
-		const id = Number(page.params.id);
-		site = await api.sites.share(id);
-	}
-
-	async function revokeShare() {
-		const id = Number(page.params.id);
-		await api.sites.revokeShare(id);
-		site = await api.sites.get(id);
-	}
-
-	async function copyShareUrl() {
-		await navigator.clipboard.writeText(shareUrl);
-		shareCopied = true;
-		setTimeout(() => (shareCopied = false), 2000);
-	}
-
-	async function copySnippet() {
-		await navigator.clipboard.writeText(trackingSnippet());
-		copied = true;
-		setTimeout(() => (copied = false), 2000);
-	}
-
-	async function refresh(siteId: number) {
+	async function refresh() {
+		const token = (page.params as Record<string, string>).token;
 		try {
 			const { from, to } = rangeDates(selectedRange);
-			overview = await api.analytics.overview(siteId, from, to);
-			live = true;
+			const data = await api.share.overview(token, from, to);
+			siteName = data.site.name;
+			siteDomain = data.site.domain;
+			overview = data.overview;
+			loading = false;
 		} catch {
-			live = false;
+			notFound = true;
+			loading = false;
 		}
 	}
 
-	async function fetchRealtime(siteId: number) {
+	async function fetchRealtime() {
+		const token = (page.params as Record<string, string>).token;
 		try {
-			const res = await api.analytics.realtime.visitors(siteId);
+			const res = await api.share.realtime(token);
 			realtimeCount = res.visitors;
 		} catch {}
-	}
-
-	function toggleDarkMode() {
-		darkMode = !darkMode;
-		document.documentElement.classList.toggle('dark', darkMode);
-		localStorage.setItem('theme', darkMode ? 'dark' : 'light');
 	}
 
 	onMount(() => {
 		const savedTheme = localStorage.getItem('theme');
 		if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-			darkMode = true;
 			document.documentElement.classList.add('dark');
 		}
 
-		const id = Number(page.params.id);
-
 		(async () => {
-			site = await api.sites.get(id);
-			await Promise.all([refresh(id), fetchRealtime(id)]);
-			pollTimer = setInterval(() => refresh(id), 5000);
-			realtimeTimer = setInterval(() => fetchRealtime(id), 10000);
+			await Promise.all([refresh(), fetchRealtime()]);
+			pollTimer = setInterval(refresh, 30000);
+			realtimeTimer = setInterval(fetchRealtime, 10000);
 		})();
 
 		return () => {
@@ -235,10 +193,7 @@
 
 	$effect(() => {
 		selectedRange;
-		customFrom;
-		customTo;
-		const id = Number(page.params.id);
-		if (id && site) refresh(id);
+		if (!loading && !notFound) refresh();
 	});
 
 	let chartData = $derived(
@@ -288,96 +243,32 @@
 	let bounceTrend = $derived(overview ? trendPercent(overview.bounce_rate, overview.prev_bounce_rate) : { text: '—', color: 'text-muted-foreground' });
 </script>
 
-{#if site}
-	<div class="mb-8 flex items-center justify-between">
-		<div>
-			<h1 class="text-2xl font-bold">{site.name}</h1>
-			<p class="text-muted-foreground">{site.domain}</p>
-			<div class="flex items-center gap-2 mt-2">
-				{#if site.share_token}
-					<div class="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5">
-						<Icon icon="solar:link-linear" class="h-4 w-4 text-muted-foreground" />
-						<code class="text-xs text-muted-foreground">{shareUrl}</code>
-						<button
-							onclick={copyShareUrl}
-							class="rounded p-1 text-muted-foreground hover:text-foreground transition-colors"
-							aria-label="Copy share link"
-						>
-							{#if shareCopied}
-								<Icon icon="solar:check-circle-linear" class="h-4 w-4 text-green-500" />
-							{:else}
-								<Icon icon="solar:copy-linear" class="h-4 w-4" />
-							{/if}
-						</button>
-						<button
-							onclick={revokeShare}
-							class="rounded p-1 text-red-500 hover:bg-red-500/10 transition-colors"
-							aria-label="Revoke share link"
-						>
-							<Icon icon="solar:trash-bin-trash-linear" class="h-4 w-4" />
-						</button>
-					</div>
-				{:else}
-					<button
-						onclick={generateShare}
-						class="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-					>
-						<Icon icon="solar:share-linear" class="h-3.5 w-3.5" />
-						Share
-					</button>
-				{/if}
+{#if loading}
+	<div class="flex min-h-[60dvh] items-center justify-center">
+		<Icon icon="solar:spinner-linear" class="h-8 w-8 animate-spin text-muted-foreground" />
+	</div>
+{:else if notFound}
+	<div class="flex min-h-[60dvh] flex-col items-center justify-center gap-4">
+		<Icon icon="solar:eye-closed-linear" class="h-12 w-12 text-muted-foreground" />
+		<h1 class="text-xl font-semibold">Dashboard not found</h1>
+		<p class="text-muted-foreground">This share link may have been revoked or is invalid.</p>
+	</div>
+{:else if overview}
+	<div class="mx-auto max-w-7xl px-4 py-8">
+		<div class="mb-8 flex items-center justify-between">
+			<div>
+				<h1 class="text-2xl font-bold">{siteName}</h1>
+				<p class="text-muted-foreground">{siteDomain}</p>
 			</div>
-		</div>
-		<div class="flex items-center gap-3 text-sm">
-			<button
-				onclick={toggleDarkMode}
-				class="rounded-md p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-				aria-label="Toggle dark mode"
-			>
-				{#if darkMode}
-					<Sun class="h-4 w-4" />
-				{:else}
-					<Moon class="h-4 w-4" />
-				{/if}
-			</button>
-			{#if live}
+			<div class="flex items-center gap-3 text-sm">
 				<span class="relative flex h-2.5 w-2.5">
-					<span
-						class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
-					></span>
+					<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
 					<span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500"></span>
 				</span>
 				<span class="text-green-600">Live</span>
-			{:else}
-				<span class="h-2.5 w-2.5 rounded-full bg-gray-300"></span>
-				<span class="text-muted-foreground">Connecting…</span>
-			{/if}
+			</div>
 		</div>
-	</div>
 
-	<div class="mb-8 rounded-xl border bg-card p-4 backdrop-blur-sm">
-		<h2 class="font-semibold mb-2">Tracking Script</h2>
-		<p class="text-sm text-muted-foreground mb-2">Add this to your website's &lt;head&gt;:</p>
-		<div class="relative group">
-			<pre
-				class="rounded bg-muted p-3 pr-12 text-xs overflow-x-auto"
-				>&lt;script defer src="{page.url.origin}/s.js?v=4"&gt;&lt;/script&gt;</pre
-			>
-			<button
-				onclick={copySnippet}
-				class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-background/80 transition-colors"
-				aria-label="Copy tracking script"
-			>
-				{#if copied}
-					<Check class="h-4 w-4 text-green-500" />
-				{:else}
-					<Copy class="h-4 w-4" />
-				{/if}
-			</button>
-		</div>
-	</div>
-
-	{#if overview}
 		<div class="mb-2 flex flex-wrap gap-2">
 			{#each ranges as r}
 				<button
@@ -390,22 +281,6 @@
 				</button>
 			{/each}
 		</div>
-
-		{#if selectedRange === 'custom'}
-			<div class="mb-4 flex items-center gap-2">
-				<input
-					type="date"
-					bind:value={customFrom}
-					class="rounded-md border bg-background px-3 py-1.5 text-sm"
-				/>
-				<span class="text-muted-foreground text-sm">to</span>
-				<input
-					type="date"
-					bind:value={customTo}
-					class="rounded-md border bg-background px-3 py-1.5 text-sm"
-				/>
-			</div>
-		{/if}
 
 		<p class="mb-6 text-sm text-muted-foreground">{dateRangeLabel()}</p>
 
@@ -729,5 +604,9 @@
 			{/if}
 		</div>
 
-	{/if}
+		<div class="flex items-center justify-center py-6 text-xs text-muted-foreground">
+			<Icon icon="solar:chart-square-linear" class="mr-1.5 h-3.5 w-3.5" />
+			Powered by Vision
+		</div>
+	</div>
 {/if}

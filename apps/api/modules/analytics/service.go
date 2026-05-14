@@ -172,6 +172,52 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		return nil, errors.Internal("failed to count previous visitors", err)
 	}
 
+	var totalSessions int64
+	s.orm.WithContext(ctx).Table("visitor_sessions").
+		Where("site_id = ? AND started_at >= ? AND started_at <= ?", siteID, from, to).
+		Count(&totalSessions)
+
+	var bounceSessions int64
+	s.orm.WithContext(ctx).Table("visitor_sessions").
+		Where("site_id = ? AND started_at >= ? AND started_at <= ? AND is_bounce = ?", siteID, from, to, true).
+		Count(&bounceSessions)
+
+	var bounceRate float64
+	if totalSessions > 0 {
+		bounceRate = float64(bounceSessions) / float64(totalSessions) * 100
+	}
+
+	type SessionAvgs struct {
+		AvgDuration float64
+		AvgPages    float64
+	}
+	var avgs SessionAvgs
+	s.orm.WithContext(ctx).Table("visitor_sessions").
+		Select("COALESCE(AVG(duration), 0) as avg_duration, COALESCE(AVG(pageview_count), 0) as avg_pages").
+		Where("site_id = ? AND started_at >= ? AND started_at <= ?", siteID, from, to).
+		Scan(&avgs)
+
+	var prevTotalSessions int64
+	s.orm.WithContext(ctx).Table("visitor_sessions").
+		Where("site_id = ? AND started_at >= ? AND started_at <= ?", siteID, prevFrom, prevTo).
+		Count(&prevTotalSessions)
+
+	var prevBounceSessions int64
+	s.orm.WithContext(ctx).Table("visitor_sessions").
+		Where("site_id = ? AND started_at >= ? AND started_at <= ? AND is_bounce = ?", siteID, prevFrom, prevTo, true).
+		Count(&prevBounceSessions)
+
+	var prevBounceRate float64
+	if prevTotalSessions > 0 {
+		prevBounceRate = float64(prevBounceSessions) / float64(prevTotalSessions) * 100
+	}
+
+	var prevAvgs SessionAvgs
+	s.orm.WithContext(ctx).Table("visitor_sessions").
+		Select("COALESCE(AVG(duration), 0) as avg_duration, COALESCE(AVG(pageview_count), 0) as avg_pages").
+		Where("site_id = ? AND started_at >= ? AND started_at <= ?", siteID, prevFrom, prevTo).
+		Scan(&prevAvgs)
+
 	if topPages == nil {
 		topPages = []PageStat{}
 	}
@@ -216,8 +262,14 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		TopScreens:           topScreens,
 		UniqueVisitorsPerDay: uniqueVisitorsPerDay,
 		HourlyDistribution:   hourlyDistribution,
-		PrevTotalPageviews:   prevTotalPageviews,
-		PrevUniqueVisitors:   prevUniqueVisitors,
+		PrevTotalPageviews:     prevTotalPageviews,
+		PrevUniqueVisitors:     prevUniqueVisitors,
+		BounceRate:             bounceRate,
+		AvgSessionDuration:     avgs.AvgDuration,
+		PagesPerSession:        avgs.AvgPages,
+		PrevBounceRate:         prevBounceRate,
+		PrevAvgSessionDuration: prevAvgs.AvgDuration,
+		PrevPagesPerSession:    prevAvgs.AvgPages,
 	}, nil
 }
 

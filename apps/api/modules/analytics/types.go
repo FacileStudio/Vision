@@ -13,8 +13,14 @@ type OverviewResponse struct {
 	TopScreens           []ScreenStat   `json:"top_screens"`
 	UniqueVisitorsPerDay []DayStat      `json:"unique_visitors_per_day"`
 	HourlyDistribution   []HourStat    `json:"hourly_distribution"`
-	PrevTotalPageviews   int64          `json:"prev_total_pageviews"`
-	PrevUniqueVisitors   int64          `json:"prev_unique_visitors"`
+	PrevTotalPageviews     int64   `json:"prev_total_pageviews"`
+	PrevUniqueVisitors     int64   `json:"prev_unique_visitors"`
+	BounceRate             float64 `json:"bounce_rate"`
+	AvgSessionDuration     float64 `json:"avg_session_duration"`
+	PagesPerSession        float64 `json:"pages_per_session"`
+	PrevBounceRate         float64 `json:"prev_bounce_rate"`
+	PrevAvgSessionDuration float64 `json:"prev_avg_session_duration"`
+	PrevPagesPerSession    float64 `json:"prev_pages_per_session"`
 }
 
 type PageStat struct {

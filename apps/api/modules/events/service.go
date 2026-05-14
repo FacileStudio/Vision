@@ -5,6 +5,7 @@ import (
 	stderrors "errors"
 	"net/url"
 	"strings"
+	"time"
 
 	"api/internal/errors"
 	"api/schemas"
@@ -82,6 +83,8 @@ func (s *Service) recordPageview(ctx context.Context, site *schemas.Site, req *P
 		return errors.Internal("failed to record pageview", err)
 	}
 
+	s.updateSession(ctx, site.ID, record.VisitorID, record.Path, record.CreatedAt)
+
 	if s.hub != nil {
 		s.hub.Broadcast(PageviewEvent{
 			SiteID:    site.ID,
@@ -94,4 +97,42 @@ func (s *Service) recordPageview(ctx context.Context, site *schemas.Site, req *P
 	}
 
 	return nil
+}
+
+func (s *Service) updateSession(ctx context.Context, siteID int64, visitorID string, path string, timestamp time.Time) {
+	if visitorID == "" {
+		return
+	}
+
+	sessionGap := 30 * time.Minute
+	cutoff := timestamp.Add(-sessionGap)
+
+	var existing schemas.VisitorSession
+	err := s.orm.WithContext(ctx).
+		Where("site_id = ? AND visitor_id = ? AND ended_at >= ?", siteID, visitorID, cutoff).
+		Order("ended_at DESC").
+		First(&existing).Error
+
+	if err == nil {
+		existing.EndedAt = timestamp
+		existing.ExitPath = path
+		existing.PageviewCount++
+		existing.Duration = int(existing.EndedAt.Sub(existing.StartedAt).Seconds())
+		existing.IsBounce = false
+		s.orm.WithContext(ctx).Save(&existing)
+		return
+	}
+
+	session := &schemas.VisitorSession{
+		SiteID:        siteID,
+		VisitorID:     visitorID,
+		StartedAt:     timestamp,
+		EndedAt:       timestamp,
+		EntryPath:     path,
+		ExitPath:      path,
+		PageviewCount: 1,
+		Duration:      0,
+		IsBounce:      true,
+	}
+	s.orm.WithContext(ctx).Create(session)
 }

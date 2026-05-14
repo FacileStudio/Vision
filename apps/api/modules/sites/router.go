@@ -73,5 +73,25 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			}
 			w.WriteHeader(http.StatusNoContent)
 		})
+
+		router.Post("/{id}/share", func(w http.ResponseWriter, request *http.Request) {
+			identity, _ := authcontext.IdentityFromContext(request.Context())
+			resp, err := service.controller.generateShare(request.Context(), identity.UserID, chi.URLParam(request, "id"))
+			if err != nil {
+				httpjson.WriteError(w, err)
+				return
+			}
+			httpjson.WriteJSON(w, http.StatusOK, resp)
+		})
+
+		router.Delete("/{id}/share", func(w http.ResponseWriter, request *http.Request) {
+			identity, _ := authcontext.IdentityFromContext(request.Context())
+			err := service.controller.revokeShare(request.Context(), identity.UserID, chi.URLParam(request, "id"))
+			if err != nil {
+				httpjson.WriteError(w, err)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		})
 	})
 }

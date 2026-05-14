@@ -2,6 +2,8 @@ package sites
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	stderrors "errors"
 	"strconv"
 
@@ -105,13 +107,44 @@ func (s *Service) findOwned(ctx context.Context, ownerID string, siteID string) 
 	return &record, nil
 }
 
+func (s *Service) generateShareToken(ctx context.Context, ownerID string, siteID string) (*SiteResponse, error) {
+	record, err := s.findOwned(ctx, ownerID, siteID)
+	if err != nil {
+		return nil, err
+	}
+
+	token := generateToken()
+	record.ShareToken = &token
+	if err := s.orm.WithContext(ctx).Save(record).Error; err != nil {
+		return nil, errors.Internal("failed to generate share token", err)
+	}
+	return toResponse(record), nil
+}
+
+func (s *Service) revokeShareToken(ctx context.Context, ownerID string, siteID string) error {
+	record, err := s.findOwned(ctx, ownerID, siteID)
+	if err != nil {
+		return err
+	}
+
+	record.ShareToken = nil
+	return s.orm.WithContext(ctx).Save(record).Error
+}
+
+func generateToken() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
 func toResponse(record *schemas.Site) *SiteResponse {
 	return &SiteResponse{
-		ID:        record.ID,
-		Name:      record.Name,
-		Domain:    record.Domain,
-		OwnerID:   record.OwnerID,
-		CreatedAt: record.CreatedAt,
-		UpdatedAt: record.UpdatedAt,
+		ID:         record.ID,
+		Name:       record.Name,
+		Domain:     record.Domain,
+		OwnerID:    record.OwnerID,
+		ShareToken: record.ShareToken,
+		CreatedAt:  record.CreatedAt,
+		UpdatedAt:  record.UpdatedAt,
 	}
 }

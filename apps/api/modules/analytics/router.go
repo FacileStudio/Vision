@@ -10,12 +10,51 @@ import (
 	"api/internal/httpjson"
 	"api/internal/middleware"
 	"api/modules/events"
+	"api/schemas"
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 )
 
 func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveTracker, orm *gorm.DB, authService middleware.Authenticator) {
+	router.Get("/share/{token}", func(w http.ResponseWriter, request *http.Request) {
+		token := chi.URLParam(request, "token")
+
+		var site schemas.Site
+		if err := orm.Where("share_token = ?", token).First(&site).Error; err != nil {
+			httpjson.WriteError(w, errors.NotFound("not found"))
+			return
+		}
+
+		from, to := parseDateRange(request)
+		resp, err := service.Overview(request.Context(), site.ID, from, to)
+		if err != nil {
+			httpjson.WriteError(w, err)
+			return
+		}
+
+		httpjson.WriteJSON(w, http.StatusOK, map[string]interface{}{
+			"site": map[string]interface{}{
+				"name":   site.Name,
+				"domain": site.Domain,
+			},
+			"overview": resp,
+		})
+	})
+
+	router.Get("/share/{token}/realtime", func(w http.ResponseWriter, request *http.Request) {
+		token := chi.URLParam(request, "token")
+
+		var site schemas.Site
+		if err := orm.Where("share_token = ?", token).First(&site).Error; err != nil {
+			httpjson.WriteError(w, errors.NotFound("not found"))
+			return
+		}
+
+		visitors := tracker.Count(site.ID)
+		httpjson.WriteJSON(w, http.StatusOK, map[string]int64{"visitors": visitors})
+	})
+
 	router.Route("/analytics", func(router chi.Router) {
 		router.Use(middleware.RequireAuth(authService))
 

@@ -50,3 +50,11 @@ func (c *Controller) update(ctx context.Context, ownerID string, siteID string, 
 func (c *Controller) delete(ctx context.Context, ownerID string, siteID string) error {
 	return c.service.deleteSite(ctx, ownerID, siteID)
 }
+
+func (c *Controller) generateShare(ctx context.Context, ownerID string, siteID string) (*SiteResponse, error) {
+	return c.service.generateShareToken(ctx, ownerID, siteID)
+}
+
+func (c *Controller) revokeShare(ctx context.Context, ownerID string, siteID string) error {
+	return c.service.revokeShareToken(ctx, ownerID, siteID)
+}
