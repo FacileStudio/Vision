@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { api } from '$lib';
 	import type { Site, AnalyticsOverview } from '$lib';
-	import { AreaChart, BarChart } from 'layerchart';
+	import { LineChart, BarChart } from 'layerchart';
 	import { scaleBand } from 'd3-scale';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Chart from '$lib/components/ui/chart/index.js';
@@ -17,15 +17,15 @@
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 	const pageviewsConfig = {
-		pageviews: { label: 'Pageviews', color: 'var(--chart-1)' }
+		pageviews: { label: 'Pageviews', color: 'var(--foreground)' }
 	} satisfies Chart.ChartConfig;
 
 	const topPagesConfig = {
-		count: { label: 'Views', color: 'var(--chart-2)' }
+		count: { label: 'Views', color: 'var(--foreground)' }
 	} satisfies Chart.ChartConfig;
 
 	const referrersConfig = {
-		count: { label: 'Referrals', color: 'var(--chart-3)' }
+		count: { label: 'Referrals', color: 'var(--foreground)' }
 	} satisfies Chart.ChartConfig;
 
 	function trackingSnippet(): string {
@@ -70,6 +70,14 @@
 
 	let topPagesData = $derived((overview?.top_pages ?? []).slice(0, 8));
 	let topReferrersData = $derived((overview?.top_referrers ?? []).slice(0, 8));
+
+	let browsersData = $derived(overview?.top_browsers ?? []);
+	let osData = $derived(overview?.top_os ?? []);
+	let devicesData = $derived(overview?.top_devices ?? []);
+
+	let maxBrowserCount = $derived(Math.max(...browsersData.map((d) => d.count), 1));
+	let maxOsCount = $derived(Math.max(...osData.map((d) => d.count), 1));
+	let maxDeviceCount = $derived(Math.max(...devicesData.map((d) => d.count), 1));
 </script>
 
 {#if site}
@@ -136,7 +144,7 @@
 				</Card.Header>
 				<Card.Content>
 					<Chart.Container config={pageviewsConfig} class="min-h-[300px] w-full">
-						<AreaChart
+						<LineChart
 							data={pageviewChartData}
 							x="date"
 							xScale={scaleBand().padding(0.25)}
@@ -145,7 +153,7 @@
 								{
 									key: 'pageviews',
 									label: 'Pageviews',
-									color: 'var(--chart-1)'
+									color: 'var(--foreground)'
 								}
 							]}
 							props={{
@@ -160,7 +168,7 @@
 							{#snippet tooltip()}
 								<Chart.Tooltip />
 							{/snippet}
-						</AreaChart>
+						</LineChart>
 					</Chart.Container>
 				</Card.Content>
 			</Card.Root>
@@ -176,6 +184,80 @@
 				</Card.Content>
 			</Card.Root>
 		{/if}
+
+		<div class="grid gap-4 grid-cols-1 md:grid-cols-3 mb-8">
+			{#if browsersData.length > 0}
+				<Card.Root>
+					<Card.Header>
+						<Card.Title>Browsers</Card.Title>
+					</Card.Header>
+					<Card.Content>
+						<div class="space-y-1">
+							{#each browsersData as item}
+								<div class="relative">
+									<div
+										class="absolute inset-y-0 left-0 rounded bg-muted"
+										style="width: {(item.count / maxBrowserCount) * 100}%"
+									></div>
+									<div class="relative flex justify-between px-3 py-1.5 text-sm">
+										<span>{item.browser}</span>
+										<span class="text-muted-foreground tabular-nums">{item.count}</span>
+									</div>
+								</div>
+							{/each}
+						</div>
+					</Card.Content>
+				</Card.Root>
+			{/if}
+
+			{#if osData.length > 0}
+				<Card.Root>
+					<Card.Header>
+						<Card.Title>Operating Systems</Card.Title>
+					</Card.Header>
+					<Card.Content>
+						<div class="space-y-1">
+							{#each osData as item}
+								<div class="relative">
+									<div
+										class="absolute inset-y-0 left-0 rounded bg-muted"
+										style="width: {(item.count / maxOsCount) * 100}%"
+									></div>
+									<div class="relative flex justify-between px-3 py-1.5 text-sm">
+										<span>{item.os}</span>
+										<span class="text-muted-foreground tabular-nums">{item.count}</span>
+									</div>
+								</div>
+							{/each}
+						</div>
+					</Card.Content>
+				</Card.Root>
+			{/if}
+
+			{#if devicesData.length > 0}
+				<Card.Root>
+					<Card.Header>
+						<Card.Title>Devices</Card.Title>
+					</Card.Header>
+					<Card.Content>
+						<div class="space-y-1">
+							{#each devicesData as item}
+								<div class="relative">
+									<div
+										class="absolute inset-y-0 left-0 rounded bg-muted"
+										style="width: {(item.count / maxDeviceCount) * 100}%"
+									></div>
+									<div class="relative flex justify-between px-3 py-1.5 text-sm">
+										<span>{item.device}</span>
+										<span class="text-muted-foreground tabular-nums">{item.count}</span>
+									</div>
+								</div>
+							{/each}
+						</div>
+					</Card.Content>
+				</Card.Root>
+			{/if}
+		</div>
 
 		<div class="grid gap-4 md:grid-cols-2 mb-8">
 			{#if topPagesData.length > 0}
@@ -196,7 +278,7 @@
 									{
 										key: 'count',
 										label: 'Views',
-										color: 'var(--chart-2)'
+										color: 'var(--foreground)'
 									}
 								]}
 							>
@@ -227,7 +309,7 @@
 									{
 										key: 'count',
 										label: 'Referrals',
-										color: 'var(--chart-3)'
+										color: 'var(--foreground)'
 									}
 								]}
 							>

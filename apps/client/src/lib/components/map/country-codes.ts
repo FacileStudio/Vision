@@ -31,6 +31,58 @@ const alpha2ToNumeric: Record<string, string> = {
 	GF: '254', RE: '638', HK: '344', MO: '446'
 };
 
+const numericToAlpha2: Record<string, string> = {};
+for (const [a2, num] of Object.entries(alpha2ToNumeric)) {
+	numericToAlpha2[num] = a2;
+}
+
+const countryNames: Record<string, string> = {
+	AF: 'Afghanistan', AL: 'Albania', DZ: 'Algeria', AD: 'Andorra', AO: 'Angola',
+	AG: 'Antigua and Barbuda', AR: 'Argentina', AM: 'Armenia', AU: 'Australia',
+	AT: 'Austria', AZ: 'Azerbaijan', BS: 'Bahamas', BH: 'Bahrain', BD: 'Bangladesh',
+	BB: 'Barbados', BY: 'Belarus', BE: 'Belgium', BZ: 'Belize', BJ: 'Benin',
+	BT: 'Bhutan', BO: 'Bolivia', BA: 'Bosnia', BW: 'Botswana', BR: 'Brazil',
+	BN: 'Brunei', BG: 'Bulgaria', BF: 'Burkina Faso', BI: 'Burundi', KH: 'Cambodia',
+	CM: 'Cameroon', CA: 'Canada', CF: 'Central African Republic', TD: 'Chad',
+	CL: 'Chile', CN: 'China', CO: 'Colombia', CD: 'DR Congo', CG: 'Congo',
+	CR: 'Costa Rica', CI: "Cote d'Ivoire", HR: 'Croatia', CU: 'Cuba', CY: 'Cyprus',
+	CZ: 'Czechia', DK: 'Denmark', DJ: 'Djibouti', DM: 'Dominica', DO: 'Dominican Republic',
+	EC: 'Ecuador', EG: 'Egypt', SV: 'El Salvador', GQ: 'Equatorial Guinea', ER: 'Eritrea',
+	EE: 'Estonia', SZ: 'Eswatini', ET: 'Ethiopia', FJ: 'Fiji', FI: 'Finland',
+	FR: 'France', GA: 'Gabon', GM: 'Gambia', GE: 'Georgia', DE: 'Germany',
+	GH: 'Ghana', GR: 'Greece', GD: 'Grenada', GT: 'Guatemala', GN: 'Guinea',
+	GY: 'Guyana', HT: 'Haiti', HN: 'Honduras', HU: 'Hungary', IS: 'Iceland',
+	IN: 'India', ID: 'Indonesia', IR: 'Iran', IQ: 'Iraq', IE: 'Ireland',
+	IL: 'Israel', IT: 'Italy', JM: 'Jamaica', JP: 'Japan', JO: 'Jordan',
+	KZ: 'Kazakhstan', KE: 'Kenya', KR: 'South Korea', KW: 'Kuwait', KG: 'Kyrgyzstan',
+	LA: 'Laos', LV: 'Latvia', LB: 'Lebanon', LS: 'Lesotho', LR: 'Liberia',
+	LY: 'Libya', LT: 'Lithuania', LU: 'Luxembourg', MG: 'Madagascar', MW: 'Malawi',
+	MY: 'Malaysia', ML: 'Mali', MT: 'Malta', MR: 'Mauritania', MU: 'Mauritius',
+	MX: 'Mexico', MD: 'Moldova', MN: 'Mongolia', ME: 'Montenegro', MA: 'Morocco',
+	MZ: 'Mozambique', MM: 'Myanmar', NA: 'Namibia', NP: 'Nepal', NL: 'Netherlands',
+	NZ: 'New Zealand', NI: 'Nicaragua', NE: 'Niger', NG: 'Nigeria', MK: 'North Macedonia',
+	NO: 'Norway', OM: 'Oman', PK: 'Pakistan', PA: 'Panama', PG: 'Papua New Guinea',
+	PY: 'Paraguay', PE: 'Peru', PH: 'Philippines', PL: 'Poland', PT: 'Portugal',
+	QA: 'Qatar', RO: 'Romania', RU: 'Russia', RW: 'Rwanda', SA: 'Saudi Arabia',
+	SN: 'Senegal', RS: 'Serbia', SG: 'Singapore', SK: 'Slovakia', SI: 'Slovenia',
+	SO: 'Somalia', ZA: 'South Africa', SS: 'South Sudan', ES: 'Spain', LK: 'Sri Lanka',
+	SD: 'Sudan', SR: 'Suriname', SE: 'Sweden', CH: 'Switzerland', SY: 'Syria',
+	TW: 'Taiwan', TJ: 'Tajikistan', TZ: 'Tanzania', TH: 'Thailand', TG: 'Togo',
+	TT: 'Trinidad and Tobago', TN: 'Tunisia', TR: 'Turkey', TM: 'Turkmenistan',
+	UG: 'Uganda', UA: 'Ukraine', AE: 'UAE', GB: 'United Kingdom', US: 'United States',
+	UY: 'Uruguay', UZ: 'Uzbekistan', VE: 'Venezuela', VN: 'Vietnam', YE: 'Yemen',
+	ZM: 'Zambia', ZW: 'Zimbabwe', XK: 'Kosovo', PS: 'Palestine', HK: 'Hong Kong',
+	MO: 'Macau', PR: 'Puerto Rico', GL: 'Greenland'
+};
+
 export function getNumericCode(alpha2: string): string | undefined {
 	return alpha2ToNumeric[alpha2.toUpperCase()];
+}
+
+export function getAlpha2FromNumeric(numeric: string): string | undefined {
+	return numericToAlpha2[numeric];
+}
+
+export function getCountryName(alpha2: string): string {
+	return countryNames[alpha2.toUpperCase()] ?? alpha2.toUpperCase();
 }
