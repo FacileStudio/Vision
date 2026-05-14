@@ -7,6 +7,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return resolve(event);
 	}
 
+	if (event.url.pathname === '/t.js') {
+		const res = await fetch(`${API_URL}/t.js`);
+		return new Response(res.body, {
+			status: res.status,
+			headers: {
+				'Content-Type': 'application/javascript',
+				'Cache-Control': 'public, max-age=86400',
+				'Access-Control-Allow-Origin': '*'
+			}
+		});
+	}
+
 	if (event.url.pathname.startsWith('/api/')) {
 		const path = event.url.pathname.slice(4);
 		const url = `${API_URL}${path}${event.url.search}`;

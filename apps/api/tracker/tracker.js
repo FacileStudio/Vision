@@ -1,6 +1,6 @@
 (function () {
   var src = document.currentScript.src;
-  var apiUrl = src.replace(/\/t\.js.*$/, "");
+  var apiUrl = src.replace(/\/t\.js.*$/, "/api");
 
   function visitorId() {
     var key = "_vs_id";
