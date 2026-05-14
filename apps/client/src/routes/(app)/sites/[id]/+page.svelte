@@ -170,16 +170,6 @@
 		count: { label: 'Pageviews', color: 'var(--chart-1)' }
 	} satisfies Chart.ChartConfig;
 
-	function sparklinePath(data: { count: number }[], width: number, height: number): string {
-		if (data.length < 2) return '';
-		const max = Math.max(...data.map((d) => d.count), 1);
-		const points = data.map((d, i) => {
-			const x = (i / (data.length - 1)) * width;
-			const y = height - (d.count / max) * height;
-			return `${x},${y}`;
-		});
-		return points.join(' ');
-	}
 
 	function trackingSnippet(): string {
 		return `<script defer src="${page.url.origin}/s.js?v=4"><\/script>`;
@@ -446,37 +436,11 @@
 			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
 				<p class="text-sm text-muted-foreground">Total Pageviews</p>
 				<p class="text-3xl font-bold">{fmt(overview.total_pageviews)}</p>
-				{#if (overview.pageviews_per_day?.length ?? 0) > 1}
-					<svg class="w-full h-10 mt-2 opacity-40" viewBox="0 0 100 24" preserveAspectRatio="none">
-						<polyline
-							points={sparklinePath(overview.pageviews_per_day ?? [], 100, 24)}
-							fill="none"
-							stroke="var(--chart-1)"
-							stroke-width="1.5"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							opacity="0.6"
-						/>
-					</svg>
-				{/if}
 				<p class="text-xs {pageviewsTrend.color}">{pageviewsTrend.text}</p>
 			</div>
 			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
 				<p class="text-sm text-muted-foreground">Unique Visitors</p>
 				<p class="text-3xl font-bold">{fmt(overview.unique_visitors)}</p>
-				{#if (overview.unique_visitors_per_day?.length ?? 0) > 1}
-					<svg class="w-full h-10 mt-2 opacity-40" viewBox="0 0 100 24" preserveAspectRatio="none">
-						<polyline
-							points={sparklinePath(overview.unique_visitors_per_day ?? [], 100, 24)}
-							fill="none"
-							stroke="var(--chart-2)"
-							stroke-width="1.5"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							opacity="0.6"
-						/>
-					</svg>
-				{/if}
 				<p class="text-xs {visitorsTrend.color}">{visitorsTrend.text}</p>
 			</div>
 			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
