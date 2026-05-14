@@ -15,6 +15,14 @@ import (
 	"gorm.io/gorm"
 )
 
+var pixel = []byte{
+	0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00,
+	0x80, 0x00, 0x00, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x21,
+	0xf9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00,
+	0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44,
+	0x01, 0x00, 0x3b,
+}
+
 func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService middleware.Authenticator, orm *gorm.DB) {
 	router.Route("/event", func(router chi.Router) {
 		router.Post("/pageview", func(w http.ResponseWriter, request *http.Request) {
@@ -45,9 +53,40 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService m
 			httpjson.WriteJSON(w, http.StatusNoContent, nil)
 		})
 
+		router.Get("/pageview", func(w http.ResponseWriter, request *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Cache-Control", "no-cache, no-store")
+
+			dataParam := request.URL.Query().Get("data")
+			if dataParam == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			referer := request.Header.Get("Referer")
+			site, err := service.resolveSiteByOrigin(request.Context(), "", referer)
+			if err != nil {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+
+			var req PageviewRequest
+			if err := json.Unmarshal([]byte(dataParam), &req); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			userAgent := request.UserAgent()
+			country := request.Header.Get("CF-IPCountry")
+			_ = service.recordPageview(request.Context(), site, &req, userAgent, country)
+
+			w.Header().Set("Content-Type", "image/gif")
+			w.Write(pixel)
+		})
+
 		router.Options("/pageview", func(w http.ResponseWriter, request *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 			w.Header().Set("Access-Control-Max-Age", "86400")
 			w.WriteHeader(http.StatusNoContent)

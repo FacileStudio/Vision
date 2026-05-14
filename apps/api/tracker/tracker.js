@@ -12,21 +12,25 @@
   }
 
   function send(path) {
-    var body = JSON.stringify({
+    var data = {
       path: path || location.pathname,
       referrer: document.referrer || "",
       language: navigator.language || "",
       visitor_id: visitorId()
-    });
+    };
+    var url = apiUrl + "/event/pageview";
+    var body = JSON.stringify(data);
 
-    if (navigator.sendBeacon) {
-      var blob = new Blob([body], { type: "text/plain" });
-      navigator.sendBeacon(apiUrl + "/event/pageview", blob);
-    } else {
-      var xhr = new XMLHttpRequest();
-      xhr.open("POST", apiUrl + "/event/pageview");
-      xhr.setRequestHeader("Content-Type", "text/plain");
-      xhr.send(body);
+    try {
+      fetch(url, {
+        method: "POST",
+        body: body,
+        mode: "no-cors",
+        keepalive: true,
+        headers: { "Content-Type": "text/plain" }
+      });
+    } catch (e) {
+      new Image().src = url + "?data=" + encodeURIComponent(body);
     }
   }
 
