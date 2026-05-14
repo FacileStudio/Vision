@@ -19,7 +19,7 @@ COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 
 ENV PORT=3000
-ENV API_URL=http://api:4000
+ENV API_URL=http://vision-api:4000
 
 EXPOSE 3000
 
