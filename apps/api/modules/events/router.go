@@ -63,16 +63,19 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, authService m
 				return
 			}
 
-			referer := request.Header.Get("Referer")
-			site, err := service.resolveSiteByOrigin(request.Context(), "", referer)
-			if err != nil {
-				w.WriteHeader(http.StatusForbidden)
-				return
-			}
-
 			var req PageviewRequest
 			if err := json.Unmarshal([]byte(dataParam), &req); err != nil {
 				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			origin := req.Hostname
+			if origin == "" {
+				origin = extractHost(request.Header.Get("Referer"))
+			}
+			site, err := service.resolveSiteByOrigin(request.Context(), "", "https://"+origin)
+			if err != nil {
+				w.WriteHeader(http.StatusForbidden)
 				return
 			}
 

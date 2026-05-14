@@ -12,6 +12,7 @@
 
   function send(path) {
     var data = {
+      hostname: location.hostname,
       path: path || location.pathname,
       referrer: document.referrer || "",
       language: navigator.language || "",
