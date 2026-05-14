@@ -300,7 +300,7 @@
 		</div>
 	</div>
 
-	<div class="mb-8 rounded-lg border p-4">
+	<div class="mb-8 rounded-xl border bg-card p-4 backdrop-blur-sm">
 		<h2 class="font-semibold mb-2">Tracking Script</h2>
 		<p class="text-sm text-muted-foreground mb-2">Add this to your website's &lt;head&gt;:</p>
 		<div class="relative group">
@@ -355,27 +355,27 @@
 		<p class="mb-6 text-sm text-muted-foreground">{dateRangeLabel()}</p>
 
 		<div class="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-5 mb-8">
-			<div class="rounded-lg border p-4">
+			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
 				<p class="text-sm text-muted-foreground">Total Pageviews</p>
 				<p class="text-3xl font-bold">{overview.total_pageviews.toLocaleString()}</p>
 				<p class="text-xs {pageviewsTrend.color}">{pageviewsTrend.text}</p>
 			</div>
-			<div class="rounded-lg border p-4">
+			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
 				<p class="text-sm text-muted-foreground">Unique Visitors</p>
 				<p class="text-3xl font-bold">{overview.unique_visitors.toLocaleString()}</p>
 				<p class="text-xs {visitorsTrend.color}">{visitorsTrend.text}</p>
 			</div>
-			<div class="rounded-lg border p-4">
+			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
 				<p class="text-sm text-muted-foreground">Views / Visitor</p>
 				<p class="text-3xl font-bold">{viewsPerVisitor().toFixed(1)}</p>
 				<p class="text-xs {vpvTrend.color}">{vpvTrend.text}</p>
 			</div>
-			<div class="rounded-lg border p-4">
+			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
 				<p class="text-sm text-muted-foreground">Bounce Rate</p>
 				<p class="text-3xl font-bold">—</p>
 				<p class="text-xs text-muted-foreground">Requires session tracking</p>
 			</div>
-			<div class="rounded-lg border p-4">
+			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
 				<p class="text-sm text-muted-foreground">Active Now</p>
 				<div class="flex items-center gap-2">
 					<span class="relative flex h-2 w-2">
@@ -513,9 +513,9 @@
 			</Card.Root>
 		{/if}
 
-		<div class="grid gap-4 md:grid-cols-2 mb-8">
+		<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
 			{#if topPagesData.length > 0}
-				<Card.Root>
+				<Card.Root class="lg:col-span-2">
 					<Card.Header>
 						<Card.Title>Top Pages</Card.Title>
 					</Card.Header>
@@ -524,7 +524,7 @@
 							{#each topPagesData as item}
 								<div class="relative">
 									<div
-										class="absolute inset-y-0 left-0 rounded bg-muted"
+										class="absolute inset-y-0 left-0 rounded bg-muted/50"
 										style="width: {(item.count / maxPageCount) * 100}%"
 									></div>
 									<div class="relative flex justify-between px-3 py-1.5 text-sm">
@@ -538,35 +538,6 @@
 				</Card.Root>
 			{/if}
 
-			{#if topReferrersData.length > 0}
-				<Card.Root>
-					<Card.Header>
-						<Card.Title>Top Referrers</Card.Title>
-					</Card.Header>
-					<Card.Content>
-						<div class="space-y-1">
-							{#each topReferrersData as item}
-								<div class="relative">
-									<div
-										class="absolute inset-y-0 left-0 rounded bg-muted"
-										style="width: {(item.count / maxReferrerCount) * 100}%"
-									></div>
-									<div class="relative flex items-center justify-between px-3 py-1.5 text-sm">
-										<span class="flex items-center gap-2 truncate mr-2">
-											<img src="https://www.google.com/s2/favicons?domain={item.referrer}&sz=16" alt="" class="h-4 w-4 shrink-0" />
-											{item.referrer}
-										</span>
-										<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
-									</div>
-								</div>
-							{/each}
-						</div>
-					</Card.Content>
-				</Card.Root>
-			{/if}
-		</div>
-
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 			{#if devicesData.length > 0}
 				<Card.Root>
 					<Card.Header>
@@ -590,6 +561,33 @@
 									<span class="h-2.5 w-2.5 rounded-full shrink-0" style="background: {item.color}"></span>
 									<span class="truncate">{item.label}</span>
 									<span class="text-muted-foreground tabular-nums ml-auto">{item.value}</span>
+								</div>
+							{/each}
+						</div>
+					</Card.Content>
+				</Card.Root>
+			{/if}
+
+			{#if topReferrersData.length > 0}
+				<Card.Root class="lg:col-span-2">
+					<Card.Header>
+						<Card.Title>Top Referrers</Card.Title>
+					</Card.Header>
+					<Card.Content>
+						<div class="space-y-1">
+							{#each topReferrersData as item}
+								<div class="relative">
+									<div
+										class="absolute inset-y-0 left-0 rounded bg-muted/50"
+										style="width: {(item.count / maxReferrerCount) * 100}%"
+									></div>
+									<div class="relative flex items-center justify-between px-3 py-1.5 text-sm">
+										<span class="flex items-center gap-2 truncate mr-2">
+											<img src="https://www.google.com/s2/favicons?domain={item.referrer}&sz=16" alt="" class="h-4 w-4 shrink-0" />
+											{item.referrer}
+										</span>
+										<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
+									</div>
 								</div>
 							{/each}
 						</div>
@@ -637,7 +635,7 @@
 							{#each browsersData as item}
 								<div class="relative">
 									<div
-										class="absolute inset-y-0 left-0 rounded bg-muted"
+										class="absolute inset-y-0 left-0 rounded bg-muted/50"
 										style="width: {(item.count / maxBrowserCount) * 100}%"
 									></div>
 									<div class="relative flex justify-between px-3 py-1.5 text-sm">
@@ -652,7 +650,7 @@
 			{/if}
 
 			{#if osData.length > 0}
-				<Card.Root>
+				<Card.Root class="lg:col-span-2">
 					<Card.Header>
 						<Card.Title>Operating Systems</Card.Title>
 					</Card.Header>
@@ -661,7 +659,7 @@
 							{#each osData as item}
 								<div class="relative">
 									<div
-										class="absolute inset-y-0 left-0 rounded bg-muted"
+										class="absolute inset-y-0 left-0 rounded bg-muted/50"
 										style="width: {(item.count / maxOsCount) * 100}%"
 									></div>
 									<div class="relative flex justify-between px-3 py-1.5 text-sm">
