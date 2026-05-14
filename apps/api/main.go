@@ -20,6 +20,7 @@ import (
 	"api/modules/auth"
 	"api/modules/events"
 	"api/modules/sites"
+	"api/modules/webhooks"
 	"api/schemas"
 
 	"github.com/go-chi/chi/v5"
@@ -99,6 +100,10 @@ func main() {
 	sites.RegisterRoutes(router, siteService, authService)
 	events.RegisterRoutes(router, eventService, eventHub, activeTracker, authService, db)
 	analytics.RegisterRoutes(router, analyticsService, activeTracker, db, authService)
+
+	webhookService := webhooks.NewService(db)
+	webhooks.RegisterRoutes(router, webhookService, analyticsService, authService)
+	webhooks.StartScheduler(db, analyticsService)
 
 	addr := ":" + appEnv.Port
 	server := &http.Server{

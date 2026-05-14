@@ -36,7 +36,7 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 			}
 
 			from, to := parseDateRange(request)
-			resp, err := service.overview(request.Context(), siteID, from, to)
+			resp, err := service.Overview(request.Context(), siteID, from, to)
 			if err != nil {
 				httpjson.WriteError(w, err)
 				return

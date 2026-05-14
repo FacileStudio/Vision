@@ -61,7 +61,14 @@ export const api = {
 		create: (name: string, domain: string) => request<Site>('POST', '/sites', { name, domain }),
 		update: (id: number, name: string, domain: string) =>
 			request<Site>('PUT', `/sites/${id}`, { name, domain }),
-		delete: (id: number) => request<void>('DELETE', `/sites/${id}`)
+		delete: (id: number) => request<void>('DELETE', `/sites/${id}`),
+		webhooks: {
+			list: (siteId: number) => request<Webhook[]>('GET', `/sites/${siteId}/webhooks`),
+			create: (siteId: number, data: CreateWebhookRequest) => request<Webhook>('POST', `/sites/${siteId}/webhooks`, data),
+			update: (siteId: number, id: number, data: UpdateWebhookRequest) => request<Webhook>('PUT', `/sites/${siteId}/webhooks/${id}`, data),
+			delete: (siteId: number, id: number) => request<void>('DELETE', `/sites/${siteId}/webhooks/${id}`),
+			test: (siteId: number, id: number) => request<void>('POST', `/sites/${siteId}/webhooks/${id}/test`)
+		}
 	},
 	analytics: {
 		overview: (siteId: number, from?: string, to?: string) => {
@@ -93,6 +100,30 @@ export interface Site {
 	owner_id: number;
 	created_at: string;
 	updated_at: string;
+}
+
+export interface Webhook {
+	id: number;
+	site_id: number;
+	url: string;
+	period: string;
+	enabled: boolean;
+	last_sent_at: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateWebhookRequest {
+	url: string;
+	secret: string;
+	period: string;
+}
+
+export interface UpdateWebhookRequest {
+	url: string;
+	secret: string;
+	period: string;
+	enabled: boolean;
 }
 
 export interface AnalyticsOverview {

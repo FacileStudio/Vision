@@ -17,7 +17,7 @@ func NewService(orm *gorm.DB) *Service {
 	return &Service{orm: orm}
 }
 
-func (s *Service) overview(ctx context.Context, siteID int64, from time.Time, to time.Time) (*OverviewResponse, error) {
+func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to time.Time) (*OverviewResponse, error) {
 	var totalPageviews int64
 	if err := s.orm.WithContext(ctx).
 		Table("pageviews").
