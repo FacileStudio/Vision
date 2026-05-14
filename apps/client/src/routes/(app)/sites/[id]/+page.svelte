@@ -29,7 +29,7 @@
 	} satisfies Chart.ChartConfig;
 
 	function trackingSnippet(): string {
-		return `<script defer src="${page.url.origin}/s.js"><\/script>`;
+		return `<script defer src="${page.url.origin}/s.js?v=4"><\/script>`;
 	}
 
 	async function copySnippet() {
@@ -108,7 +108,7 @@
 		<div class="relative group">
 			<pre
 				class="rounded bg-muted p-3 pr-12 text-xs overflow-x-auto"
-				>&lt;script defer src="{page.url.origin}/s.js"&gt;&lt;/script&gt;</pre
+				>&lt;script defer src="{page.url.origin}/s.js?v=4"&gt;&lt;/script&gt;</pre
 			>
 			<button
 				onclick={copySnippet}
