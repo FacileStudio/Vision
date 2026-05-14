@@ -7,9 +7,20 @@ export const handle: Handle = async ({ event, resolve }) => {
 		const path = event.url.pathname.slice(4);
 		const url = `${API_URL}${path}${event.url.search}`;
 
+		const headers = new Headers();
+		for (const [key, value] of event.request.headers.entries()) {
+			if (key === 'host') continue;
+			headers.set(key, value);
+		}
+
+		const cookieHeader = event.request.headers.get('cookie');
+		if (cookieHeader) {
+			headers.set('cookie', cookieHeader);
+		}
+
 		const res = await fetch(url, {
 			method: event.request.method,
-			headers: event.request.headers,
+			headers,
 			body: event.request.method !== 'GET' && event.request.method !== 'HEAD'
 				? event.request.body
 				: undefined,
@@ -18,10 +29,22 @@ export const handle: Handle = async ({ event, resolve }) => {
 			duplex: 'half'
 		});
 
+		const responseHeaders = new Headers();
+		for (const [key, value] of res.headers.entries()) {
+			responseHeaders.append(key, value);
+		}
+		const setCookies = res.headers.getSetCookie?.();
+		if (setCookies) {
+			responseHeaders.delete('set-cookie');
+			for (const cookie of setCookies) {
+				responseHeaders.append('set-cookie', cookie);
+			}
+		}
+
 		return new Response(res.body, {
 			status: res.status,
 			statusText: res.statusText,
-			headers: res.headers
+			headers: responseHeaders
 		});
 	}
 
