@@ -66,8 +66,57 @@
     }
   }
 
+  function getPerformance() {
+    try {
+      var nav = performance.getEntriesByType('navigation')[0];
+      if (!nav) return null;
+      return {
+        dns: Math.round(nav.domainLookupEnd - nav.domainLookupStart),
+        tcp: Math.round(nav.connectEnd - nav.connectStart),
+        ttfb: Math.round(nav.responseStart - nav.requestStart),
+        dom_load: Math.round(nav.domContentLoadedEventEnd - nav.startTime),
+        page_load: Math.round(nav.loadEventEnd - nav.startTime)
+      };
+    } catch (e) { return null; }
+  }
+
+  function sendPerformance() {
+    var perf = getPerformance();
+    if (!perf || perf.page_load <= 0) return;
+    var data = {
+      hostname: location.hostname,
+      path: location.pathname,
+      visitor_id: visitorId(),
+      performance: perf
+    };
+    var img = new Image();
+    img.src = endpoint + "?data=" + encodeURIComponent(JSON.stringify(data)) + "&type=perf";
+  }
+
+  window.vision = {
+    track: function (name, props) {
+      var data = {
+        hostname: location.hostname,
+        path: location.pathname,
+        visitor_id: visitorId(),
+        event_name: name,
+        event_props: props || {}
+      };
+      var img = new Image();
+      img.src = endpoint.replace('/e/p', '/e/t') + "?data=" + encodeURIComponent(JSON.stringify(data));
+    }
+  };
+
   send();
   startHeartbeat();
+
+  if (document.readyState === 'complete') {
+    setTimeout(sendPerformance, 100);
+  } else {
+    window.addEventListener('load', function () {
+      setTimeout(sendPerformance, 100);
+    });
+  }
 
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) {

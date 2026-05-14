@@ -73,11 +73,16 @@ export const api = {
 		test: (id: number) => request<void>('POST', `/webhooks/${id}/test`)
 	},
 	analytics: {
-		overview: (siteId: number, from?: string, to?: string, granularity?: string) => {
+		overview: (siteId: number, from?: string, to?: string, granularity?: string, filters?: Record<string, string>) => {
 			const params = new URLSearchParams();
 			if (from) params.set('from', from);
 			if (to) params.set('to', to);
 			if (granularity) params.set('granularity', granularity);
+			if (filters) {
+				for (const [k, v] of Object.entries(filters)) {
+					if (v) params.set(k, v);
+				}
+			}
 			const qs = params.toString();
 			return request<AnalyticsOverview>('GET', `/analytics/${siteId}/overview${qs ? `?${qs}` : ''}`);
 		},
@@ -167,6 +172,15 @@ export interface AnalyticsOverview {
 	prev_pageviews_per_day: { date: string; count: number }[];
 	prev_unique_visitors_per_day: { date: string; count: number }[];
 	hourly_distribution: { hour: number; count: number }[];
+	performance: {
+		avg_dns: number;
+		avg_tcp: number;
+		avg_ttfb: number;
+		avg_dom_load: number;
+		avg_page_load: number;
+		sample_count: number;
+	} | null;
+	top_events: { name: string; count: number }[];
 	bounce_rate: number;
 	avg_session_duration: number;
 	pages_per_session: number;

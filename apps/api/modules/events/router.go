@@ -70,6 +70,22 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, tracker *Acti
 				return
 			}
 
+			if request.URL.Query().Get("type") == "perf" {
+				host := req.Hostname
+				if host == "" {
+					host = extractHost(request.Header.Get("Referer"))
+				}
+				if host != "" {
+					site, err := service.resolveSiteByOrigin(request.Context(), "", "https://"+host)
+					if err == nil {
+						service.updatePerformance(request.Context(), site, req.VisitorID, req.Path, req.Performance)
+					}
+				}
+				w.Header().Set("Content-Type", "image/gif")
+				w.Write(pixel)
+				return
+			}
+
 			origin := req.Hostname
 			if origin == "" {
 				origin = extractHost(request.Header.Get("Referer"))
@@ -84,6 +100,39 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, tracker *Acti
 			country := request.Header.Get("CF-IPCountry")
 			_ = service.recordPageview(request.Context(), site, &req, userAgent, country)
 			tracker.Touch(site.ID, req.VisitorID)
+
+			w.Header().Set("Content-Type", "image/gif")
+			w.Write(pixel)
+		})
+
+		router.Get("/t", func(w http.ResponseWriter, request *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Cache-Control", "no-cache, no-store")
+
+			dataParam := request.URL.Query().Get("data")
+			if dataParam == "" {
+				w.Header().Set("Content-Type", "image/gif")
+				w.Write(pixel)
+				return
+			}
+
+			var req CustomEventRequest
+			if err := json.Unmarshal([]byte(dataParam), &req); err != nil {
+				w.Header().Set("Content-Type", "image/gif")
+				w.Write(pixel)
+				return
+			}
+
+			host := req.Hostname
+			if host == "" {
+				host = extractHost(request.Header.Get("Referer"))
+			}
+			if host != "" {
+				site, err := service.resolveSiteByOrigin(request.Context(), "", "https://"+host)
+				if err == nil {
+					_ = service.recordCustomEvent(request.Context(), site, &req)
+				}
+			}
 
 			w.Header().Set("Content-Type", "image/gif")
 			w.Write(pixel)

@@ -35,6 +35,24 @@
 		{ key: 'month', label: 'Monthly' }
 	];
 
+	let activeFilters = $state<Record<string, string>>({});
+	let showFilters = $state(false);
+
+	const filterFields = [
+		{ key: 'country', label: 'Country', placeholder: 'e.g. US' },
+		{ key: 'browser', label: 'Browser', placeholder: 'e.g. Chrome' },
+		{ key: 'os', label: 'OS', placeholder: 'e.g. macOS' },
+		{ key: 'device', label: 'Device', placeholder: 'e.g. Desktop' },
+		{ key: 'path', label: 'Path', placeholder: 'e.g. /blog' },
+		{ key: 'referrer', label: 'Referrer', placeholder: 'e.g. google.com' }
+	];
+
+	let activeFilterCount = $derived(Object.values(activeFilters).filter(Boolean).length);
+
+	function clearFilters() {
+		activeFilters = {};
+	}
+
 	const ranges: { key: RangeKey; label: string }[] = [
 		{ key: 'today', label: 'Today' },
 		{ key: 'this_week', label: 'This Week' },
@@ -201,7 +219,7 @@
 	async function refresh(siteId: number) {
 		try {
 			const { from, to } = rangeDates(selectedRange);
-			overview = await api.analytics.overview(siteId, from, to, selectedGranularity);
+			overview = await api.analytics.overview(siteId, from, to, selectedGranularity, activeFilters);
 			live = true;
 		} catch {
 			live = false;
@@ -256,6 +274,7 @@
 		customFrom;
 		customTo;
 		selectedGranularity;
+		activeFilters;
 		const id = Number(page.params.id);
 		if (id && site) refresh(id);
 	});
@@ -307,6 +326,7 @@
 	let maxUTMSourceCount = $derived(Math.max(...(overview?.top_utm_sources ?? []).map((d) => d.count), 1));
 	let maxUTMMediumCount = $derived(Math.max(...(overview?.top_utm_mediums ?? []).map((d) => d.count), 1));
 	let maxUTMCampaignCount = $derived(Math.max(...(overview?.top_utm_campaigns ?? []).map((d) => d.count), 1));
+	let maxEventCount = $derived(Math.max(...(overview?.top_events ?? []).map((d) => d.count), 1));
 
 	let pageviewsTrend = $derived(overview ? trendPercent(overview.total_pageviews, overview.prev_total_pageviews) : { text: '—', color: 'text-muted-foreground' });
 	let visitorsTrend = $derived(overview ? trendPercent(overview.unique_visitors, overview.prev_unique_visitors) : { text: '—', color: 'text-muted-foreground' });
@@ -435,7 +455,50 @@
 			</div>
 		{/if}
 
-		<p class="mb-6 text-sm text-muted-foreground">{dateRangeLabel()}</p>
+		<p class="mb-4 text-sm text-muted-foreground">{dateRangeLabel()}</p>
+
+		<div class="mb-4 flex items-center gap-2">
+			<button
+				onclick={() => (showFilters = !showFilters)}
+				class="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-colors {activeFilterCount > 0
+					? 'bg-foreground text-background'
+					: 'bg-muted text-muted-foreground hover:text-foreground'}"
+			>
+				<Icon icon="solar:filter-linear" class="h-3.5 w-3.5" />
+				Filters
+				{#if activeFilterCount > 0}
+					<span class="ml-1 rounded-full bg-background text-foreground px-1.5 text-xs">{activeFilterCount}</span>
+				{/if}
+			</button>
+			{#if activeFilterCount > 0}
+				<button
+					onclick={clearFilters}
+					class="text-xs text-muted-foreground hover:text-foreground transition-colors"
+				>
+					Clear all
+				</button>
+			{/if}
+		</div>
+
+		{#if showFilters}
+			<div class="mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+				{#each filterFields as f}
+					<div>
+						<label for="filter-{f.key}" class="block text-xs text-muted-foreground mb-1">{f.label}</label>
+						<input
+							id="filter-{f.key}"
+							type="text"
+							value={activeFilters[f.key] ?? ''}
+							oninput={(e) => {
+								activeFilters = { ...activeFilters, [f.key]: e.currentTarget.value };
+							}}
+							placeholder={f.placeholder}
+							class="w-full rounded-md border bg-background px-2.5 py-1.5 text-sm placeholder:text-muted-foreground"
+						/>
+					</div>
+				{/each}
+			</div>
+		{/if}
 
 		<div class="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-5 mb-8">
 			<div class="rounded-lg border p-4">
@@ -469,6 +532,37 @@
 				</div>
 			</div>
 		</div>
+
+		{#if overview.performance && overview.performance.sample_count > 0}
+			<div class="rounded-lg border p-4 mb-8">
+				<div class="flex items-center justify-between mb-3">
+					<h3 class="text-sm font-semibold">Page Load Performance</h3>
+					<span class="text-xs text-muted-foreground">{fmt(overview.performance.sample_count)} samples</span>
+				</div>
+				<div class="grid grid-cols-5 gap-4">
+					<div>
+						<p class="text-xs text-muted-foreground">DNS</p>
+						<p class="text-lg font-semibold">{Math.round(overview.performance.avg_dns)}ms</p>
+					</div>
+					<div>
+						<p class="text-xs text-muted-foreground">TCP</p>
+						<p class="text-lg font-semibold">{Math.round(overview.performance.avg_tcp)}ms</p>
+					</div>
+					<div>
+						<p class="text-xs text-muted-foreground">TTFB</p>
+						<p class="text-lg font-semibold">{Math.round(overview.performance.avg_ttfb)}ms</p>
+					</div>
+					<div>
+						<p class="text-xs text-muted-foreground">DOM Load</p>
+						<p class="text-lg font-semibold">{Math.round(overview.performance.avg_dom_load)}ms</p>
+					</div>
+					<div>
+						<p class="text-xs text-muted-foreground">Page Load</p>
+						<p class="text-lg font-semibold">{Math.round(overview.performance.avg_page_load)}ms</p>
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		{#if chartData.length > 1}
 			<Card.Root class="mb-8">
@@ -679,6 +773,30 @@
 			</div>
 		{/if}
 
+		{#if (overview?.top_events?.length ?? 0) > 0}
+			<Card.Root class="mb-8">
+				<Card.Header>
+					<Card.Title>Custom Events</Card.Title>
+				</Card.Header>
+				<Card.Content>
+					<div class="space-y-1">
+						{#each overview.top_events as item}
+							<div class="relative">
+								<div
+									class="absolute inset-y-0 left-0 rounded bg-muted/50"
+									style="width: {(item.count / maxEventCount) * 100}%"
+								></div>
+								<div class="relative flex justify-between px-3 py-1.5 text-sm">
+									<span class="font-mono">{item.name}</span>
+									<span class="text-muted-foreground tabular-nums">{fmt(item.count)}</span>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</Card.Content>
+			</Card.Root>
+		{/if}
+
 		{#if overview.top_countries?.length > 0}
 			<Card.Root class="mb-8">
 				<Card.Header>
@@ -698,7 +816,7 @@
 						<Card.Content>
 							<div class="space-y-1">
 								{#each overview?.top_entry_pages ?? [] as item}
-									<div class="relative">
+									<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, path: item.path }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, path: item.path }; showFilters = true; } }}>
 										<div
 											class="absolute inset-y-0 left-0 rounded bg-muted/50"
 											style="width: {(item.count / maxEntryCount) * 100}%"
@@ -719,7 +837,7 @@
 						<Card.Content>
 							<div class="space-y-1">
 								{#each overview?.top_exit_pages ?? [] as item}
-									<div class="relative">
+									<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, path: item.path }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, path: item.path }; showFilters = true; } }}>
 										<div
 											class="absolute inset-y-0 left-0 rounded bg-muted/50"
 											style="width: {(item.count / maxExitCount) * 100}%"
@@ -746,7 +864,7 @@
 					<Card.Content>
 						<div class="space-y-1">
 							{#each topPagesData as item}
-								<div class="relative">
+								<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, path: item.path }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, path: item.path }; showFilters = true; } }}>
 									<div
 										class="absolute inset-y-0 left-0 rounded bg-muted/50"
 										style="width: {(item.count / maxPageCount) * 100}%"
@@ -781,7 +899,7 @@
 						</div>
 						<div class="mt-3 space-y-1">
 							{#each devicesPieData as item}
-								<div class="flex items-center gap-2 text-xs">
+								<div role="button" tabindex="0" class="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/30 rounded px-1 py-0.5 transition-colors" onclick={() => { activeFilters = { ...activeFilters, device: item.label }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, device: item.label }; showFilters = true; } }}>
 									<span class="h-2.5 w-2.5 rounded-full shrink-0" style="background: {item.color}"></span>
 									<span class="truncate">{item.label}</span>
 									<span class="text-muted-foreground tabular-nums ml-auto">{item.value}</span>
@@ -800,7 +918,7 @@
 					<Card.Content>
 						<div class="space-y-1">
 							{#each topReferrersData as item}
-								<div class="relative">
+								<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, referrer: item.referrer }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, referrer: item.referrer }; showFilters = true; } }}>
 									<div
 										class="absolute inset-y-0 left-0 rounded bg-muted/50"
 										style="width: {(item.count / maxReferrerCount) * 100}%"
@@ -857,7 +975,7 @@
 					<Card.Content>
 						<div class="space-y-1">
 							{#each browsersData as item}
-								<div class="relative">
+								<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, browser: item.browser }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, browser: item.browser }; showFilters = true; } }}>
 									<div
 										class="absolute inset-y-0 left-0 rounded bg-muted/50"
 										style="width: {(item.count / maxBrowserCount) * 100}%"
@@ -881,7 +999,7 @@
 					<Card.Content>
 						<div class="space-y-1">
 							{#each osData as item}
-								<div class="relative">
+								<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, os: item.os }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, os: item.os }; showFilters = true; } }}>
 									<div
 										class="absolute inset-y-0 left-0 rounded bg-muted/50"
 										style="width: {(item.count / maxOsCount) * 100}%"

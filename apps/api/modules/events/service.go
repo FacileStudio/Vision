@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"encoding/json"
+
 	"api/internal/errors"
 	"api/schemas"
 
@@ -84,6 +86,13 @@ func (s *Service) recordPageview(ctx context.Context, site *schemas.Site, req *P
 		UTMTerm:     strings.TrimSpace(req.UTMTerm),
 		UTMContent:  strings.TrimSpace(req.UTMContent),
 	}
+	if req.Performance != nil {
+		record.PerfDNS = &req.Performance.DNS
+		record.PerfTCP = &req.Performance.TCP
+		record.PerfTTFB = &req.Performance.TTFB
+		record.PerfDOMLoad = &req.Performance.DOMLoad
+		record.PerfPageLoad = &req.Performance.PageLoad
+	}
 	if err := s.orm.WithContext(ctx).Create(record).Error; err != nil {
 		return errors.Internal("failed to record pageview", err)
 	}
@@ -141,4 +150,49 @@ func (s *Service) updateSession(ctx context.Context, siteID int64, visitorID str
 		}
 		return tx.Create(session).Error
 	})
+}
+
+func (s *Service) recordCustomEvent(ctx context.Context, site *schemas.Site, req *CustomEventRequest) error {
+	name := strings.TrimSpace(req.EventName)
+	if name == "" {
+		return errors.Invalid("event name is required")
+	}
+
+	propsJSON := "{}"
+	if req.EventProps != nil {
+		b, err := json.Marshal(req.EventProps)
+		if err == nil {
+			propsJSON = string(b)
+		}
+	}
+
+	record := &schemas.CustomEvent{
+		SiteID:    site.ID,
+		VisitorID: strings.TrimSpace(req.VisitorID),
+		Path:      strings.TrimSpace(req.Path),
+		Name:      name,
+		Props:     propsJSON,
+	}
+	if err := s.orm.WithContext(ctx).Create(record).Error; err != nil {
+		return errors.Internal("failed to record custom event", err)
+	}
+	return nil
+}
+
+func (s *Service) updatePerformance(ctx context.Context, site *schemas.Site, visitorID string, path string, perf *PerformanceData) {
+	if perf == nil || visitorID == "" {
+		return
+	}
+	s.orm.WithContext(ctx).
+		Model(&schemas.Pageview{}).
+		Where("site_id = ? AND visitor_id = ? AND path = ? AND perf_page_load IS NULL", site.ID, visitorID, path).
+		Order("created_at DESC").
+		Limit(1).
+		Updates(map[string]interface{}{
+			"perf_dns":       perf.DNS,
+			"perf_tcp":       perf.TCP,
+			"perf_ttfb":      perf.TTFB,
+			"perf_dom_load":  perf.DOMLoad,
+			"perf_page_load": perf.PageLoad,
+		})
 }

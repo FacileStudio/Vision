@@ -1,5 +1,28 @@
 package analytics
 
+type Filters struct {
+	Country  string
+	Browser  string
+	OS       string
+	Device   string
+	Path     string
+	Referrer string
+}
+
+type PerformanceStats struct {
+	AvgDNS      float64 `json:"avg_dns"`
+	AvgTCP      float64 `json:"avg_tcp"`
+	AvgTTFB     float64 `json:"avg_ttfb"`
+	AvgDOMLoad  float64 `json:"avg_dom_load"`
+	AvgPageLoad float64 `json:"avg_page_load"`
+	SampleCount int64   `json:"sample_count"`
+}
+
+type EventStat struct {
+	Name  string `json:"name"`
+	Count int64  `json:"count"`
+}
+
 type OverviewResponse struct {
 	TotalPageviews       int64          `json:"total_pageviews"`
 	UniqueVisitors       int64          `json:"unique_visitors"`
@@ -26,8 +49,10 @@ type OverviewResponse struct {
 	TopUTMSources            []UTMStat  `json:"top_utm_sources"`
 	TopUTMMediums            []UTMStat  `json:"top_utm_mediums"`
 	TopUTMCampaigns          []UTMStat  `json:"top_utm_campaigns"`
-	PrevPageviewsPerDay      []DayStat  `json:"prev_pageviews_per_day"`
-	PrevUniqueVisitorsPerDay []DayStat  `json:"prev_unique_visitors_per_day"`
+	PrevPageviewsPerDay      []DayStat        `json:"prev_pageviews_per_day"`
+	PrevUniqueVisitorsPerDay []DayStat        `json:"prev_unique_visitors_per_day"`
+	Performance              *PerformanceStats `json:"performance"`
+	TopEvents                []EventStat       `json:"top_events"`
 }
 
 type PageStat struct {

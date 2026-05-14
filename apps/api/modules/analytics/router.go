@@ -33,7 +33,7 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 		if granularity == "" {
 			granularity = "day"
 		}
-		resp, err := service.Overview(request.Context(), site.ID, from, to, granularity)
+		resp, err := service.Overview(request.Context(), site.ID, from, to, granularity, parseFilters(request))
 		if err != nil {
 			httpjson.WriteError(w, err)
 			return
@@ -85,7 +85,7 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 			if granularity == "" {
 				granularity = "day"
 			}
-			resp, err := service.Overview(request.Context(), siteID, from, to, granularity)
+			resp, err := service.Overview(request.Context(), siteID, from, to, granularity, parseFilters(request))
 			if err != nil {
 				httpjson.WriteError(w, err)
 				return
@@ -134,7 +134,7 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 			if granularity == "" {
 				granularity = "day"
 			}
-			resp, err := service.Overview(request.Context(), siteID, from, to, granularity)
+			resp, err := service.Overview(request.Context(), siteID, from, to, granularity, parseFilters(request))
 			if err != nil {
 				httpjson.WriteError(w, err)
 				return
@@ -171,6 +171,17 @@ func writeCSV(w http.ResponseWriter, resp *OverviewResponse) {
 			fmt.Sprintf("%d", d.Count),
 			fmt.Sprintf("%d", visitorsMap[d.Date]),
 		})
+	}
+}
+
+func parseFilters(request *http.Request) Filters {
+	return Filters{
+		Country:  request.URL.Query().Get("country"),
+		Browser:  request.URL.Query().Get("browser"),
+		OS:       request.URL.Query().Get("os"),
+		Device:   request.URL.Query().Get("device"),
+		Path:     request.URL.Query().Get("path"),
+		Referrer: request.URL.Query().Get("referrer"),
 	}
 }
 

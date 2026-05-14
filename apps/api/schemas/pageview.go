@@ -19,7 +19,12 @@ type Pageview struct {
 	UTMMedium   string    `gorm:"column:utm_medium"`
 	UTMCampaign string    `gorm:"column:utm_campaign"`
 	UTMTerm     string    `gorm:"column:utm_term"`
-	UTMContent  string    `gorm:"column:utm_content"`
+	UTMContent   string `gorm:"column:utm_content"`
+	PerfDNS      *int   `gorm:"column:perf_dns"`
+	PerfTCP      *int   `gorm:"column:perf_tcp"`
+	PerfTTFB     *int   `gorm:"column:perf_ttfb"`
+	PerfDOMLoad  *int   `gorm:"column:perf_dom_load"`
+	PerfPageLoad *int   `gorm:"column:perf_page_load"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime;index;index:idx_site_created,priority:2"`
 }
 

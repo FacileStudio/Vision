@@ -17,7 +17,30 @@ func NewService(orm *gorm.DB) *Service {
 	return &Service{orm: orm}
 }
 
-func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to time.Time, granularity string) (*OverviewResponse, error) {
+func applyFilters(db *gorm.DB, siteID int64, from time.Time, to time.Time, filters Filters) *gorm.DB {
+	q := db.Where("site_id = ? AND created_at >= ? AND created_at <= ?", siteID, from, to)
+	if filters.Country != "" {
+		q = q.Where("country = ?", filters.Country)
+	}
+	if filters.Browser != "" {
+		q = q.Where("browser = ?", filters.Browser)
+	}
+	if filters.OS != "" {
+		q = q.Where("os = ?", filters.OS)
+	}
+	if filters.Device != "" {
+		q = q.Where("device = ?", filters.Device)
+	}
+	if filters.Path != "" {
+		q = q.Where("path LIKE ?", "%"+filters.Path+"%")
+	}
+	if filters.Referrer != "" {
+		q = q.Where("referrer LIKE ?", "%"+filters.Referrer+"%")
+	}
+	return q
+}
+
+func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to time.Time, granularity string, filters Filters) (*OverviewResponse, error) {
 	var dateFormat string
 	switch granularity {
 	case "hour":
@@ -31,27 +54,21 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	}
 
 	var totalPageviews int64
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ?", siteID, from, to).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews"), siteID, from, to, filters).
 		Count(&totalPageviews).Error; err != nil {
 		return nil, errors.Internal("failed to count pageviews", err)
 	}
 
 	var uniqueVisitors int64
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND visitor_id != ''", siteID, from, to).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews"), siteID, from, to, filters).
+		Where("visitor_id != ''").
 		Distinct("visitor_id").
 		Count(&uniqueVisitors).Error; err != nil {
 		return nil, errors.Internal("failed to count visitors", err)
 	}
 
 	var topPages []PageStat
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Select("path, count(*) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ?", siteID, from, to).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("path, count(*) as count"), siteID, from, to, filters).
 		Group("path").
 		Order("count desc").
 		Limit(10).
@@ -60,10 +77,8 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	}
 
 	var topReferrers []ReferrerStat
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Select("referrer, count(*) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND referrer != ''", siteID, from, to).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("referrer, count(*) as count"), siteID, from, to, filters).
+		Where("referrer != ''").
 		Group("referrer").
 		Order("count desc").
 		Limit(10).
@@ -72,10 +87,8 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	}
 
 	var topCountries []CountryStat
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Select("country, count(*) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND country != ''", siteID, from, to).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("country, count(*) as count"), siteID, from, to, filters).
+		Where("country != ''").
 		Group("country").
 		Order("count desc").
 		Limit(10).
@@ -84,10 +97,8 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	}
 
 	var topBrowsers []BrowserStat
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Select("browser, count(*) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND browser != ''", siteID, from, to).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("browser, count(*) as count"), siteID, from, to, filters).
+		Where("browser != ''").
 		Group("browser").
 		Order("count desc").
 		Limit(10).
@@ -96,10 +107,8 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	}
 
 	var topOS []OSStat
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Select("os, count(*) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND os != ''", siteID, from, to).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("os, count(*) as count"), siteID, from, to, filters).
+		Where("os != ''").
 		Group("os").
 		Order("count desc").
 		Limit(10).
@@ -108,10 +117,8 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	}
 
 	var topDevices []DeviceStat
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Select("device, count(*) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND device != ''", siteID, from, to).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("device, count(*) as count"), siteID, from, to, filters).
+		Where("device != ''").
 		Group("device").
 		Order("count desc").
 		Limit(10).
@@ -120,10 +127,7 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	}
 
 	var pageviewsPerDay []DayStat
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Select("to_char(created_at, '"+dateFormat+"') as date, count(*) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ?", siteID, from, to).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("to_char(created_at, '"+dateFormat+"') as date, count(*) as count"), siteID, from, to, filters).
 		Group("date").
 		Order("date asc").
 		Scan(&pageviewsPerDay).Error; err != nil {
@@ -131,10 +135,8 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	}
 
 	var topScreens []ScreenStat
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Select("CASE WHEN screen_width < 768 THEN 'Mobile' WHEN screen_width < 1024 THEN 'Tablet' WHEN screen_width < 1440 THEN 'Laptop' ELSE 'Desktop' END as screen, count(*) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND screen_width > 0", siteID, from, to).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("CASE WHEN screen_width < 768 THEN 'Mobile' WHEN screen_width < 1024 THEN 'Tablet' WHEN screen_width < 1440 THEN 'Laptop' ELSE 'Desktop' END as screen, count(*) as count"), siteID, from, to, filters).
+		Where("screen_width > 0").
 		Group("screen").
 		Order("count desc").
 		Scan(&topScreens).Error; err != nil {
@@ -142,10 +144,8 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	}
 
 	var uniqueVisitorsPerDay []DayStat
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Select("to_char(created_at, '"+dateFormat+"') as date, count(distinct visitor_id) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND visitor_id != ''", siteID, from, to).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("to_char(created_at, '"+dateFormat+"') as date, count(distinct visitor_id) as count"), siteID, from, to, filters).
+		Where("visitor_id != ''").
 		Group("date").
 		Order("date asc").
 		Scan(&uniqueVisitorsPerDay).Error; err != nil {
@@ -153,10 +153,7 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	}
 
 	var hourlyDistribution []HourStat
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Select("EXTRACT(HOUR FROM created_at)::int as hour, count(*) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ?", siteID, from, to).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("EXTRACT(HOUR FROM created_at)::int as hour, count(*) as count"), siteID, from, to, filters).
 		Group("hour").
 		Order("hour asc").
 		Scan(&hourlyDistribution).Error; err != nil {
@@ -168,17 +165,14 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	prevTo := from.Add(-time.Nanosecond)
 
 	var prevTotalPageviews int64
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ?", siteID, prevFrom, prevTo).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews"), siteID, prevFrom, prevTo, filters).
 		Count(&prevTotalPageviews).Error; err != nil {
 		return nil, errors.Internal("failed to count previous pageviews", err)
 	}
 
 	var prevUniqueVisitors int64
-	if err := s.orm.WithContext(ctx).
-		Table("pageviews").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND visitor_id != ''", siteID, prevFrom, prevTo).
+	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews"), siteID, prevFrom, prevTo, filters).
+		Where("visitor_id != ''").
 		Distinct("visitor_id").
 		Count(&prevUniqueVisitors).Error; err != nil {
 		return nil, errors.Internal("failed to count previous visitors", err)
@@ -245,37 +239,31 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		Scan(&topExitPages)
 
 	var topUTMSources []UTMStat
-	s.orm.WithContext(ctx).Table("pageviews").
-		Select("utm_source as value, count(*) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND utm_source != ''", siteID, from, to).
+	applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("utm_source as value, count(*) as count"), siteID, from, to, filters).
+		Where("utm_source != ''").
 		Group("utm_source").Order("count desc").Limit(10).
 		Scan(&topUTMSources)
 
 	var topUTMMediums []UTMStat
-	s.orm.WithContext(ctx).Table("pageviews").
-		Select("utm_medium as value, count(*) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND utm_medium != ''", siteID, from, to).
+	applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("utm_medium as value, count(*) as count"), siteID, from, to, filters).
+		Where("utm_medium != ''").
 		Group("utm_medium").Order("count desc").Limit(10).
 		Scan(&topUTMMediums)
 
 	var topUTMCampaigns []UTMStat
-	s.orm.WithContext(ctx).Table("pageviews").
-		Select("utm_campaign as value, count(*) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND utm_campaign != ''", siteID, from, to).
+	applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("utm_campaign as value, count(*) as count"), siteID, from, to, filters).
+		Where("utm_campaign != ''").
 		Group("utm_campaign").Order("count desc").Limit(10).
 		Scan(&topUTMCampaigns)
 
 	var prevPageviewsPerDay []DayStat
-	s.orm.WithContext(ctx).Table("pageviews").
-		Select("to_char(created_at, '"+dateFormat+"') as date, count(*) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ?", siteID, prevFrom, prevTo).
+	applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("to_char(created_at, '"+dateFormat+"') as date, count(*) as count"), siteID, prevFrom, prevTo, filters).
 		Group("date").Order("date asc").
 		Scan(&prevPageviewsPerDay)
 
 	var prevUniqueVisitorsPerDay []DayStat
-	s.orm.WithContext(ctx).Table("pageviews").
-		Select("to_char(created_at, '"+dateFormat+"') as date, count(distinct visitor_id) as count").
-		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND visitor_id != ''", siteID, prevFrom, prevTo).
+	applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("to_char(created_at, '"+dateFormat+"') as date, count(distinct visitor_id) as count"), siteID, prevFrom, prevTo, filters).
+		Where("visitor_id != ''").
 		Group("date").Order("date asc").
 		Scan(&prevUniqueVisitorsPerDay)
 
@@ -331,6 +319,25 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		prevUniqueVisitorsPerDay = []DayStat{}
 	}
 
+	var perf PerformanceStats
+	s.orm.WithContext(ctx).Table("pageviews").
+		Select("COALESCE(AVG(perf_dns), 0) as avg_dns, COALESCE(AVG(perf_tcp), 0) as avg_tcp, COALESCE(AVG(perf_ttfb), 0) as avg_ttfb, COALESCE(AVG(perf_dom_load), 0) as avg_dom_load, COALESCE(AVG(perf_page_load), 0) as avg_page_load, COUNT(perf_page_load) as sample_count").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ? AND perf_page_load IS NOT NULL", siteID, from, to).
+		Scan(&perf)
+
+	var topEvents []EventStat
+	s.orm.WithContext(ctx).Table("custom_events").
+		Select("name, count(*) as count").
+		Where("site_id = ? AND created_at >= ? AND created_at <= ?", siteID, from, to).
+		Group("name").
+		Order("count desc").
+		Limit(10).
+		Scan(&topEvents)
+
+	if topEvents == nil {
+		topEvents = []EventStat{}
+	}
+
 	return &OverviewResponse{
 		TotalPageviews:  totalPageviews,
 		UniqueVisitors:  uniqueVisitors,
@@ -359,6 +366,7 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		TopUTMCampaigns:          topUTMCampaigns,
 		PrevPageviewsPerDay:      prevPageviewsPerDay,
 		PrevUniqueVisitorsPerDay: prevUniqueVisitorsPerDay,
+		Performance:              &perf,
+		TopEvents:                topEvents,
 	}, nil
 }
-
