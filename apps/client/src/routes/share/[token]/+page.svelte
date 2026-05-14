@@ -242,6 +242,8 @@
 	let bounceTrend = $derived(overview ? trendPercent(overview.bounce_rate, overview.prev_bounce_rate) : { text: '—', color: 'text-muted-foreground' });
 </script>
 
+<svelte:head><title>{siteName ? `${siteName} — Vision` : 'Vision'}</title></svelte:head>
+
 {#if loading}
 	<div class="flex min-h-[60dvh] items-center justify-center">
 		<Icon icon="solar:spinner-linear" class="h-8 w-8 animate-spin text-muted-foreground" />
@@ -253,7 +255,6 @@
 		<p class="text-muted-foreground">This share link may have been revoked or is invalid.</p>
 	</div>
 {:else if overview}
-	<svelte:head><title>{siteName} — Vision</title></svelte:head>
 	<div class="mx-auto max-w-7xl px-4 py-8">
 		<div class="mb-8 flex items-center justify-between">
 			<div>

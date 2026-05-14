@@ -217,7 +217,7 @@
 					/>
 				</div>
 				<div>
-					<label class="block text-sm font-medium mb-1.5">Period</label>
+					<span class="block text-sm font-medium mb-1.5">Period</span>
 					<div class="flex gap-2">
 						{#each webhookPeriods as p}
 							<button
