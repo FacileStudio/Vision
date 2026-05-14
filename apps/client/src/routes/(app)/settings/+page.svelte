@@ -155,7 +155,7 @@
 <h1 class="text-2xl font-bold mb-6">Settings</h1>
 
 <div class="space-y-8 max-w-lg">
-	<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
+	<div class="rounded-lg border p-4">
 		<h2 class="text-lg font-semibold mb-4">Profile</h2>
 
 		{#if profile}
@@ -206,7 +206,7 @@
 		{/if}
 	</div>
 
-	<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
+	<div class="rounded-lg border p-4">
 		<h2 class="text-lg font-semibold mb-4">Change Password</h2>
 
 		<form onsubmit={changePassword} class="space-y-3">
@@ -261,7 +261,7 @@
 		</form>
 	</div>
 
-	<div class="rounded-xl border bg-card p-6 backdrop-blur-sm">
+	<div class="rounded-lg border p-6">
 		<div class="flex items-center justify-between mb-1">
 			<h2 class="text-lg font-semibold">Webhook Reports</h2>
 			{#if !showWebhookForm && webhooks.length > 0}
@@ -289,7 +289,7 @@
 		{#if webhooks.length > 0}
 			<div class="space-y-3 mb-4">
 				{#each webhooks as wh}
-					<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
+					<div class="rounded-lg border p-4">
 						{#if deletingWebhookId === wh.id}
 							<div class="flex items-center justify-between">
 								<p class="text-sm">Delete this webhook?</p>
@@ -359,7 +359,7 @@
 		{/if}
 
 		{#if showWebhookForm}
-			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm space-y-4">
+			<div class="rounded-lg border p-4 space-y-4">
 				<div>
 					<label for="webhook-url" class="block text-sm font-medium mb-1">URL</label>
 					<input

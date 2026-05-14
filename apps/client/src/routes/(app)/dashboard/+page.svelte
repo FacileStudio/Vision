@@ -19,7 +19,7 @@
 		{#each sites as site}
 			<a
 				href="/sites/{site.id}"
-				class="flex items-start gap-3 rounded-xl border bg-card p-6 backdrop-blur-sm hover:shadow-sm transition-shadow"
+				class="flex items-start gap-3 rounded-lg border bg-card p-6 hover:shadow-sm transition-shadow"
 			>
 				<img src="https://www.google.com/s2/favicons?domain={site.domain}&sz=32" alt="" class="h-6 w-6 shrink-0 rounded mt-0.5" />
 				<div>

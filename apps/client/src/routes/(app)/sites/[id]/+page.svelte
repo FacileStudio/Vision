@@ -378,7 +378,7 @@
 		</div>
 	</div>
 
-	<div class="mb-8 rounded-xl border bg-card p-4 backdrop-blur-sm">
+	<div class="mb-8 rounded-lg border p-4">
 		<h2 class="font-semibold mb-2">Tracking Script</h2>
 		<p class="text-sm text-muted-foreground mb-2">Add this to your website's &lt;head&gt;:</p>
 		<div class="relative group">
@@ -433,27 +433,27 @@
 		<p class="mb-6 text-sm text-muted-foreground">{dateRangeLabel()}</p>
 
 		<div class="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-5 mb-8">
-			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
+			<div class="rounded-lg border p-4">
 				<p class="text-sm text-muted-foreground">Total Pageviews</p>
 				<p class="text-3xl font-bold">{fmt(overview.total_pageviews)}</p>
 				<p class="text-xs {pageviewsTrend.color}">{pageviewsTrend.text}</p>
 			</div>
-			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
+			<div class="rounded-lg border p-4">
 				<p class="text-sm text-muted-foreground">Unique Visitors</p>
 				<p class="text-3xl font-bold">{fmt(overview.unique_visitors)}</p>
 				<p class="text-xs {visitorsTrend.color}">{visitorsTrend.text}</p>
 			</div>
-			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
+			<div class="rounded-lg border p-4">
 				<p class="text-sm text-muted-foreground">Views / Visitor</p>
 				<p class="text-3xl font-bold">{viewsPerVisitor().toFixed(1)}</p>
 				<p class="text-xs {vpvTrend.color}">{vpvTrend.text}</p>
 			</div>
-			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
+			<div class="rounded-lg border p-4">
 				<p class="text-sm text-muted-foreground">Bounce Rate</p>
 				<p class="text-3xl font-bold">{overview.bounce_rate.toFixed(1)}%</p>
 				<p class="text-xs {bounceTrend.color}">{bounceTrend.text}</p>
 			</div>
-			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
+			<div class="rounded-lg border p-4">
 				<p class="text-sm text-muted-foreground">Active Now</p>
 				<div class="flex items-center gap-2">
 					<span class="relative flex h-2 w-2">
