@@ -29,8 +29,7 @@ Self-hosted analytics. Go + SvelteKit.
 - [x] Copy tracking script snippet
 - [x] Profile page (name, email, change password)
 - [x] Settings page (system-wide webhook configuration)
-- [x] Sidebar user card with initials and profile link
-- [x] Reactive profile updates (sidebar syncs instantly on save)
+- [x] Sidebar user card with initials and profile link (reactive on update)
 - [x] Page titles via svelte:head on all routes
 - [x] OIDC/SSO authentication
 - [x] Ad-blocker resistant tracking (renamed paths)
@@ -47,11 +46,11 @@ Self-hosted analytics. Go + SvelteKit.
 - [x] Solar Linear / Iconify icons across UI
 - [x] Composite index on pageviews(site_id, created_at) for query performance
 - [x] Session race condition fix (GORM transaction)
-
-## Short-term
-
-- [ ] Dashboard filters (filter by country, browser, path, device, referrer)
-- [ ] Custom event tracking (`vision.track('signup', { plan: 'pro' })`)
+- [x] Dashboard filters (country, browser, OS, device, path, referrer — clickable stats apply filters)
+- [x] Custom event tracking (`vision.track('signup', { plan: 'pro' })` via pixel endpoint)
+- [x] Custom events dashboard section (top events by count)
+- [x] Page load performance tracking (DNS, TCP, TTFB, DOM load, page load via Navigation Timing API)
+- [x] Performance metrics dashboard section (averages with sample count)
 
 ## Medium-term
 
@@ -59,7 +58,6 @@ Self-hosted analytics. Go + SvelteKit.
 - [ ] API keys for programmatic access
 - [ ] Multi-user / team access with roles (viewer, admin)
 - [ ] Email reports (weekly/monthly summary via scheduled job)
-- [ ] Page load performance tracking (measure timing from tracker)
 - [ ] Lightweight embeddable widget (small stats badge for sites)
 - [ ] "See all" drawers for top pages / referrers (paginated, searchable)
 
