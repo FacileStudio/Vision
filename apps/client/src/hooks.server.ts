@@ -13,6 +13,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			body: event.request.method !== 'GET' && event.request.method !== 'HEAD'
 				? event.request.body
 				: undefined,
+			redirect: 'manual',
 			// @ts-expect-error duplex needed for streaming body
 			duplex: 'half'
 		});
