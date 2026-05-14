@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { api } from '$lib';
 	import type { Site } from '$lib';
+	import Icon from '@iconify/svelte';
 
 	let sites = $state<Site[]>([]);
 	let name = $state('');
@@ -35,7 +36,10 @@
 <form onsubmit={addSite} class="flex gap-2 mb-6">
 	<input bind:value={name} placeholder="Site name" class="rounded-md border bg-background px-3 py-2 text-sm" required />
 	<input bind:value={domain} placeholder="example.com" class="rounded-md border bg-background px-3 py-2 text-sm" required />
-	<button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">Add</button>
+	<button type="submit" class="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">
+		<Icon icon="mdi:plus" class="h-4 w-4" />
+		Add
+	</button>
 </form>
 
 {#if error}
@@ -49,7 +53,9 @@
 				<span class="font-medium">{site.name}</span>
 				<span class="text-sm text-muted-foreground ml-2">{site.domain}</span>
 			</a>
-			<button onclick={() => deleteSite(site.id)} class="text-sm text-destructive hover:underline">Delete</button>
+			<button onclick={() => deleteSite(site.id)} class="flex items-center gap-1 rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-500/10">
+				<Icon icon="solar:trash-bin-trash-linear" class="h-4 w-4" />
+			</button>
 		</div>
 	{/each}
 </div>

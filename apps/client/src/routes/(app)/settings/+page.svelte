@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { api } from '$lib';
 	import type { UserProfile, Webhook } from '$lib';
-	import { Trash2, Pencil, Plus, Send } from '@lucide/svelte';
+	import Icon from '@iconify/svelte';
 
 	let profile = $state<UserProfile | null>(null);
 	let name = $state('');
@@ -191,8 +191,9 @@
 				<button
 					type="submit"
 					disabled={profileLoading}
-					class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
+					class="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
 				>
+					<Icon icon="solar:diskette-linear" class="h-4 w-4" />
 					{profileLoading ? 'Saving...' : 'Save'}
 				</button>
 			</form>
@@ -252,8 +253,9 @@
 			<button
 				type="submit"
 				disabled={passwordLoading}
-				class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
+				class="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
 			>
+				<Icon icon="solar:lock-keyhole-linear" class="h-4 w-4" />
 				{passwordLoading ? 'Changing...' : 'Change Password'}
 			</button>
 		</form>
@@ -267,7 +269,7 @@
 					onclick={() => { resetWebhookForm(); showWebhookForm = true; }}
 					class="flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
 				>
-					<Plus class="h-3.5 w-3.5" />
+					<Icon icon="solar:add-circle-linear" class="h-4 w-4" />
 					Add
 				</button>
 			{/if}
@@ -279,7 +281,7 @@
 				onclick={() => (showWebhookForm = true)}
 				class="flex items-center gap-2 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground w-full justify-center"
 			>
-				<Plus class="h-4 w-4" />
+				<Icon icon="solar:add-circle-linear" class="h-4 w-4" />
 				Add Webhook
 			</button>
 		{/if}
@@ -332,21 +334,21 @@
 										class="rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
 										aria-label="Test webhook"
 									>
-										<Send class="h-3.5 w-3.5" />
+										<Icon icon="solar:plain-linear" class="h-3.5 w-3.5" />
 									</button>
 									<button
 										onclick={() => startEditWebhook(wh)}
 										class="rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
 										aria-label="Edit webhook"
 									>
-										<Pencil class="h-3.5 w-3.5" />
+										<Icon icon="solar:pen-linear" class="h-3.5 w-3.5" />
 									</button>
 									<button
 										onclick={() => (deletingWebhookId = wh.id)}
 										class="rounded-md p-1.5 text-muted-foreground transition-colors hover:text-red-500 hover:bg-muted"
 										aria-label="Delete webhook"
 									>
-										<Trash2 class="h-3.5 w-3.5" />
+										<Icon icon="solar:trash-bin-trash-linear" class="h-3.5 w-3.5" />
 									</button>
 								</div>
 							</div>
@@ -397,14 +399,16 @@
 					<button
 						onclick={saveWebhook}
 						disabled={webhookSaving || !webhookUrl}
-						class="rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed"
+						class="flex items-center gap-1.5 rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed"
 					>
+						<Icon icon="solar:diskette-linear" class="h-4 w-4" />
 						{webhookSaving ? 'Saving…' : editingWebhookId ? 'Update' : 'Save'}
 					</button>
 					<button
 						onclick={resetWebhookForm}
-						class="rounded-full bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+						class="flex items-center gap-1.5 rounded-full bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
 					>
+						<Icon icon="solar:close-circle-linear" class="h-4 w-4" />
 						Cancel
 					</button>
 				</div>
