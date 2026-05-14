@@ -41,20 +41,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 			duplex: 'half'
 		});
 
-		const isSSE = res.headers.get('content-type')?.includes('text/event-stream');
-
-		if (isSSE && res.body) {
-			return new Response(res.body, {
-				status: res.status,
-				headers: {
-					'Content-Type': 'text/event-stream',
-					'Cache-Control': 'no-cache',
-					'Connection': 'keep-alive',
-					'X-Accel-Buffering': 'no'
-				}
-			});
-		}
-
 		const responseHeaders = new Headers();
 		for (const [key, value] of res.headers.entries()) {
 			responseHeaders.append(key, value);

@@ -72,13 +72,7 @@ export const api = {
 			return request<AnalyticsOverview>('GET', `/analytics/${siteId}/overview${qs ? `?${qs}` : ''}`);
 		}
 	},
-	events: {
-		liveUrl: (siteId: number): string => {
-			const token = getToken();
-			const params = token ? `?token=${encodeURIComponent(token)}` : '';
-			return `/api/events/${siteId}/live${params}`;
-		}
-	}
+	events: {}
 };
 
 export interface UserProfile {

@@ -9,21 +9,11 @@
 	import * as Chart from '$lib/components/ui/chart/index.js';
 	import { Copy, Check } from '@lucide/svelte';
 
-	interface LiveEvent {
-		site_id: number;
-		path: string;
-		referrer: string;
-		country: string;
-		visitor_id: string;
-		timestamp: string;
-	}
-
 	let site = $state<Site | null>(null);
 	let overview = $state<AnalyticsOverview | null>(null);
-	let liveConnected = $state(false);
-	let recentEvents = $state<LiveEvent[]>([]);
-	let eventSource: EventSource | null = null;
+	let live = $state(false);
 	let copied = $state(false);
+	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 	const pageviewsConfig = {
 		pageviews: { label: 'Pageviews', color: 'var(--chart-1)' }
@@ -47,88 +37,13 @@
 		setTimeout(() => (copied = false), 2000);
 	}
 
-	function handleLiveEvent(event: LiveEvent) {
-		if (!overview) return;
-
-		overview.total_pageviews += 1;
-
-		if (!overview.top_pages) overview.top_pages = [];
-		if (!overview.top_referrers) overview.top_referrers = [];
-		if (!overview.top_countries) overview.top_countries = [];
-		if (!overview.pageviews_per_day) overview.pageviews_per_day = [];
-
-		const knownVisitors = new Set<string>();
-		knownVisitors.add(event.visitor_id);
-		if (knownVisitors.size === 1) {
-			overview.unique_visitors += 1;
+	async function refresh(siteId: number) {
+		try {
+			overview = await api.analytics.overview(siteId);
+			live = true;
+		} catch {
+			live = false;
 		}
-
-		const pageEntry = overview.top_pages.find((p) => p.path === event.path);
-		if (pageEntry) {
-			pageEntry.count += 1;
-			overview.top_pages = [...overview.top_pages].sort((a, b) => b.count - a.count);
-		} else {
-			overview.top_pages = [...overview.top_pages, { path: event.path, count: 1 }].sort(
-				(a, b) => b.count - a.count
-			);
-		}
-
-		if (event.referrer) {
-			const refEntry = overview.top_referrers.find((r) => r.referrer === event.referrer);
-			if (refEntry) {
-				refEntry.count += 1;
-				overview.top_referrers = [...overview.top_referrers].sort((a, b) => b.count - a.count);
-			} else {
-				overview.top_referrers = [
-					...overview.top_referrers,
-					{ referrer: event.referrer, count: 1 }
-				].sort((a, b) => b.count - a.count);
-			}
-		}
-
-		if (event.country) {
-			const countryEntry = overview.top_countries.find((c) => c.country === event.country);
-			if (countryEntry) {
-				countryEntry.count += 1;
-				overview.top_countries = [...overview.top_countries].sort((a, b) => b.count - a.count);
-			} else {
-				overview.top_countries = [
-					...overview.top_countries,
-					{ country: event.country, count: 1 }
-				].sort((a, b) => b.count - a.count);
-			}
-		}
-
-		const today = new Date().toISOString().split('T')[0];
-		const todayEntry = overview.pageviews_per_day.find((d) => d.date === today);
-		if (todayEntry) {
-			todayEntry.count += 1;
-			overview.pageviews_per_day = [...overview.pageviews_per_day];
-		} else {
-			overview.pageviews_per_day = [...overview.pageviews_per_day, { date: today, count: 1 }];
-		}
-
-		recentEvents = [event, ...recentEvents].slice(0, 20);
-	}
-
-	function connectSSE(siteId: number) {
-		const url = api.events.liveUrl(siteId);
-		eventSource = new EventSource(url);
-
-		eventSource.onopen = () => {
-			liveConnected = true;
-		};
-
-		eventSource.onmessage = (e) => {
-			try {
-				const event: LiveEvent = JSON.parse(e.data);
-				handleLiveEvent(event);
-			} catch {}
-		};
-
-		eventSource.onerror = () => {
-			liveConnected = false;
-		};
 	}
 
 	onMount(() => {
@@ -136,25 +51,14 @@
 
 		(async () => {
 			site = await api.sites.get(id);
-			overview = await api.analytics.overview(id);
-			connectSSE(id);
+			await refresh(id);
+			pollTimer = setInterval(() => refresh(id), 5000);
 		})();
 
 		return () => {
-			if (eventSource) {
-				eventSource.close();
-				eventSource = null;
-			}
+			if (pollTimer) clearInterval(pollTimer);
 		};
 	});
-
-	function formatTime(timestamp: string): string {
-		try {
-			return new Date(timestamp).toLocaleTimeString();
-		} catch {
-			return timestamp;
-		}
-	}
 
 	let pageviewChartData = $derived(
 		(overview?.pageviews_per_day ?? []).map((d) => ({
@@ -174,7 +78,7 @@
 			<p class="text-muted-foreground">{site.domain}</p>
 		</div>
 		<div class="flex items-center gap-2 text-sm">
-			{#if liveConnected}
+			{#if live}
 				<span class="relative flex h-2.5 w-2.5">
 					<span
 						class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
@@ -338,25 +242,5 @@
 				</div>
 			</div>
 		{/if}
-	{/if}
-
-	{#if recentEvents.length > 0}
-		<div class="mb-8">
-			<h2 class="font-semibold mb-3">Live Feed</h2>
-			<div class="space-y-1 rounded-lg border p-4 max-h-80 overflow-y-auto">
-				{#each recentEvents as event}
-					<div class="flex items-center gap-3 rounded px-3 py-2 text-sm hover:bg-muted">
-						<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500"></span>
-						<span class="font-mono truncate flex-1">{event.path}</span>
-						{#if event.country}
-							<span class="text-muted-foreground text-xs">{event.country}</span>
-						{/if}
-						<span class="text-muted-foreground text-xs shrink-0"
-							>{formatTime(event.timestamp)}</span
-						>
-					</div>
-				{/each}
-			</div>
-		</div>
 	{/if}
 {/if}
