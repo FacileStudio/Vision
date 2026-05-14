@@ -4,7 +4,7 @@ import "time"
 
 type Pageview struct {
 	ID        int64     `gorm:"column:id;primaryKey"`
-	SiteID    int64     `gorm:"column:site_id;index"`
+	SiteID    int64     `gorm:"column:site_id;index:idx_site_created,priority:1"`
 	Path      string    `gorm:"column:path;index"`
 	Referrer  string    `gorm:"column:referrer"`
 	UserAgent string    `gorm:"column:user_agent"`
@@ -20,7 +20,7 @@ type Pageview struct {
 	UTMCampaign string    `gorm:"column:utm_campaign"`
 	UTMTerm     string    `gorm:"column:utm_term"`
 	UTMContent  string    `gorm:"column:utm_content"`
-	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime;index"`
+	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime;index;index:idx_site_created,priority:2"`
 }
 
 func (Pageview) TableName() string { return "pageviews" }

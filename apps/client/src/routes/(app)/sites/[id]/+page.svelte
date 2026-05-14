@@ -7,7 +7,7 @@
 	import { scaleBand } from 'd3-scale';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Chart from '$lib/components/ui/chart/index.js';
-	import { Copy, Check, Sun, Moon } from '@lucide/svelte';
+	import { Copy, Check } from '@lucide/svelte';
 	import Icon from '@iconify/svelte';
 	import WorldMap from '$lib/components/map/world-map.svelte';
 
@@ -34,8 +34,6 @@
 		{ key: 'week', label: 'Weekly' },
 		{ key: 'month', label: 'Monthly' }
 	];
-
-	let darkMode = $state(false);
 
 	const ranges: { key: RangeKey; label: string }[] = [
 		{ key: 'today', label: 'Today' },
@@ -227,19 +225,27 @@
 		} catch {}
 	}
 
-	function toggleDarkMode() {
-		darkMode = !darkMode;
-		document.documentElement.classList.toggle('dark', darkMode);
-		localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+	async function exportCSV() {
+		const { from, to } = rangeDates(selectedRange);
+		const token = localStorage.getItem('token');
+		const res = await fetch(`/api/analytics/${page.params.id}/export?from=${from}&to=${to}&format=csv`, {
+			headers: { 'Authorization': `Bearer ${token}` }
+		});
+		if (!res.ok) return;
+		const blob = await res.blob();
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = 'vision-export.csv';
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	function fmt(n: number): string {
+		return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 	}
 
 	onMount(() => {
-		const savedTheme = localStorage.getItem('theme');
-		if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-			darkMode = true;
-			document.documentElement.classList.add('dark');
-		}
-
 		const id = Number(page.params.id);
 
 		(async () => {
@@ -359,24 +365,13 @@
 			</div>
 		</div>
 		<div class="flex items-center gap-3 text-sm">
-			<a
-				href="/api/analytics/{page.params.id}/export?from={rangeDates(selectedRange).from}&to={rangeDates(selectedRange).to}&format=csv"
-				download
-				class="rounded-md p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+			<button
+				onclick={exportCSV}
+				class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
 				aria-label="Export CSV"
 			>
 				<Icon icon="solar:download-linear" class="h-4 w-4" />
-			</a>
-			<button
-				onclick={toggleDarkMode}
-				class="rounded-md p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-				aria-label="Toggle dark mode"
-			>
-				{#if darkMode}
-					<Sun class="h-4 w-4" />
-				{:else}
-					<Moon class="h-4 w-4" />
-				{/if}
+				Export
 			</button>
 			{#if live}
 				<span class="relative flex h-2.5 w-2.5">
@@ -450,9 +445,9 @@
 		<div class="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-5 mb-8">
 			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
 				<p class="text-sm text-muted-foreground">Total Pageviews</p>
-				<p class="text-3xl font-bold">{overview.total_pageviews.toLocaleString()}</p>
+				<p class="text-3xl font-bold">{fmt(overview.total_pageviews)}</p>
 				{#if (overview.pageviews_per_day?.length ?? 0) > 1}
-					<svg class="w-full h-8 mt-1" viewBox="0 0 100 24" preserveAspectRatio="none">
+					<svg class="w-full h-10 mt-2 opacity-40" viewBox="0 0 100 24" preserveAspectRatio="none">
 						<polyline
 							points={sparklinePath(overview.pageviews_per_day ?? [], 100, 24)}
 							fill="none"
@@ -468,9 +463,9 @@
 			</div>
 			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
 				<p class="text-sm text-muted-foreground">Unique Visitors</p>
-				<p class="text-3xl font-bold">{overview.unique_visitors.toLocaleString()}</p>
+				<p class="text-3xl font-bold">{fmt(overview.unique_visitors)}</p>
 				{#if (overview.unique_visitors_per_day?.length ?? 0) > 1}
-					<svg class="w-full h-8 mt-1" viewBox="0 0 100 24" preserveAspectRatio="none">
+					<svg class="w-full h-10 mt-2 opacity-40" viewBox="0 0 100 24" preserveAspectRatio="none">
 						<polyline
 							points={sparklinePath(overview.unique_visitors_per_day ?? [], 100, 24)}
 							fill="none"
@@ -501,7 +496,7 @@
 						<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
 						<span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
 					</span>
-					<p class="text-3xl font-bold">{realtimeCount.toLocaleString()}</p>
+					<p class="text-3xl font-bold">{fmt(realtimeCount)}</p>
 				</div>
 			</div>
 		</div>

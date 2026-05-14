@@ -10,6 +10,10 @@
 	import Icon from '@iconify/svelte';
 	import WorldMap from '$lib/components/map/world-map.svelte';
 
+	function fmt(n: number): string {
+		return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+	}
+
 	let siteName = $state('');
 	let siteDomain = $state('');
 	let overview = $state<AnalyticsOverview | null>(null);
@@ -174,11 +178,6 @@
 	}
 
 	onMount(() => {
-		const savedTheme = localStorage.getItem('theme');
-		if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-			document.documentElement.classList.add('dark');
-		}
-
 		(async () => {
 			await Promise.all([refresh(), fetchRealtime()]);
 			pollTimer = setInterval(refresh, 30000);
@@ -287,12 +286,12 @@
 		<div class="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-5 mb-8">
 			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
 				<p class="text-sm text-muted-foreground">Total Pageviews</p>
-				<p class="text-3xl font-bold">{overview.total_pageviews.toLocaleString()}</p>
+				<p class="text-3xl font-bold">{fmt(overview.total_pageviews)}</p>
 				<p class="text-xs {pageviewsTrend.color}">{pageviewsTrend.text}</p>
 			</div>
 			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
 				<p class="text-sm text-muted-foreground">Unique Visitors</p>
-				<p class="text-3xl font-bold">{overview.unique_visitors.toLocaleString()}</p>
+				<p class="text-3xl font-bold">{fmt(overview.unique_visitors)}</p>
 				<p class="text-xs {visitorsTrend.color}">{visitorsTrend.text}</p>
 			</div>
 			<div class="rounded-xl border bg-card p-4 backdrop-blur-sm">
@@ -312,7 +311,7 @@
 						<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
 						<span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
 					</span>
-					<p class="text-3xl font-bold">{realtimeCount.toLocaleString()}</p>
+					<p class="text-3xl font-bold">{fmt(realtimeCount)}</p>
 				</div>
 			</div>
 		</div>

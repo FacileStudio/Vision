@@ -112,32 +112,33 @@ func (s *Service) updateSession(ctx context.Context, siteID int64, visitorID str
 	sessionGap := 30 * time.Minute
 	cutoff := timestamp.Add(-sessionGap)
 
-	var existing schemas.VisitorSession
-	err := s.orm.WithContext(ctx).
-		Where("site_id = ? AND visitor_id = ? AND ended_at >= ?", siteID, visitorID, cutoff).
-		Order("ended_at DESC").
-		First(&existing).Error
+	_ = s.orm.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var existing schemas.VisitorSession
+		err := tx.
+			Where("site_id = ? AND visitor_id = ? AND ended_at >= ?", siteID, visitorID, cutoff).
+			Order("ended_at DESC").
+			First(&existing).Error
 
-	if err == nil {
-		existing.EndedAt = timestamp
-		existing.ExitPath = path
-		existing.PageviewCount++
-		existing.Duration = int(existing.EndedAt.Sub(existing.StartedAt).Seconds())
-		existing.IsBounce = false
-		s.orm.WithContext(ctx).Save(&existing)
-		return
-	}
+		if err == nil {
+			existing.EndedAt = timestamp
+			existing.ExitPath = path
+			existing.PageviewCount++
+			existing.Duration = int(existing.EndedAt.Sub(existing.StartedAt).Seconds())
+			existing.IsBounce = false
+			return tx.Save(&existing).Error
+		}
 
-	session := &schemas.VisitorSession{
-		SiteID:        siteID,
-		VisitorID:     visitorID,
-		StartedAt:     timestamp,
-		EndedAt:       timestamp,
-		EntryPath:     path,
-		ExitPath:      path,
-		PageviewCount: 1,
-		Duration:      0,
-		IsBounce:      true,
-	}
-	s.orm.WithContext(ctx).Create(session)
+		session := &schemas.VisitorSession{
+			SiteID:        siteID,
+			VisitorID:     visitorID,
+			StartedAt:     timestamp,
+			EndedAt:       timestamp,
+			EntryPath:     path,
+			ExitPath:      path,
+			PageviewCount: 1,
+			Duration:      0,
+			IsBounce:      true,
+		}
+		return tx.Create(session).Error
+	})
 }
