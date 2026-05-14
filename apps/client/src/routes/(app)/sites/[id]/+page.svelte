@@ -4,7 +4,6 @@
 	import { api } from '$lib';
 	import type { Site, AnalyticsOverview } from '$lib';
 
-	const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
 	let site = $state<Site | null>(null);
 	let overview = $state<AnalyticsOverview | null>(null);
 
@@ -24,7 +23,7 @@
 	<div class="mb-8 rounded-lg border p-4">
 		<h2 class="font-semibold mb-2">Tracking Script</h2>
 		<p class="text-sm text-muted-foreground mb-2">Add this to your website's &lt;head&gt;:</p>
-		<pre class="rounded bg-muted p-3 text-xs overflow-x-auto">&lt;script defer src="{apiBase}/t.js"&gt;&lt;/script&gt;</pre>
+		<pre class="rounded bg-muted p-3 text-xs overflow-x-auto">&lt;script defer src="https://your-api-url/t.js"&gt;&lt;/script&gt;</pre>
 	</div>
 
 	{#if overview}

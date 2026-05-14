@@ -2,20 +2,25 @@ FROM oven/bun:1 AS build
 
 WORKDIR /app
 
-COPY package.json bun.lockb* ./
+COPY package.json bun.lock* ./
 
 RUN bun install --ignore-scripts
 
 COPY . .
 
-ARG VITE_API_BASE_URL
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-
 RUN bunx svelte-kit sync && bun run build
 
-FROM nginx:alpine
+FROM oven/bun:1-slim
 
-COPY --from=build /app/build /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+WORKDIR /app
 
-EXPOSE 80
+COPY --from=build /app/build ./build
+COPY --from=build /app/package.json ./
+COPY --from=build /app/node_modules ./node_modules
+
+ENV PORT=3000
+ENV API_URL=http://api:4000
+
+EXPOSE 3000
+
+CMD ["bun", "build/index.js"]

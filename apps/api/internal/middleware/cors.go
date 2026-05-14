@@ -2,14 +2,13 @@ package middleware
 
 import (
 	"net/http"
-	"slices"
 	"strings"
 )
 
 var corsAllowedMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 var corsAllowedHeaders = []string{"Accept", "Authorization", "Content-Type"}
 
-func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
+func CORS(domain string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 			origin := request.Header.Get("Origin")
@@ -18,7 +17,7 @@ func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 				return
 			}
 
-			if !isAllowedOrigin(origin, allowedOrigins) {
+			if !isAllowedOrigin(origin, domain) {
 				if request.Method == http.MethodOptions {
 					w.WriteHeader(http.StatusForbidden)
 					return
@@ -46,6 +45,6 @@ func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 	}
 }
 
-func isAllowedOrigin(origin string, allowedOrigins []string) bool {
-	return slices.Contains(allowedOrigins, "*") || slices.Contains(allowedOrigins, origin)
+func isAllowedOrigin(origin string, domain string) bool {
+	return domain == "*" || origin == domain
 }

@@ -19,13 +19,10 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    expose:
-      - "4000"
+    ports:
+      - "4000:4000"
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@db:5432/vision?sslmode=disable}
-      PORT: ${PORT:-4000}
-      LOG_LEVEL: ${LOG_LEVEL:-info}
-      DOMAINS: ${DOMAINS:-http://localhost:3000,http://127.0.0.1:3000}
+      DOMAIN: ${DOMAIN:-http://localhost:3000}
     depends_on:
       db:
         condition: service_healthy
@@ -34,11 +31,8 @@ services:
     build:
       context: apps/client
       dockerfile: Dockerfile
-      args:
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:4000}
-      network: host
-    expose:
-      - "80"
+    ports:
+      - "3000:3000"
     depends_on:
       - api
 

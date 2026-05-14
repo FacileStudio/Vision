@@ -1,5 +1,3 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
-
 function getToken(): string | null {
 	if (typeof window === 'undefined') return null;
 	return localStorage.getItem('token');
@@ -27,7 +25,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 		headers['Authorization'] = `Bearer ${token}`;
 	}
 
-	const res = await fetch(`${API_BASE}${path}`, {
+	const res = await fetch(`/api${path}`, {
 		method,
 		headers,
 		body: body ? JSON.stringify(body) : undefined
