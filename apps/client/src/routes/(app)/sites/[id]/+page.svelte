@@ -314,8 +314,9 @@
 	let bounceTrend = $derived(overview ? trendPercent(overview.bounce_rate, overview.prev_bounce_rate) : { text: '—', color: 'text-muted-foreground' });
 </script>
 
+<svelte:head><title>{site ? `${site.name} — Vision` : 'Vision'}</title></svelte:head>
+
 {#if site}
-	<svelte:head><title>{site.name} — Vision</title></svelte:head>
 	<div class="mb-8 flex items-center justify-between">
 		<div>
 			<div class="flex items-center gap-3">
