@@ -29,6 +29,10 @@ func (writer *loggingResponseWriter) Write(body []byte) (int, error) {
 	return n, err
 }
 
+func (writer *loggingResponseWriter) Unwrap() http.ResponseWriter {
+	return writer.ResponseWriter
+}
+
 func RequestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
