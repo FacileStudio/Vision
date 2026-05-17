@@ -640,9 +640,9 @@
 						<Card.Title>Traffic Sources</Card.Title>
 					</Card.Header>
 					<Card.Content>
-						<div class="flex items-center gap-6">
-							<div class="flex-1 aspect-square max-h-[280px]">
-								<Chart.Container config={trafficConfig} class="h-full w-full">
+						<div class="flex items-center justify-center gap-6">
+							<div class="aspect-square h-[200px]">
+								<Chart.Container config={trafficConfig} class="aspect-auto h-full w-full">
 									<PieChart
 										data={trafficSourcesData()}
 										key="key"
