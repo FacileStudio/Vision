@@ -564,7 +564,7 @@
 			</div>
 		{/if}
 
-		{#if chartData.length > 1}
+		{#if chartData.length > 0}
 			<Card.Root class="mb-8">
 				<Card.Header>
 					<div class="flex items-center justify-between">
@@ -587,7 +587,7 @@
 					</div>
 				</Card.Header>
 				<Card.Content>
-					<Chart.Container config={chartConfig} class="min-h-[300px] w-full [&_.lc-area-path:nth-child(n+3)]:opacity-20">
+					<Chart.Container config={chartConfig} class="aspect-auto h-[300px] w-full [&_.lc-area-path:nth-child(n+3)]:opacity-20">
 						<AreaChart
 							data={chartData}
 							x="date"

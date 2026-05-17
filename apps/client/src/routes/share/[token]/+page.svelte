@@ -318,14 +318,14 @@
 			</div>
 		</div>
 
-		{#if chartData.length > 1}
+		{#if chartData.length > 0}
 			<Card.Root class="mb-8">
 				<Card.Header>
 					<Card.Title>Traffic Over Time</Card.Title>
 					<Card.Description>Pageviews and unique visitors</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					<Chart.Container config={chartConfig} class="min-h-[300px] w-full">
+					<Chart.Container config={chartConfig} class="aspect-auto h-[300px] w-full">
 						<AreaChart
 							data={chartData}
 							x="date"
