@@ -513,10 +513,10 @@
 										style="width: {(item.count / maxReferrerCount) * 100}%"
 									></div>
 									<div class="relative flex items-center justify-between px-3 py-1.5 text-sm">
-										<span class="flex items-center gap-2 truncate mr-2">
+										<a href="https://{item.referrer}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 truncate mr-2 hover:underline">
 											<img src="https://www.google.com/s2/favicons?domain={item.referrer}&sz=16" alt="" class="h-4 w-4 shrink-0" />
 											{item.referrer}
-										</span>
+										</a>
 										<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
 									</div>
 								</div>
