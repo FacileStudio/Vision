@@ -504,22 +504,22 @@
 			<div class="rounded-lg border p-4">
 				<p class="text-sm text-muted-foreground">Total Pageviews</p>
 				<p class="text-3xl font-bold">{fmt(overview.total_pageviews)}</p>
-				<p class="text-xs {pageviewsTrend.color}">{pageviewsTrend.text}</p>
+				{#if pageviewsTrend.text !== '—'}<p class="text-xs {pageviewsTrend.color}">{pageviewsTrend.text}</p>{/if}
 			</div>
 			<div class="rounded-lg border p-4">
 				<p class="text-sm text-muted-foreground">Unique Visitors</p>
 				<p class="text-3xl font-bold">{fmt(overview.unique_visitors)}</p>
-				<p class="text-xs {visitorsTrend.color}">{visitorsTrend.text}</p>
+				{#if visitorsTrend.text !== '—'}<p class="text-xs {visitorsTrend.color}">{visitorsTrend.text}</p>{/if}
 			</div>
 			<div class="rounded-lg border p-4">
 				<p class="text-sm text-muted-foreground">Views / Visitor</p>
 				<p class="text-3xl font-bold">{viewsPerVisitor().toFixed(1)}</p>
-				<p class="text-xs {vpvTrend.color}">{vpvTrend.text}</p>
+				{#if vpvTrend.text !== '—'}<p class="text-xs {vpvTrend.color}">{vpvTrend.text}</p>{/if}
 			</div>
 			<div class="rounded-lg border p-4">
 				<p class="text-sm text-muted-foreground">Bounce Rate</p>
 				<p class="text-3xl font-bold">{overview.bounce_rate.toFixed(1)}%</p>
-				<p class="text-xs {bounceTrend.color}">{bounceTrend.text}</p>
+				{#if bounceTrend.text !== '—'}<p class="text-xs {bounceTrend.color}">{bounceTrend.text}</p>{/if}
 			</div>
 			<div class="rounded-lg border p-4">
 				<p class="text-sm text-muted-foreground">Active Now</p>
