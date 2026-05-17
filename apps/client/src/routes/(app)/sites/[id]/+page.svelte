@@ -586,7 +586,7 @@
 						</div>
 					</div>
 				</Card.Header>
-				<Card.Content>
+				<Card.Content class="px-0">
 					<Chart.Container config={chartConfig} class="aspect-auto h-[300px] w-full [&_.lc-area-path:nth-child(n+3)]:opacity-20">
 						<AreaChart
 							data={chartData}

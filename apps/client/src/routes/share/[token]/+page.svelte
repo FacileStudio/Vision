@@ -324,7 +324,7 @@
 					<Card.Title>Traffic Over Time</Card.Title>
 					<Card.Description>Pageviews and unique visitors</Card.Description>
 				</Card.Header>
-				<Card.Content>
+				<Card.Content class="px-0">
 					<Chart.Container config={chartConfig} class="aspect-auto h-[300px] w-full">
 						<AreaChart
 							data={chartData}
