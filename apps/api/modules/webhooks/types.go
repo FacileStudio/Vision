@@ -1,26 +1,29 @@
 package webhooks
 
+import "fmt"
+
 type CreateWebhookRequest struct {
-	URL    string `json:"url"`
-	Secret string `json:"secret"`
-	Period string `json:"period"`
+	URL           string `json:"url"`
+	Secret        string `json:"secret"`
+	IntervalHours int    `json:"interval_hours"`
 }
 
 type UpdateWebhookRequest struct {
-	URL     string `json:"url"`
-	Secret  string `json:"secret"`
-	Period  string `json:"period"`
-	Enabled bool   `json:"enabled"`
+	URL           string `json:"url"`
+	Secret        string `json:"secret"`
+	IntervalHours int    `json:"interval_hours"`
+	Enabled       bool   `json:"enabled"`
 }
 
 type WebhookResponse struct {
-	ID         int64   `json:"id"`
-	URL        string  `json:"url"`
-	Period     string  `json:"period"`
-	Enabled    bool    `json:"enabled"`
-	LastSentAt *string `json:"last_sent_at"`
-	CreatedAt  string  `json:"created_at"`
-	UpdatedAt  string  `json:"updated_at"`
+	ID            int64   `json:"id"`
+	URL           string  `json:"url"`
+	Period        string  `json:"period"`
+	IntervalHours int     `json:"interval_hours"`
+	Enabled       bool    `json:"enabled"`
+	LastSentAt    *string `json:"last_sent_at"`
+	CreatedAt     string  `json:"created_at"`
+	UpdatedAt     string  `json:"updated_at"`
 }
 
 type ReportPayload struct {
@@ -60,4 +63,28 @@ type ReportMetrics struct {
 type TopItem struct {
 	Name  string `json:"name"`
 	Count int64  `json:"count"`
+}
+
+func periodLabel(hours int) string {
+	switch hours {
+	case 1:
+		return "hourly"
+	case 24:
+		return "daily"
+	case 168:
+		return "weekly"
+	case 720:
+		return "monthly"
+	}
+	if hours < 24 {
+		return fmt.Sprintf("every %dh", hours)
+	}
+	days := hours / 24
+	if hours%24 == 0 {
+		if days == 1 {
+			return "daily"
+		}
+		return fmt.Sprintf("every %dd", days)
+	}
+	return fmt.Sprintf("every %dh", hours)
 }

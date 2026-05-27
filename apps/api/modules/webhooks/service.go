@@ -11,13 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-var validPeriods = map[string]bool{
-	"hourly":  true,
-	"daily":   true,
-	"weekly":  true,
-	"monthly": true,
-}
-
 type Service struct {
 	orm *gorm.DB
 }
@@ -30,16 +23,17 @@ func (s *Service) create(ctx context.Context, ownerID int64, req *CreateWebhookR
 	if req.URL == "" {
 		return nil, errors.Invalid("url is required")
 	}
-	if !validPeriods[req.Period] {
-		return nil, errors.Invalid("period must be one of: hourly, daily, weekly, monthly")
+	if req.IntervalHours < 1 {
+		return nil, errors.Invalid("interval_hours must be at least 1")
 	}
 
 	record := &schemas.Webhook{
-		OwnerID: ownerID,
-		URL:     req.URL,
-		Secret:  req.Secret,
-		Period:  req.Period,
-		Enabled: true,
+		OwnerID:       ownerID,
+		URL:           req.URL,
+		Secret:        req.Secret,
+		Period:        periodLabel(req.IntervalHours),
+		IntervalHours: req.IntervalHours,
+		Enabled:       true,
 	}
 	if err := s.orm.WithContext(ctx).Create(record).Error; err != nil {
 		return nil, errors.Internal("failed to create webhook", err)
@@ -78,15 +72,16 @@ func (s *Service) update(ctx context.Context, ownerID int64, webhookID int64, re
 	if req.URL == "" {
 		return nil, errors.Invalid("url is required")
 	}
-	if !validPeriods[req.Period] {
-		return nil, errors.Invalid("period must be one of: hourly, daily, weekly, monthly")
+	if req.IntervalHours < 1 {
+		return nil, errors.Invalid("interval_hours must be at least 1")
 	}
 
 	record.URL = req.URL
 	if req.Secret != "" {
 		record.Secret = req.Secret
 	}
-	record.Period = req.Period
+	record.IntervalHours = req.IntervalHours
+	record.Period = periodLabel(req.IntervalHours)
 	record.Enabled = req.Enabled
 
 	if err := s.orm.WithContext(ctx).Save(record).Error; err != nil {
@@ -119,14 +114,33 @@ func (s *Service) findWebhook(ctx context.Context, ownerID int64, webhookID int6
 	return &record, nil
 }
 
+func getIntervalHours(wh *schemas.Webhook) int {
+	if wh.IntervalHours > 0 {
+		return wh.IntervalHours
+	}
+	switch wh.Period {
+	case "hourly":
+		return 1
+	case "daily":
+		return 24
+	case "weekly":
+		return 168
+	case "monthly":
+		return 720
+	}
+	return 24
+}
+
 func toResponse(w *schemas.Webhook) *WebhookResponse {
+	hours := getIntervalHours(w)
 	resp := &WebhookResponse{
-		ID:        w.ID,
-		URL:       w.URL,
-		Period:    w.Period,
-		Enabled:   w.Enabled,
-		CreatedAt: w.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: w.UpdatedAt.Format(time.RFC3339),
+		ID:            w.ID,
+		URL:           w.URL,
+		Period:        periodLabel(hours),
+		IntervalHours: hours,
+		Enabled:       w.Enabled,
+		CreatedAt:     w.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:     w.UpdatedAt.Format(time.RFC3339),
 	}
 	if w.LastSentAt != nil {
 		formatted := w.LastSentAt.Format(time.RFC3339)

@@ -75,18 +75,9 @@ func isDue(wh *schemas.Webhook, now time.Time) bool {
 	if wh.LastSentAt == nil {
 		return true
 	}
-	elapsed := now.Sub(*wh.LastSentAt)
-	switch wh.Period {
-	case "hourly":
-		return elapsed >= time.Hour
-	case "daily":
-		return elapsed >= 24*time.Hour
-	case "weekly":
-		return elapsed >= 7*24*time.Hour
-	case "monthly":
-		return elapsed >= 30*24*time.Hour
-	}
-	return false
+	hours := getIntervalHours(wh)
+	interval := time.Duration(hours) * time.Hour
+	return now.Sub(*wh.LastSentAt) >= interval
 }
 
 func testWebhookReport(orm *gorm.DB, analyticsService *analytics.Service, ownerID int64, webhookID int64) error {
@@ -110,7 +101,8 @@ func testWebhookReport(orm *gorm.DB, analyticsService *analytics.Service, ownerI
 
 func sendSiteReport(orm *gorm.DB, analyticsService *analytics.Service, wh *schemas.Webhook, site *schemas.Site) error {
 	now := time.Now().UTC()
-	from := periodStart(wh.Period, now)
+	hours := getIntervalHours(wh)
+	from := now.Add(-time.Duration(hours) * time.Hour)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -162,7 +154,7 @@ func sendSiteReport(orm *gorm.DB, analyticsService *analytics.Service, wh *schem
 			Domain: site.Domain,
 		},
 		Period: ReportPeriod{
-			Type: wh.Period,
+			Type: periodLabel(hours),
 			From: from.Format(time.RFC3339),
 			To:   now.Format(time.RFC3339),
 		},
@@ -215,18 +207,4 @@ func sign(secret string, body []byte) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write(body)
 	return hex.EncodeToString(mac.Sum(nil))
-}
-
-func periodStart(period string, now time.Time) time.Time {
-	switch period {
-	case "hourly":
-		return now.Add(-time.Hour)
-	case "daily":
-		return now.Add(-24 * time.Hour)
-	case "weekly":
-		return now.Add(-7 * 24 * time.Hour)
-	case "monthly":
-		return now.Add(-30 * 24 * time.Hour)
-	}
-	return now.Add(-24 * time.Hour)
 }

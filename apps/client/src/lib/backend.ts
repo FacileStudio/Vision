@@ -132,6 +132,7 @@ export interface Webhook {
 	id: number;
 	url: string;
 	period: string;
+	interval_hours: number;
 	enabled: boolean;
 	last_sent_at: string | null;
 	created_at: string;
@@ -141,13 +142,13 @@ export interface Webhook {
 export interface CreateWebhookRequest {
 	url: string;
 	secret: string;
-	period: string;
+	interval_hours: number;
 }
 
 export interface UpdateWebhookRequest {
 	url: string;
 	secret: string;
-	period: string;
+	interval_hours: number;
 	enabled: boolean;
 }
 
