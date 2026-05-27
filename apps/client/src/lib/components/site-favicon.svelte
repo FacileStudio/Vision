@@ -24,9 +24,11 @@
 </script>
 
 <div class="relative shrink-0 rounded overflow-hidden {className}" style="background: {colorFromDomain(domain)}">
-	<span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white select-none">
-		{initial}
-	</span>
+	{#if !loaded}
+		<span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white select-none">
+			{initial}
+		</span>
+	{/if}
 	{#if !errored}
 		<img
 			src="https://{domain}/favicon.ico"
