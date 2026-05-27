@@ -18,11 +18,11 @@
 		const token = page.url.searchParams.get('token');
 		if (token) {
 			setToken(token);
-			goto('/dashboard');
+			goto('/sites');
 			return;
 		}
 		if (isAuthenticated()) {
-			goto('/dashboard');
+			goto('/sites');
 			return;
 		}
 

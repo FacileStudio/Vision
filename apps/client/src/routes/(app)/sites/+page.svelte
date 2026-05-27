@@ -5,6 +5,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import Icon from '@iconify/svelte';
 	import AddSiteDrawer from '$lib/components/add-site-drawer.svelte';
+	import SiteFavicon from '$lib/components/site-favicon.svelte';
 
 	let sites = $state<Site[]>([]);
 	let drawerOpen = $state(false);
@@ -35,7 +36,7 @@
 	{#each sites as site}
 		<div class="flex items-center justify-between rounded-lg border p-4">
 			<a href="/sites/{site.id}" class="flex items-center gap-3 hover:underline">
-				<img src="https://www.google.com/s2/favicons?domain={site.domain}&sz=32" alt="" class="h-5 w-5 shrink-0 rounded" />
+				<SiteFavicon domain={site.domain} name={site.name} class="h-5 w-5" />
 				<span class="font-medium">{site.name}</span>
 				<span class="text-sm text-muted-foreground">{site.domain}</span>
 			</a>

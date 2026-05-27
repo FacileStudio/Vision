@@ -7,7 +7,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
 	import { userStore } from '$lib/stores/user.svelte';
-	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
 	import Globe from '@lucide/svelte/icons/globe';
 	import Settings from '@lucide/svelte/icons/settings';
 	import LogOut from '@lucide/svelte/icons/log-out';
@@ -40,7 +39,6 @@
 	}
 
 	const navLinks = [
-		{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 		{ href: '/sites', label: 'Sites', icon: Globe },
 		{ href: '/settings', label: 'Settings', icon: Settings }
 	];

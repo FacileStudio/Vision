@@ -19,7 +19,7 @@
 
 	onMount(async () => {
 		if (isAuthenticated()) {
-			goto('/dashboard');
+			goto('/sites');
 			return;
 		}
 		const raw = page.url.searchParams.get('tab');
@@ -42,7 +42,7 @@
 			const fn = tab === 'register' ? api.auth.register : api.auth.login;
 			const res = await fn(email, password);
 			setToken(res.token);
-			goto('/dashboard');
+			goto('/sites');
 		} catch (err) {
 			message = err instanceof Error ? err.message : 'Something went wrong';
 		} finally {

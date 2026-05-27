@@ -11,6 +11,7 @@
 	import Icon from '@iconify/svelte';
 	import WorldMap from '$lib/components/map/world-map.svelte';
 	import StatsDrawer from '$lib/components/stats-drawer.svelte';
+	import SiteFavicon from '$lib/components/site-favicon.svelte';
 
 	let site = $state<Site | null>(null);
 	let overview = $state<AnalyticsOverview | null>(null);
@@ -377,7 +378,7 @@
 	<div class="mb-8 flex items-center justify-between">
 		<div>
 			<div class="flex items-center gap-3">
-				<img src="https://www.google.com/s2/favicons?domain={site.domain}&sz=32" alt="" class="h-6 w-6 shrink-0 rounded" />
+				<SiteFavicon domain={site.domain} name={site.name} class="h-6 w-6" />
 				<h1 class="text-2xl font-bold">{site.name}</h1>
 			</div>
 			<p class="text-muted-foreground">{site.domain}</p>
@@ -411,7 +412,7 @@
 						class="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
 					>
 						<Icon icon="solar:share-linear" class="h-3.5 w-3.5" />
-						Share
+						Create public link
 					</button>
 				{/if}
 			</div>
