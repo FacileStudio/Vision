@@ -31,7 +31,7 @@
 		<img
 			src="https://{domain}/favicon.ico"
 			alt=""
-			class="relative h-full w-full object-contain transition-opacity duration-150 {loaded ? 'opacity-100' : 'opacity-0'}"
+			class="absolute inset-0 h-full w-full object-contain transition-opacity duration-150 {loaded ? 'opacity-100' : 'opacity-0'}"
 			onload={() => (loaded = true)}
 			onerror={() => (errored = true)}
 		/>
