@@ -7,11 +7,28 @@
 	import { scaleBand } from 'd3-scale';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Chart from '$lib/components/ui/chart/index.js';
+	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
 	import { Copy, Check } from '@lucide/svelte';
 	import Icon from '@iconify/svelte';
 	import WorldMap from '$lib/components/map/world-map.svelte';
 	import StatsDrawer from '$lib/components/stats-drawer.svelte';
 	import SiteFavicon from '$lib/components/site-favicon.svelte';
+	import StatCard from '$lib/components/stat-card.svelte';
+	import BarListCard from '$lib/components/bar-list-card.svelte';
+	import PieLegendCard from '$lib/components/pie-legend-card.svelte';
+	import PerformanceCard from '$lib/components/performance-card.svelte';
+	import {
+		type RangeKey,
+		type Granularity,
+		ranges,
+		granularities,
+		rangeDates,
+		formatDateRange,
+		trendPercent,
+		fmt,
+		classifyReferrer,
+		CHART_COLORS
+	} from '$lib/utils/analytics';
 
 	let site = $state<Site | null>(null);
 	let overview = $state<AnalyticsOverview | null>(null);
@@ -21,24 +38,18 @@
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 	let realtimeTimer: ReturnType<typeof setInterval> | null = null;
 	let shareCopied = $state(false);
-	let shareUrl = $derived(site?.share_token ? `${page.url.origin}/share/${site.share_token}` : '');
+	let shareUrl = $derived(
+		site?.share_token ? `${page.url.origin}/share/${site.share_token}` : ''
+	);
 
-	type RangeKey = 'today' | 'this_week' | '7d' | 'this_month' | '30d' | '90d' | 'this_year' | 'custom';
 	let selectedRange = $state<RangeKey>('30d');
 	let customFrom = $state('');
 	let customTo = $state('');
-
-	type Granularity = 'hour' | 'day' | 'week' | 'month';
 	let selectedGranularity = $state<Granularity>('day');
-	const granularities: { key: Granularity; label: string }[] = [
-		{ key: 'hour', label: 'Hourly' },
-		{ key: 'day', label: 'Daily' },
-		{ key: 'week', label: 'Weekly' },
-		{ key: 'month', label: 'Monthly' }
-	];
 
 	let activeFilters = $state<Record<string, string>>({});
 	let showFilters = $state(false);
+	let activeDrawer = $state<string | null>(null);
 
 	const filterFields = [
 		{ key: 'country', label: 'Country', placeholder: 'e.g. US' },
@@ -55,70 +66,17 @@
 		activeFilters = {};
 	}
 
-	const ranges: { key: RangeKey; label: string }[] = [
-		{ key: 'today', label: 'Today' },
-		{ key: 'this_week', label: 'This Week' },
-		{ key: '7d', label: 'Last 7 Days' },
-		{ key: 'this_month', label: 'This Month' },
-		{ key: '30d', label: 'Last 30 Days' },
-		{ key: '90d', label: 'Last 90 Days' },
-		{ key: 'this_year', label: 'This Year' },
-		{ key: 'custom', label: 'Custom' }
-	];
-
-	function rangeDates(key: RangeKey): { from: string; to: string } {
-		const now = new Date();
-		const toStr = now.toISOString().slice(0, 10);
-
-		if (key === 'today') return { from: toStr, to: toStr };
-
-		if (key === 'this_week') {
-			const day = now.getDay();
-			const diff = day === 0 ? 6 : day - 1;
-			const monday = new Date(now);
-			monday.setDate(now.getDate() - diff);
-			return { from: monday.toISOString().slice(0, 10), to: toStr };
-		}
-
-		if (key === 'this_month') {
-			const first = new Date(now.getFullYear(), now.getMonth(), 1);
-			return { from: first.toISOString().slice(0, 10), to: toStr };
-		}
-
-		if (key === 'this_year') {
-			return { from: `${now.getFullYear()}-01-01`, to: toStr };
-		}
-
-		if (key === 'custom') {
-			return { from: customFrom || toStr, to: customTo || toStr };
-		}
-
-		const daysMap: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
-		const from = new Date(now);
-		from.setDate(from.getDate() - (daysMap[key] ?? 30));
-		return { from: from.toISOString().slice(0, 10), to: toStr };
-	}
-
-	function formatDateRange(from: string, to: string): string {
-		const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
-		const f = new Date(from + 'T00:00:00');
-		const t = new Date(to + 'T00:00:00');
-		if (from === to) return f.toLocaleDateString('en-US', opts);
-		return `${f.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${t.toLocaleDateString('en-US', opts)}`;
+	function setFilter(key: string) {
+		return (label: string) => {
+			activeFilters = { ...activeFilters, [key]: label };
+			showFilters = true;
+		};
 	}
 
 	let dateRangeLabel = $derived(() => {
-		const { from, to } = rangeDates(selectedRange);
+		const { from, to } = rangeDates(selectedRange, customFrom, customTo);
 		return formatDateRange(from, to);
 	});
-
-	function trendPercent(current: number, prev: number): { text: string; color: string } {
-		if (prev === 0) return { text: '—', color: 'text-muted-foreground' };
-		const pct = ((current - prev) / prev) * 100;
-		if (pct > 0) return { text: `↑ ${pct.toFixed(1)}%`, color: 'text-green-500' };
-		if (pct < 0) return { text: `↓ ${Math.abs(pct).toFixed(1)}%`, color: 'text-red-500' };
-		return { text: '—', color: 'text-muted-foreground' };
-	}
 
 	let viewsPerVisitor = $derived(() => {
 		if (!overview || overview.unique_visitors === 0) return 0;
@@ -137,17 +95,16 @@
 		prev_visitors: { label: 'Prev Visitors', color: 'var(--chart-2)' }
 	} satisfies Chart.ChartConfig;
 
-	const CHART_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
+	const trafficConfig = {
+		direct: { label: 'Direct', color: 'var(--chart-1)' },
+		search: { label: 'Search', color: 'var(--chart-2)' },
+		social: { label: 'Social', color: 'var(--chart-3)' },
+		other: { label: 'Other', color: 'var(--chart-4)' }
+	} satisfies Chart.ChartConfig;
 
-	const SEARCH_ENGINES = ['google', 'bing', 'duckduckgo', 'yahoo', 'baidu', 'yandex'];
-	const SOCIAL_NETWORKS = ['twitter', 'x.com', 'facebook', 'instagram', 'linkedin', 'reddit', 'tiktok', 'youtube'];
-
-	function classifyReferrer(ref: string): 'search' | 'social' | 'other' {
-		const lower = ref.toLowerCase();
-		if (SEARCH_ENGINES.some((s) => lower.includes(s))) return 'search';
-		if (SOCIAL_NETWORKS.some((s) => lower.includes(s))) return 'social';
-		return 'other';
-	}
+	const hourlyConfig = {
+		count: { label: 'Pageviews', color: 'var(--chart-1)' }
+	} satisfies Chart.ChartConfig;
 
 	let trafficSourcesData = $derived(() => {
 		if (!overview) return [];
@@ -179,18 +136,6 @@
 		return trafficSourcesData().reduce((sum, d) => sum + d.value, 0);
 	});
 
-	const trafficConfig = {
-		direct: { label: 'Direct', color: 'var(--chart-1)' },
-		search: { label: 'Search', color: 'var(--chart-2)' },
-		social: { label: 'Social', color: 'var(--chart-3)' },
-		other: { label: 'Other', color: 'var(--chart-4)' }
-	} satisfies Chart.ChartConfig;
-
-	const hourlyConfig = {
-		count: { label: 'Pageviews', color: 'var(--chart-1)' }
-	} satisfies Chart.ChartConfig;
-
-
 	function trackingSnippet(): string {
 		return `<script defer src="${page.url.origin}/s.js"><\/script>`;
 	}
@@ -220,7 +165,7 @@
 
 	async function refresh(siteId: number) {
 		try {
-			const { from, to } = rangeDates(selectedRange);
+			const { from, to } = rangeDates(selectedRange, customFrom, customTo);
 			overview = await api.analytics.overview(siteId, from, to, selectedGranularity, activeFilters);
 			live = true;
 		} catch {
@@ -236,11 +181,12 @@
 	}
 
 	async function exportCSV() {
-		const { from, to } = rangeDates(selectedRange);
+		const { from, to } = rangeDates(selectedRange, customFrom, customTo);
 		const token = localStorage.getItem('token');
-		const res = await fetch(`/api/analytics/${page.params.id}/export?from=${from}&to=${to}&format=csv`, {
-			headers: { 'Authorization': `Bearer ${token}` }
-		});
+		const res = await fetch(
+			`/api/analytics/${page.params.id}/export?from=${from}&to=${to}&format=csv`,
+			{ headers: { Authorization: `Bearer ${token}` } }
+		);
 		if (!res.ok) return;
 		const blob = await res.blob();
 		const url = URL.createObjectURL(blob);
@@ -249,10 +195,6 @@
 		a.download = 'vision-export.csv';
 		a.click();
 		URL.revokeObjectURL(url);
-	}
-
-	function fmt(n: number): string {
-		return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 	}
 
 	onMount(() => {
@@ -293,16 +235,39 @@
 
 	let hourlyData = $derived(overview?.hourly_distribution ?? []);
 
-	let topPagesData = $derived((overview?.top_pages ?? []).slice(0, 8));
-	let topReferrersData = $derived((overview?.top_referrers ?? []).slice(0, 8));
-
-	let browsersData = $derived((overview?.top_browsers ?? []).slice(0, 8));
-	let osData = $derived((overview?.top_os ?? []).slice(0, 8));
-	let devicesData = $derived(overview?.top_devices ?? []);
-	let screensData = $derived(overview?.top_screens ?? []);
+	let topPagesData = $derived(
+		(overview?.top_pages ?? []).slice(0, 8).map((d) => ({ label: d.path, count: d.count }))
+	);
+	let topReferrersData = $derived(
+		(overview?.top_referrers ?? []).slice(0, 8).map((d) => ({ label: d.referrer, count: d.count }))
+	);
+	let browsersData = $derived(
+		(overview?.top_browsers ?? []).slice(0, 8).map((d) => ({ label: d.browser, count: d.count }))
+	);
+	let osData = $derived(
+		(overview?.top_os ?? []).slice(0, 8).map((d) => ({ label: d.os, count: d.count }))
+	);
+	let entryPagesData = $derived(
+		(overview?.top_entry_pages ?? []).slice(0, 8).map((d) => ({ label: d.path, count: d.count }))
+	);
+	let exitPagesData = $derived(
+		(overview?.top_exit_pages ?? []).slice(0, 8).map((d) => ({ label: d.path, count: d.count }))
+	);
+	let utmSourcesData = $derived(
+		(overview?.top_utm_sources ?? []).slice(0, 8).map((d) => ({ label: d.value, count: d.count }))
+	);
+	let utmMediumsData = $derived(
+		(overview?.top_utm_mediums ?? []).slice(0, 8).map((d) => ({ label: d.value, count: d.count }))
+	);
+	let utmCampaignsData = $derived(
+		(overview?.top_utm_campaigns ?? []).slice(0, 8).map((d) => ({ label: d.value, count: d.count }))
+	);
+	let eventsData = $derived(
+		(overview?.top_events ?? []).slice(0, 8).map((d) => ({ label: d.name, count: d.count }))
+	);
 
 	let devicesPieData = $derived(
-		devicesData.map((d, i) => ({
+		(overview?.top_devices ?? []).map((d, i) => ({
 			key: d.device,
 			label: d.device,
 			value: d.count,
@@ -311,7 +276,7 @@
 	);
 
 	let screensPieData = $derived(
-		screensData.map((d, i) => ({
+		(overview?.top_screens ?? []).map((d, i) => ({
 			key: d.screen,
 			label: d.screen,
 			value: d.count,
@@ -319,45 +284,85 @@
 		}))
 	);
 
-	let maxBrowserCount = $derived(Math.max(...browsersData.map((d) => d.count), 1));
-	let maxOsCount = $derived(Math.max(...osData.map((d) => d.count), 1));
-	let maxPageCount = $derived(Math.max(...topPagesData.map((d) => d.count), 1));
-	let maxReferrerCount = $derived(Math.max(...topReferrersData.map((d) => d.count), 1));
-	let entryPagesData = $derived((overview?.top_entry_pages ?? []).slice(0, 8));
-	let exitPagesData = $derived((overview?.top_exit_pages ?? []).slice(0, 8));
-	let utmSourcesData = $derived((overview?.top_utm_sources ?? []).slice(0, 8));
-	let utmMediumsData = $derived((overview?.top_utm_mediums ?? []).slice(0, 8));
-	let utmCampaignsData = $derived((overview?.top_utm_campaigns ?? []).slice(0, 8));
-	let eventsData = $derived((overview?.top_events ?? []).slice(0, 8));
-
-	let maxEntryCount = $derived(Math.max(...entryPagesData.map((d) => d.count), 1));
-	let maxExitCount = $derived(Math.max(...exitPagesData.map((d) => d.count), 1));
-	let maxUTMSourceCount = $derived(Math.max(...utmSourcesData.map((d) => d.count), 1));
-	let maxUTMMediumCount = $derived(Math.max(...utmMediumsData.map((d) => d.count), 1));
-	let maxUTMCampaignCount = $derived(Math.max(...utmCampaignsData.map((d) => d.count), 1));
-	let maxEventCount = $derived(Math.max(...eventsData.map((d) => d.count), 1));
-
-	let pageviewsTrend = $derived(overview ? trendPercent(overview.total_pageviews, overview.prev_total_pageviews) : { text: '—', color: 'text-muted-foreground' });
-	let visitorsTrend = $derived(overview ? trendPercent(overview.unique_visitors, overview.prev_unique_visitors) : { text: '—', color: 'text-muted-foreground' });
+	let pageviewsTrend = $derived(
+		overview
+			? trendPercent(overview.total_pageviews, overview.prev_total_pageviews)
+			: { text: '—', color: 'text-muted-foreground' }
+	);
+	let visitorsTrend = $derived(
+		overview
+			? trendPercent(overview.unique_visitors, overview.prev_unique_visitors)
+			: { text: '—', color: 'text-muted-foreground' }
+	);
 	let vpvTrend = $derived(trendPercent(viewsPerVisitor(), prevViewsPerVisitor()));
-	let bounceTrend = $derived(overview ? trendPercent(overview.bounce_rate, overview.prev_bounce_rate) : { text: '—', color: 'text-muted-foreground' });
-
-	let activeDrawer = $state<string | null>(null);
+	let bounceTrend = $derived(
+		overview
+			? trendPercent(overview.bounce_rate, overview.prev_bounce_rate)
+			: { text: '—', color: 'text-muted-foreground' }
+	);
 
 	let drawerConfig = $derived(() => {
-		if (!overview || !activeDrawer) return { title: '', items: [] as { label: string; count: number }[], filterKey: '' };
-		const configs: Record<string, { title: string; items: { label: string; count: number }[]; filterKey: string }> = {
-			pages: { title: 'Top Pages', items: (overview.top_pages ?? []).map(d => ({ label: d.path, count: d.count })), filterKey: 'path' },
-			referrers: { title: 'Top Referrers', items: (overview.top_referrers ?? []).map(d => ({ label: d.referrer, count: d.count })), filterKey: 'referrer' },
-			browsers: { title: 'Browsers', items: (overview.top_browsers ?? []).map(d => ({ label: d.browser, count: d.count })), filterKey: 'browser' },
-			os: { title: 'Operating Systems', items: (overview.top_os ?? []).map(d => ({ label: d.os, count: d.count })), filterKey: 'os' },
-			entry: { title: 'Entry Pages', items: (overview.top_entry_pages ?? []).map(d => ({ label: d.path, count: d.count })), filterKey: 'path' },
-			exit: { title: 'Exit Pages', items: (overview.top_exit_pages ?? []).map(d => ({ label: d.path, count: d.count })), filterKey: 'path' },
-			countries: { title: 'Countries', items: (overview.top_countries ?? []).map(d => ({ label: d.country, count: d.count })), filterKey: 'country' },
-			utm_sources: { title: 'UTM Sources', items: (overview.top_utm_sources ?? []).map(d => ({ label: d.value, count: d.count })), filterKey: '' },
-			utm_mediums: { title: 'UTM Mediums', items: (overview.top_utm_mediums ?? []).map(d => ({ label: d.value, count: d.count })), filterKey: '' },
-			utm_campaigns: { title: 'UTM Campaigns', items: (overview.top_utm_campaigns ?? []).map(d => ({ label: d.value, count: d.count })), filterKey: '' },
-			events: { title: 'Custom Events', items: (overview.top_events ?? []).map(d => ({ label: d.name, count: d.count })), filterKey: '' }
+		if (!overview || !activeDrawer)
+			return { title: '', items: [] as { label: string; count: number }[], filterKey: '' };
+		const configs: Record<
+			string,
+			{ title: string; items: { label: string; count: number }[]; filterKey: string }
+		> = {
+			pages: {
+				title: 'Top Pages',
+				items: (overview.top_pages ?? []).map((d) => ({ label: d.path, count: d.count })),
+				filterKey: 'path'
+			},
+			referrers: {
+				title: 'Top Referrers',
+				items: (overview.top_referrers ?? []).map((d) => ({ label: d.referrer, count: d.count })),
+				filterKey: 'referrer'
+			},
+			browsers: {
+				title: 'Browsers',
+				items: (overview.top_browsers ?? []).map((d) => ({ label: d.browser, count: d.count })),
+				filterKey: 'browser'
+			},
+			os: {
+				title: 'Operating Systems',
+				items: (overview.top_os ?? []).map((d) => ({ label: d.os, count: d.count })),
+				filterKey: 'os'
+			},
+			entry: {
+				title: 'Entry Pages',
+				items: (overview.top_entry_pages ?? []).map((d) => ({ label: d.path, count: d.count })),
+				filterKey: 'path'
+			},
+			exit: {
+				title: 'Exit Pages',
+				items: (overview.top_exit_pages ?? []).map((d) => ({ label: d.path, count: d.count })),
+				filterKey: 'path'
+			},
+			countries: {
+				title: 'Countries',
+				items: (overview.top_countries ?? []).map((d) => ({ label: d.country, count: d.count })),
+				filterKey: 'country'
+			},
+			utm_sources: {
+				title: 'UTM Sources',
+				items: (overview.top_utm_sources ?? []).map((d) => ({ label: d.value, count: d.count })),
+				filterKey: ''
+			},
+			utm_mediums: {
+				title: 'UTM Mediums',
+				items: (overview.top_utm_mediums ?? []).map((d) => ({ label: d.value, count: d.count })),
+				filterKey: ''
+			},
+			utm_campaigns: {
+				title: 'UTM Campaigns',
+				items: (overview.top_utm_campaigns ?? []).map((d) => ({ label: d.value, count: d.count })),
+				filterKey: ''
+			},
+			events: {
+				title: 'Custom Events',
+				items: (overview.top_events ?? []).map((d) => ({ label: d.name, count: d.count })),
+				filterKey: ''
+			}
 		};
 		return configs[activeDrawer] ?? { title: '', items: [], filterKey: '' };
 	});
@@ -382,14 +387,14 @@
 				<h1 class="text-2xl font-bold">{site.name}</h1>
 			</div>
 			<p class="text-muted-foreground">{site.domain}</p>
-			<div class="flex items-center gap-2 mt-2">
+			<div class="mt-2 flex items-center gap-2">
 				{#if site.share_token}
 					<div class="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5">
 						<Icon icon="solar:link-linear" class="h-4 w-4 text-muted-foreground" />
 						<code class="text-xs text-muted-foreground">{shareUrl}</code>
 						<button
 							onclick={copyShareUrl}
-							class="rounded p-1 text-muted-foreground hover:text-foreground transition-colors"
+							class="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
 							aria-label="Copy share link"
 						>
 							{#if shareCopied}
@@ -400,7 +405,7 @@
 						</button>
 						<button
 							onclick={revokeShare}
-							class="rounded p-1 text-red-500 hover:bg-red-500/10 transition-colors"
+							class="rounded p-1 text-red-500 transition-colors hover:bg-red-500/10"
 							aria-label="Revoke share link"
 						>
 							<Icon icon="solar:trash-bin-trash-linear" class="h-4 w-4" />
@@ -420,7 +425,7 @@
 		<div class="flex items-center gap-3 text-sm">
 			<button
 				onclick={exportCSV}
-				class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+				class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 				aria-label="Export CSV"
 			>
 				<Icon icon="solar:download-linear" class="h-4 w-4" />
@@ -441,40 +446,72 @@
 		</div>
 	</div>
 
-	<div class="mb-8 rounded-lg border p-4">
-		<h2 class="font-semibold mb-2">Tracking Script</h2>
-		<p class="text-sm text-muted-foreground mb-2">Add this to your website's &lt;head&gt;:</p>
-		<div class="relative group">
-			<pre
-				class="rounded bg-muted p-3 pr-12 text-xs overflow-x-auto"
-				>&lt;script defer src="{page.url.origin}/s.js"&gt;&lt;/script&gt;</pre
-			>
-			<button
-				onclick={copySnippet}
-				class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-background/80 transition-colors"
-				aria-label="Copy tracking script"
-			>
-				{#if copied}
-					<Check class="h-4 w-4 text-green-500" />
-				{:else}
-					<Copy class="h-4 w-4" />
-				{/if}
-			</button>
-		</div>
-	</div>
+	<Card.Root class="mb-8">
+		<Card.Header>
+			<Card.Title>Tracking Script</Card.Title>
+			<Card.Description>Add this to your website's &lt;head&gt;</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			<div class="group relative">
+				<pre
+					class="overflow-x-auto rounded bg-muted p-3 pr-12 text-xs"
+				>&lt;script defer src="{page.url.origin}/s.js"&gt;&lt;/script&gt;</pre>
+				<button
+					onclick={copySnippet}
+					class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-muted-foreground transition-colors hover:bg-background/80 hover:text-foreground"
+					aria-label="Copy tracking script"
+				>
+					{#if copied}
+						<Check class="h-4 w-4 text-green-500" />
+					{:else}
+						<Copy class="h-4 w-4" />
+					{/if}
+				</button>
+			</div>
+		</Card.Content>
+	</Card.Root>
 
 	{#if overview}
-		<div class="mb-2 flex flex-wrap gap-2">
-			{#each ranges as r}
+		<div class="mb-6 flex flex-wrap items-center gap-3">
+			<ToggleGroup.Root
+				type="single"
+				variant="outline"
+				size="sm"
+				value={selectedRange}
+				onValueChange={(v) => {
+					if (v) selectedRange = v as RangeKey;
+				}}
+			>
+				{#each ranges as r (r.key)}
+					<ToggleGroup.Item value={r.key}>{r.label}</ToggleGroup.Item>
+				{/each}
+			</ToggleGroup.Root>
+
+			<button
+				onclick={() => (showFilters = !showFilters)}
+				class="flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors {activeFilterCount >
+				0
+					? 'border-foreground bg-foreground text-background'
+					: 'text-muted-foreground hover:text-foreground'}"
+			>
+				<Icon icon="solar:filter-linear" class="h-3.5 w-3.5" />
+				Filters
+				{#if activeFilterCount > 0}
+					<span class="rounded-full bg-background px-1.5 text-[10px] leading-4 text-foreground"
+						>{activeFilterCount}</span
+					>
+				{/if}
+			</button>
+			{#if activeFilterCount > 0}
 				<button
-					onclick={() => (selectedRange = r.key)}
-					class="rounded-full px-3 py-1 text-sm font-medium transition-colors {selectedRange === r.key
-						? 'bg-foreground text-background'
-						: 'bg-muted text-muted-foreground hover:text-foreground'}"
+					onclick={clearFilters}
+					class="text-xs text-muted-foreground transition-colors hover:text-foreground"
 				>
-					{r.label}
+					Clear
 				</button>
-			{/each}
+			{/if}
+
+			<span class="ml-auto text-xs text-muted-foreground">{dateRangeLabel()}</span>
 		</div>
 
 		{#if selectedRange === 'custom'}
@@ -484,7 +521,7 @@
 					bind:value={customFrom}
 					class="rounded-md border bg-background px-3 py-1.5 text-sm"
 				/>
-				<span class="text-muted-foreground text-sm">to</span>
+				<span class="text-sm text-muted-foreground">to</span>
 				<input
 					type="date"
 					bind:value={customTo}
@@ -493,36 +530,13 @@
 			</div>
 		{/if}
 
-		<p class="mb-4 text-sm text-muted-foreground">{dateRangeLabel()}</p>
-
-		<div class="mb-4 flex items-center gap-2">
-			<button
-				onclick={() => (showFilters = !showFilters)}
-				class="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-colors {activeFilterCount > 0
-					? 'bg-foreground text-background'
-					: 'bg-muted text-muted-foreground hover:text-foreground'}"
-			>
-				<Icon icon="solar:filter-linear" class="h-3.5 w-3.5" />
-				Filters
-				{#if activeFilterCount > 0}
-					<span class="ml-1 rounded-full bg-background text-foreground px-1.5 text-xs">{activeFilterCount}</span>
-				{/if}
-			</button>
-			{#if activeFilterCount > 0}
-				<button
-					onclick={clearFilters}
-					class="text-xs text-muted-foreground hover:text-foreground transition-colors"
-				>
-					Clear all
-				</button>
-			{/if}
-		</div>
-
 		{#if showFilters}
-			<div class="mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+			<div class="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
 				{#each filterFields as f}
 					<div>
-						<label for="filter-{f.key}" class="block text-xs text-muted-foreground mb-1">{f.label}</label>
+						<label for="filter-{f.key}" class="mb-1 block text-xs text-muted-foreground"
+							>{f.label}</label
+						>
 						<input
 							id="filter-{f.key}"
 							type="text"
@@ -538,68 +552,20 @@
 			</div>
 		{/if}
 
-		<div class="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-5 mb-8">
-			<div class="rounded-lg border p-4">
-				<p class="text-sm text-muted-foreground">Total Pageviews</p>
-				<p class="text-3xl font-bold">{fmt(overview.total_pageviews)}</p>
-				{#if pageviewsTrend.text !== '—'}<p class="text-xs {pageviewsTrend.color}">{pageviewsTrend.text}</p>{/if}
-			</div>
-			<div class="rounded-lg border p-4">
-				<p class="text-sm text-muted-foreground">Unique Visitors</p>
-				<p class="text-3xl font-bold">{fmt(overview.unique_visitors)}</p>
-				{#if visitorsTrend.text !== '—'}<p class="text-xs {visitorsTrend.color}">{visitorsTrend.text}</p>{/if}
-			</div>
-			<div class="rounded-lg border p-4">
-				<p class="text-sm text-muted-foreground">Views / Visitor</p>
-				<p class="text-3xl font-bold">{viewsPerVisitor().toFixed(1)}</p>
-				{#if vpvTrend.text !== '—'}<p class="text-xs {vpvTrend.color}">{vpvTrend.text}</p>{/if}
-			</div>
-			<div class="rounded-lg border p-4">
-				<p class="text-sm text-muted-foreground">Bounce Rate</p>
-				<p class="text-3xl font-bold">{overview.bounce_rate.toFixed(1)}%</p>
-				{#if bounceTrend.text !== '—'}<p class="text-xs {bounceTrend.color}">{bounceTrend.text}</p>{/if}
-			</div>
-			<div class="rounded-lg border p-4">
-				<p class="text-sm text-muted-foreground">Active Now</p>
-				<div class="flex items-center gap-2">
-					<span class="relative flex h-2 w-2">
-						<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
-						<span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
-					</span>
-					<p class="text-3xl font-bold">{fmt(realtimeCount)}</p>
-				</div>
-			</div>
+		<div class="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+			<StatCard label="Pageviews" value={fmt(overview.total_pageviews)} trend={pageviewsTrend} />
+			<StatCard label="Visitors" value={fmt(overview.unique_visitors)} trend={visitorsTrend} />
+			<StatCard label="Views / Visitor" value={viewsPerVisitor().toFixed(1)} trend={vpvTrend} />
+			<StatCard
+				label="Bounce Rate"
+				value="{overview.bounce_rate.toFixed(1)}%"
+				trend={bounceTrend}
+			/>
+			<StatCard label="Active Now" value={fmt(realtimeCount)} pulse />
 		</div>
 
 		{#if overview.performance && overview.performance.sample_count > 0}
-			<div class="rounded-lg border p-4 mb-8">
-				<div class="flex items-center justify-between mb-3">
-					<h3 class="text-sm font-semibold">Page Load Performance</h3>
-					<span class="text-xs text-muted-foreground">{fmt(overview.performance.sample_count)} samples</span>
-				</div>
-				<div class="grid grid-cols-5 gap-4">
-					<div>
-						<p class="text-xs text-muted-foreground">DNS</p>
-						<p class="text-lg font-semibold">{Math.round(overview.performance.avg_dns)}ms</p>
-					</div>
-					<div>
-						<p class="text-xs text-muted-foreground">TCP</p>
-						<p class="text-lg font-semibold">{Math.round(overview.performance.avg_tcp)}ms</p>
-					</div>
-					<div>
-						<p class="text-xs text-muted-foreground">TTFB</p>
-						<p class="text-lg font-semibold">{Math.round(overview.performance.avg_ttfb)}ms</p>
-					</div>
-					<div>
-						<p class="text-xs text-muted-foreground">DOM Load</p>
-						<p class="text-lg font-semibold">{Math.round(overview.performance.avg_dom_load)}ms</p>
-					</div>
-					<div>
-						<p class="text-xs text-muted-foreground">Page Load</p>
-						<p class="text-lg font-semibold">{Math.round(overview.performance.avg_page_load)}ms</p>
-					</div>
-				</div>
-			</div>
+			<PerformanceCard performance={overview.performance} />
 		{/if}
 
 		{#if chartData.length > 0}
@@ -610,48 +576,36 @@
 							<Card.Title>Traffic Over Time</Card.Title>
 							<Card.Description>Pageviews and unique visitors</Card.Description>
 						</div>
-						<div class="flex gap-1">
-							{#each granularities as g}
-								<button
-									onclick={() => (selectedGranularity = g.key)}
-									class="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors {selectedGranularity === g.key
-										? 'bg-foreground text-background'
-										: 'text-muted-foreground hover:text-foreground'}"
-								>
-									{g.label}
-								</button>
+						<ToggleGroup.Root
+							type="single"
+							variant="outline"
+							size="sm"
+							value={selectedGranularity}
+							onValueChange={(v) => {
+								if (v) selectedGranularity = v as Granularity;
+							}}
+						>
+							{#each granularities as g (g.key)}
+								<ToggleGroup.Item value={g.key}>{g.label}</ToggleGroup.Item>
 							{/each}
-						</div>
+						</ToggleGroup.Root>
 					</div>
 				</Card.Header>
 				<Card.Content class="px-0">
-					<Chart.Container config={chartConfig} class="aspect-auto h-[300px] w-full [&_.lc-area-path:nth-child(n+3)]:opacity-20">
+					<Chart.Container
+						config={chartConfig}
+						class="aspect-auto h-[300px] w-full [&_.lc-area-path:nth-child(n+3)]:opacity-20"
+					>
 						<AreaChart
 							data={chartData}
 							x="date"
 							xScale={scaleBand().padding(0.25)}
 							axis="x"
 							series={[
-								{
-									key: 'pageviews',
-									label: 'Pageviews',
-									color: 'var(--chart-1)'
-								},
-								{
-									key: 'visitors',
-									label: 'Visitors',
-									color: 'var(--chart-2)'
-								},
-								{
-									key: 'prev_pageviews',
-									label: 'Prev Pageviews',
-									color: 'var(--chart-1)'
-								},
-								{
-									key: 'prev_visitors',
-									label: 'Prev Visitors',
-									color: 'var(--chart-2)'
-								}
+								{ key: 'pageviews', label: 'Pageviews', color: 'var(--chart-1)' },
+								{ key: 'visitors', label: 'Visitors', color: 'var(--chart-2)' },
+								{ key: 'prev_pageviews', label: 'Prev Pageviews', color: 'var(--chart-1)' },
+								{ key: 'prev_visitors', label: 'Prev Visitors', color: 'var(--chart-2)' }
 							]}
 							props={{
 								xAxis: {
@@ -671,7 +625,7 @@
 			</Card.Root>
 		{/if}
 
-		<div class="grid md:grid-cols-2 gap-4 mb-8">
+		<div class="mb-8 grid gap-4 md:grid-cols-2">
 			{#if trafficSourcesData().length > 0}
 				<Card.Root>
 					<Card.Header>
@@ -690,13 +644,19 @@
 									/>
 								</Chart.Container>
 							</div>
-							<div class="space-y-2 shrink-0">
+							<div class="shrink-0 space-y-2">
 								{#each trafficSourcesData() as source}
-									{@const pct = trafficSourcesTotal() > 0 ? ((source.value / trafficSourcesTotal()) * 100).toFixed(1) : '0'}
+									{@const pct =
+										trafficSourcesTotal() > 0
+											? ((source.value / trafficSourcesTotal()) * 100).toFixed(1)
+											: '0'}
 									<div class="flex items-center gap-2 text-sm">
-										<span class="h-3 w-3 rounded-full shrink-0" style="background: {source.color}"></span>
+										<span
+											class="h-3 w-3 shrink-0 rounded-full"
+											style="background: {source.color}"
+										></span>
 										<span>{source.label}</span>
-										<span class="text-muted-foreground tabular-nums">{pct}%</span>
+										<span class="tabular-nums text-muted-foreground">{pct}%</span>
 									</div>
 								{/each}
 							</div>
@@ -717,13 +677,7 @@
 								x="hour"
 								xScale={scaleBand().padding(0.25)}
 								axis="x"
-								series={[
-									{
-										key: 'count',
-										label: 'Pageviews',
-										color: 'var(--chart-1)'
-									}
-								]}
+								series={[{ key: 'count', label: 'Pageviews', color: 'var(--chart-1)' }]}
 								props={{
 									xAxis: {
 										format: (d: number) => {
@@ -744,98 +698,47 @@
 		</div>
 
 		{#if (overview?.top_utm_sources?.length ?? 0) > 0 || (overview?.top_utm_mediums?.length ?? 0) > 0 || (overview?.top_utm_campaigns?.length ?? 0) > 0}
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+			<div class="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
 				{#if (overview?.top_utm_sources?.length ?? 0) > 0}
-					<Card.Root>
-						<Card.Header><div class="flex items-center justify-between"><Card.Title>UTM Sources</Card.Title>{#if (overview?.top_utm_sources?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'utm_sources')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}</div></Card.Header>
-						<Card.Content>
-							<div class="space-y-1">
-								{#each utmSourcesData as item}
-									<div class="relative">
-										<div
-											class="absolute inset-y-0 left-0 rounded bg-muted/50"
-											style="width: {(item.count / maxUTMSourceCount) * 100}%"
-										></div>
-										<div class="relative flex justify-between px-3 py-1.5 text-sm">
-											<span class="truncate mr-2">{item.value}</span>
-											<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
-										</div>
-									</div>
-								{/each}
-							</div>
-						</Card.Content>
-					</Card.Root>
+					<BarListCard
+						title="UTM Sources"
+						items={utmSourcesData}
+						showSeeAll={(overview?.top_utm_sources?.length ?? 0) > 8}
+						onSeeAll={() => (activeDrawer = 'utm_sources')}
+					/>
 				{/if}
 				{#if (overview?.top_utm_mediums?.length ?? 0) > 0}
-					<Card.Root>
-						<Card.Header><div class="flex items-center justify-between"><Card.Title>UTM Mediums</Card.Title>{#if (overview?.top_utm_mediums?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'utm_mediums')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}</div></Card.Header>
-						<Card.Content>
-							<div class="space-y-1">
-								{#each utmMediumsData as item}
-									<div class="relative">
-										<div
-											class="absolute inset-y-0 left-0 rounded bg-muted/50"
-											style="width: {(item.count / maxUTMMediumCount) * 100}%"
-										></div>
-										<div class="relative flex justify-between px-3 py-1.5 text-sm">
-											<span class="truncate mr-2">{item.value}</span>
-											<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
-										</div>
-									</div>
-								{/each}
-							</div>
-						</Card.Content>
-					</Card.Root>
+					<BarListCard
+						title="UTM Mediums"
+						items={utmMediumsData}
+						showSeeAll={(overview?.top_utm_mediums?.length ?? 0) > 8}
+						onSeeAll={() => (activeDrawer = 'utm_mediums')}
+					/>
 				{/if}
 				{#if (overview?.top_utm_campaigns?.length ?? 0) > 0}
-					<Card.Root>
-						<Card.Header><div class="flex items-center justify-between"><Card.Title>UTM Campaigns</Card.Title>{#if (overview?.top_utm_campaigns?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'utm_campaigns')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}</div></Card.Header>
-						<Card.Content>
-							<div class="space-y-1">
-								{#each utmCampaignsData as item}
-									<div class="relative">
-										<div
-											class="absolute inset-y-0 left-0 rounded bg-muted/50"
-											style="width: {(item.count / maxUTMCampaignCount) * 100}%"
-										></div>
-										<div class="relative flex justify-between px-3 py-1.5 text-sm">
-											<span class="truncate mr-2">{item.value}</span>
-											<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
-										</div>
-									</div>
-								{/each}
-							</div>
-						</Card.Content>
-					</Card.Root>
+					<BarListCard
+						title="UTM Campaigns"
+						items={utmCampaignsData}
+						showSeeAll={(overview?.top_utm_campaigns?.length ?? 0) > 8}
+						onSeeAll={() => (activeDrawer = 'utm_campaigns')}
+					/>
 				{/if}
 			</div>
 		{/if}
 
 		{#if (overview?.top_events?.length ?? 0) > 0}
-			<Card.Root class="mb-8">
-				<Card.Header>
-					<div class="flex items-center justify-between">
-						<Card.Title>Custom Events</Card.Title>
-						{#if (overview?.top_events?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'events')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}
-					</div>
-				</Card.Header>
-				<Card.Content>
-					<div class="space-y-1">
-						{#each eventsData as item}
-							<div class="relative">
-								<div
-									class="absolute inset-y-0 left-0 rounded bg-muted/50"
-									style="width: {(item.count / maxEventCount) * 100}%"
-								></div>
-								<div class="relative flex justify-between px-3 py-1.5 text-sm">
-									<span class="font-mono">{item.name}</span>
-									<span class="text-muted-foreground tabular-nums">{fmt(item.count)}</span>
-								</div>
-							</div>
-						{/each}
-					</div>
-				</Card.Content>
-			</Card.Root>
+			<BarListCard
+				title="Custom Events"
+				items={eventsData}
+				showSeeAll={(overview?.top_events?.length ?? 0) > 8}
+				onSeeAll={() => (activeDrawer = 'events')}
+				formatCount
+				class="mb-8"
+			>
+				{#snippet label(item)}
+					<span class="font-mono">{item.label}</span>
+				{/snippet}
+			</BarListCard>
 		{/if}
 
 		{#if overview.top_countries?.length > 0}
@@ -843,7 +746,13 @@
 				<Card.Header>
 					<div class="flex items-center justify-between">
 						<Card.Title>Visitors</Card.Title>
-						{#if (overview?.top_countries?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'countries')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}
+						{#if (overview?.top_countries?.length ?? 0) > 8}
+							<button
+								onclick={() => (activeDrawer = 'countries')}
+								class="text-xs text-muted-foreground transition-colors hover:text-foreground"
+								>See all →</button
+							>
+						{/if}
 					</div>
 				</Card.Header>
 				<Card.Content>
@@ -853,222 +762,105 @@
 		{/if}
 
 		{#if (overview?.top_entry_pages?.length ?? 0) > 0 || (overview?.top_exit_pages?.length ?? 0) > 0}
-			<div class="grid md:grid-cols-2 gap-4 mb-8">
+			<div class="mb-8 grid gap-4 md:grid-cols-2">
 				{#if (overview?.top_entry_pages?.length ?? 0) > 0}
-					<Card.Root>
-						<Card.Header><div class="flex items-center justify-between"><Card.Title>Entry Pages</Card.Title>{#if (overview?.top_entry_pages?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'entry')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}</div></Card.Header>
-						<Card.Content>
-							<div class="space-y-1">
-								{#each entryPagesData as item}
-									<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, path: item.path }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, path: item.path }; showFilters = true; } }}>
-										<div
-											class="absolute inset-y-0 left-0 rounded bg-muted/50"
-											style="width: {(item.count / maxEntryCount) * 100}%"
-										></div>
-										<div class="relative flex justify-between px-3 py-1.5 text-sm">
-											<span class="truncate mr-2">{item.path}</span>
-											<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
-										</div>
-									</div>
-								{/each}
-							</div>
-						</Card.Content>
-					</Card.Root>
+					<BarListCard
+						title="Entry Pages"
+						items={entryPagesData}
+						showSeeAll={(overview?.top_entry_pages?.length ?? 0) > 8}
+						onSeeAll={() => (activeDrawer = 'entry')}
+						onItemClick={setFilter('path')}
+					/>
 				{/if}
 				{#if (overview?.top_exit_pages?.length ?? 0) > 0}
-					<Card.Root>
-						<Card.Header><div class="flex items-center justify-between"><Card.Title>Exit Pages</Card.Title>{#if (overview?.top_exit_pages?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'exit')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}</div></Card.Header>
-						<Card.Content>
-							<div class="space-y-1">
-								{#each exitPagesData as item}
-									<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, path: item.path }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, path: item.path }; showFilters = true; } }}>
-										<div
-											class="absolute inset-y-0 left-0 rounded bg-muted/50"
-											style="width: {(item.count / maxExitCount) * 100}%"
-										></div>
-										<div class="relative flex justify-between px-3 py-1.5 text-sm">
-											<span class="truncate mr-2">{item.path}</span>
-											<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
-										</div>
-									</div>
-								{/each}
-							</div>
-						</Card.Content>
-					</Card.Root>
+					<BarListCard
+						title="Exit Pages"
+						items={exitPagesData}
+						showSeeAll={(overview?.top_exit_pages?.length ?? 0) > 8}
+						onSeeAll={() => (activeDrawer = 'exit')}
+						onItemClick={setFilter('path')}
+					/>
 				{/if}
 			</div>
 		{/if}
 
-		<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+		<div class="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
 			{#if topPagesData.length > 0}
-				<Card.Root class="lg:col-span-2">
-					<Card.Header>
-						<div class="flex items-center justify-between">
-							<Card.Title>Top Pages</Card.Title>
-							{#if (overview?.top_pages?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'pages')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}
-						</div>
-					</Card.Header>
-					<Card.Content>
-						<div class="space-y-1">
-							{#each topPagesData as item}
-								<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, path: item.path }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, path: item.path }; showFilters = true; } }}>
-									<div
-										class="absolute inset-y-0 left-0 rounded bg-muted/50"
-										style="width: {(item.count / maxPageCount) * 100}%"
-									></div>
-									<div class="relative flex justify-between px-3 py-1.5 text-sm">
-										<span class="truncate mr-2">{item.path}</span>
-										<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
-									</div>
-								</div>
-							{/each}
-						</div>
-					</Card.Content>
-				</Card.Root>
+				<BarListCard
+					title="Top Pages"
+					items={topPagesData}
+					showSeeAll={(overview?.top_pages?.length ?? 0) > 8}
+					onSeeAll={() => (activeDrawer = 'pages')}
+					onItemClick={setFilter('path')}
+					class="lg:col-span-2"
+				/>
 			{/if}
 
-			{#if devicesData.length > 0}
-				<Card.Root>
-					<Card.Header>
-						<Card.Title>Devices</Card.Title>
-					</Card.Header>
-					<Card.Content>
-						<div class="min-h-[180px]">
-							<Chart.Container config={{ devices: { label: 'Devices', color: 'var(--chart-1)' } }} class="h-[180px] w-full">
-								<PieChart
-									data={devicesPieData}
-									key="key"
-									label="label"
-									value="value"
-									innerRadius={0.5}
-								/>
-							</Chart.Container>
-						</div>
-						<div class="mt-3 space-y-1">
-							{#each devicesPieData as item}
-								<div role="button" tabindex="0" class="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/30 rounded px-1 py-0.5 transition-colors" onclick={() => { activeFilters = { ...activeFilters, device: item.label }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, device: item.label }; showFilters = true; } }}>
-									<span class="h-2.5 w-2.5 rounded-full shrink-0" style="background: {item.color}"></span>
-									<span class="truncate">{item.label}</span>
-									<span class="text-muted-foreground tabular-nums ml-auto">{item.value}</span>
-								</div>
-							{/each}
-						</div>
-					</Card.Content>
-				</Card.Root>
+			{#if devicesPieData.length > 0}
+				<PieLegendCard
+					title="Devices"
+					data={devicesPieData}
+					configKey="devices"
+					onItemClick={setFilter('device')}
+				/>
 			{/if}
 
 			{#if topReferrersData.length > 0}
-				<Card.Root class="lg:col-span-2">
-					<Card.Header>
-						<div class="flex items-center justify-between">
-							<Card.Title>Top Referrers</Card.Title>
-							{#if (overview?.top_referrers?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'referrers')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}
-						</div>
-					</Card.Header>
-					<Card.Content>
-						<div class="space-y-1">
-							{#each topReferrersData as item}
-								<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, referrer: item.referrer }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, referrer: item.referrer }; showFilters = true; } }}>
-									<div
-										class="absolute inset-y-0 left-0 rounded bg-muted/50"
-										style="width: {(item.count / maxReferrerCount) * 100}%"
-									></div>
-									<div class="relative flex items-center justify-between px-3 py-1.5 text-sm">
-										<a href="{item.referrer.includes('://') ? '' : 'https://'}{item.referrer}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 truncate mr-2 hover:underline" onclick={(e) => e.stopPropagation()}>
-											<img src="https://www.google.com/s2/favicons?domain={item.referrer}&sz=16" alt="" class="h-4 w-4 shrink-0" />
-											{item.referrer}
-										</a>
-										<span class="text-muted-foreground tabular-nums shrink-0">{item.count}</span>
-									</div>
-								</div>
-							{/each}
-						</div>
-					</Card.Content>
-				</Card.Root>
+				<BarListCard
+					title="Top Referrers"
+					items={topReferrersData}
+					showSeeAll={(overview?.top_referrers?.length ?? 0) > 8}
+					onSeeAll={() => (activeDrawer = 'referrers')}
+					onItemClick={setFilter('referrer')}
+					class="lg:col-span-2"
+				>
+					{#snippet label(item)}
+						<a
+							href="{item.label.includes('://') ? '' : 'https://'}{item.label}"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="flex items-center gap-2 truncate mr-2 hover:underline"
+							onclick={(e) => e.stopPropagation()}
+						>
+							<img
+								src="https://www.google.com/s2/favicons?domain={item.label}&sz=16"
+								alt=""
+								class="h-4 w-4 shrink-0"
+							/>
+							{item.label}
+						</a>
+					{/snippet}
+				</BarListCard>
 			{/if}
 
-			{#if screensData.length > 0}
-				<Card.Root>
-					<Card.Header>
-						<Card.Title>Screens</Card.Title>
-					</Card.Header>
-					<Card.Content>
-						<div class="min-h-[180px]">
-							<Chart.Container config={{ screens: { label: 'Screens', color: 'var(--chart-2)' } }} class="h-[180px] w-full">
-								<PieChart
-									data={screensPieData}
-									key="key"
-									label="label"
-									value="value"
-									innerRadius={0.5}
-								/>
-							</Chart.Container>
-						</div>
-						<div class="mt-3 space-y-1">
-							{#each screensPieData as item}
-								<div class="flex items-center gap-2 text-xs">
-									<span class="h-2.5 w-2.5 rounded-full shrink-0" style="background: {item.color}"></span>
-									<span class="truncate">{item.label}</span>
-									<span class="text-muted-foreground tabular-nums ml-auto">{item.value}</span>
-								</div>
-							{/each}
-						</div>
-					</Card.Content>
-				</Card.Root>
+			{#if screensPieData.length > 0}
+				<PieLegendCard
+					title="Screens"
+					data={screensPieData}
+					configKey="screens"
+					configColor="var(--chart-2)"
+				/>
 			{/if}
 
 			{#if browsersData.length > 0}
-				<Card.Root>
-					<Card.Header>
-						<div class="flex items-center justify-between">
-							<Card.Title>Browsers</Card.Title>
-							{#if (overview?.top_browsers?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'browsers')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}
-						</div>
-					</Card.Header>
-					<Card.Content>
-						<div class="space-y-1">
-							{#each browsersData as item}
-								<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, browser: item.browser }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, browser: item.browser }; showFilters = true; } }}>
-									<div
-										class="absolute inset-y-0 left-0 rounded bg-muted/50"
-										style="width: {(item.count / maxBrowserCount) * 100}%"
-									></div>
-									<div class="relative flex justify-between px-3 py-1.5 text-sm">
-										<span>{item.browser}</span>
-										<span class="text-muted-foreground tabular-nums">{item.count}</span>
-									</div>
-								</div>
-							{/each}
-						</div>
-					</Card.Content>
-				</Card.Root>
+				<BarListCard
+					title="Browsers"
+					items={browsersData}
+					showSeeAll={(overview?.top_browsers?.length ?? 0) > 8}
+					onSeeAll={() => (activeDrawer = 'browsers')}
+					onItemClick={setFilter('browser')}
+				/>
 			{/if}
 
 			{#if osData.length > 0}
-				<Card.Root class="lg:col-span-2">
-					<Card.Header>
-						<div class="flex items-center justify-between">
-							<Card.Title>Operating Systems</Card.Title>
-							{#if (overview?.top_os?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'os')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}
-						</div>
-					</Card.Header>
-					<Card.Content>
-						<div class="space-y-1">
-							{#each osData as item}
-								<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, os: item.os }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, os: item.os }; showFilters = true; } }}>
-									<div
-										class="absolute inset-y-0 left-0 rounded bg-muted/50"
-										style="width: {(item.count / maxOsCount) * 100}%"
-									></div>
-									<div class="relative flex justify-between px-3 py-1.5 text-sm">
-										<span>{item.os}</span>
-										<span class="text-muted-foreground tabular-nums">{item.count}</span>
-									</div>
-								</div>
-							{/each}
-						</div>
-					</Card.Content>
-				</Card.Root>
+				<BarListCard
+					title="Operating Systems"
+					items={osData}
+					showSeeAll={(overview?.top_os?.length ?? 0) > 8}
+					onSeeAll={() => (activeDrawer = 'os')}
+					onItemClick={setFilter('os')}
+					class="lg:col-span-2"
+				/>
 			{/if}
 		</div>
 
@@ -1079,6 +871,5 @@
 			items={drawerConfig().items}
 			onFilter={drawerConfig().filterKey ? applyDrawerFilter : undefined}
 		/>
-
 	{/if}
 {/if}

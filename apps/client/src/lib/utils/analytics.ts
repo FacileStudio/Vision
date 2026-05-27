@@ -1,0 +1,87 @@
+export type RangeKey = 'today' | '7d' | '30d' | '90d' | 'this_year' | 'custom';
+
+export type Granularity = 'hour' | 'day' | 'week' | 'month';
+
+export const ranges: { key: RangeKey; label: string }[] = [
+	{ key: 'today', label: 'Today' },
+	{ key: '7d', label: '7d' },
+	{ key: '30d', label: '30d' },
+	{ key: '90d', label: '90d' },
+	{ key: 'this_year', label: 'Year' },
+	{ key: 'custom', label: 'Custom' }
+];
+
+export const granularities: { key: Granularity; label: string }[] = [
+	{ key: 'hour', label: 'Hourly' },
+	{ key: 'day', label: 'Daily' },
+	{ key: 'week', label: 'Weekly' },
+	{ key: 'month', label: 'Monthly' }
+];
+
+export function rangeDates(
+	key: RangeKey,
+	customFrom?: string,
+	customTo?: string
+): { from: string; to: string } {
+	const now = new Date();
+	const toStr = now.toISOString().slice(0, 10);
+
+	if (key === 'today') return { from: toStr, to: toStr };
+	if (key === 'this_year') return { from: `${now.getFullYear()}-01-01`, to: toStr };
+	if (key === 'custom') return { from: customFrom || toStr, to: customTo || toStr };
+
+	const daysMap: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
+	const from = new Date(now);
+	from.setDate(from.getDate() - (daysMap[key] ?? 30));
+	return { from: from.toISOString().slice(0, 10), to: toStr };
+}
+
+export function formatDateRange(from: string, to: string): string {
+	const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+	const f = new Date(from + 'T00:00:00');
+	const t = new Date(to + 'T00:00:00');
+	if (from === to) return f.toLocaleDateString('en-US', opts);
+	return `${f.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${t.toLocaleDateString('en-US', opts)}`;
+}
+
+export function trendPercent(
+	current: number,
+	prev: number
+): { text: string; color: string } {
+	if (prev === 0) return { text: '—', color: 'text-muted-foreground' };
+	const pct = ((current - prev) / prev) * 100;
+	if (pct > 0) return { text: `↑ ${pct.toFixed(1)}%`, color: 'text-green-500' };
+	if (pct < 0) return { text: `↓ ${Math.abs(pct).toFixed(1)}%`, color: 'text-red-500' };
+	return { text: '—', color: 'text-muted-foreground' };
+}
+
+export function fmt(n: number): string {
+	return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+const SEARCH_ENGINES = ['google', 'bing', 'duckduckgo', 'yahoo', 'baidu', 'yandex'];
+const SOCIAL_NETWORKS = [
+	'twitter',
+	'x.com',
+	'facebook',
+	'instagram',
+	'linkedin',
+	'reddit',
+	'tiktok',
+	'youtube'
+];
+
+export function classifyReferrer(ref: string): 'search' | 'social' | 'other' {
+	const lower = ref.toLowerCase();
+	if (SEARCH_ENGINES.some((s) => lower.includes(s))) return 'search';
+	if (SOCIAL_NETWORKS.some((s) => lower.includes(s))) return 'social';
+	return 'other';
+}
+
+export const CHART_COLORS = [
+	'var(--chart-1)',
+	'var(--chart-2)',
+	'var(--chart-3)',
+	'var(--chart-4)',
+	'var(--chart-5)'
+];
