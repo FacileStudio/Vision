@@ -10,6 +10,7 @@
 	import { Copy, Check } from '@lucide/svelte';
 	import Icon from '@iconify/svelte';
 	import WorldMap from '$lib/components/map/world-map.svelte';
+	import StatsDrawer from '$lib/components/stats-drawer.svelte';
 
 	let site = $state<Site | null>(null);
 	let overview = $state<AnalyticsOverview | null>(null);
@@ -294,8 +295,8 @@
 	let topPagesData = $derived((overview?.top_pages ?? []).slice(0, 8));
 	let topReferrersData = $derived((overview?.top_referrers ?? []).slice(0, 8));
 
-	let browsersData = $derived(overview?.top_browsers ?? []);
-	let osData = $derived(overview?.top_os ?? []);
+	let browsersData = $derived((overview?.top_browsers ?? []).slice(0, 8));
+	let osData = $derived((overview?.top_os ?? []).slice(0, 8));
 	let devicesData = $derived(overview?.top_devices ?? []);
 	let screensData = $derived(overview?.top_screens ?? []);
 
@@ -321,17 +322,53 @@
 	let maxOsCount = $derived(Math.max(...osData.map((d) => d.count), 1));
 	let maxPageCount = $derived(Math.max(...topPagesData.map((d) => d.count), 1));
 	let maxReferrerCount = $derived(Math.max(...topReferrersData.map((d) => d.count), 1));
-	let maxEntryCount = $derived(Math.max(...(overview?.top_entry_pages ?? []).map((d) => d.count), 1));
-	let maxExitCount = $derived(Math.max(...(overview?.top_exit_pages ?? []).map((d) => d.count), 1));
-	let maxUTMSourceCount = $derived(Math.max(...(overview?.top_utm_sources ?? []).map((d) => d.count), 1));
-	let maxUTMMediumCount = $derived(Math.max(...(overview?.top_utm_mediums ?? []).map((d) => d.count), 1));
-	let maxUTMCampaignCount = $derived(Math.max(...(overview?.top_utm_campaigns ?? []).map((d) => d.count), 1));
-	let maxEventCount = $derived(Math.max(...(overview?.top_events ?? []).map((d) => d.count), 1));
+	let entryPagesData = $derived((overview?.top_entry_pages ?? []).slice(0, 8));
+	let exitPagesData = $derived((overview?.top_exit_pages ?? []).slice(0, 8));
+	let utmSourcesData = $derived((overview?.top_utm_sources ?? []).slice(0, 8));
+	let utmMediumsData = $derived((overview?.top_utm_mediums ?? []).slice(0, 8));
+	let utmCampaignsData = $derived((overview?.top_utm_campaigns ?? []).slice(0, 8));
+	let eventsData = $derived((overview?.top_events ?? []).slice(0, 8));
+
+	let maxEntryCount = $derived(Math.max(...entryPagesData.map((d) => d.count), 1));
+	let maxExitCount = $derived(Math.max(...exitPagesData.map((d) => d.count), 1));
+	let maxUTMSourceCount = $derived(Math.max(...utmSourcesData.map((d) => d.count), 1));
+	let maxUTMMediumCount = $derived(Math.max(...utmMediumsData.map((d) => d.count), 1));
+	let maxUTMCampaignCount = $derived(Math.max(...utmCampaignsData.map((d) => d.count), 1));
+	let maxEventCount = $derived(Math.max(...eventsData.map((d) => d.count), 1));
 
 	let pageviewsTrend = $derived(overview ? trendPercent(overview.total_pageviews, overview.prev_total_pageviews) : { text: '—', color: 'text-muted-foreground' });
 	let visitorsTrend = $derived(overview ? trendPercent(overview.unique_visitors, overview.prev_unique_visitors) : { text: '—', color: 'text-muted-foreground' });
 	let vpvTrend = $derived(trendPercent(viewsPerVisitor(), prevViewsPerVisitor()));
 	let bounceTrend = $derived(overview ? trendPercent(overview.bounce_rate, overview.prev_bounce_rate) : { text: '—', color: 'text-muted-foreground' });
+
+	let activeDrawer = $state<string | null>(null);
+
+	let drawerConfig = $derived(() => {
+		if (!overview || !activeDrawer) return { title: '', items: [] as { label: string; count: number }[], filterKey: '' };
+		const configs: Record<string, { title: string; items: { label: string; count: number }[]; filterKey: string }> = {
+			pages: { title: 'Top Pages', items: (overview.top_pages ?? []).map(d => ({ label: d.path, count: d.count })), filterKey: 'path' },
+			referrers: { title: 'Top Referrers', items: (overview.top_referrers ?? []).map(d => ({ label: d.referrer, count: d.count })), filterKey: 'referrer' },
+			browsers: { title: 'Browsers', items: (overview.top_browsers ?? []).map(d => ({ label: d.browser, count: d.count })), filterKey: 'browser' },
+			os: { title: 'Operating Systems', items: (overview.top_os ?? []).map(d => ({ label: d.os, count: d.count })), filterKey: 'os' },
+			entry: { title: 'Entry Pages', items: (overview.top_entry_pages ?? []).map(d => ({ label: d.path, count: d.count })), filterKey: 'path' },
+			exit: { title: 'Exit Pages', items: (overview.top_exit_pages ?? []).map(d => ({ label: d.path, count: d.count })), filterKey: 'path' },
+			countries: { title: 'Countries', items: (overview.top_countries ?? []).map(d => ({ label: d.country, count: d.count })), filterKey: 'country' },
+			utm_sources: { title: 'UTM Sources', items: (overview.top_utm_sources ?? []).map(d => ({ label: d.value, count: d.count })), filterKey: '' },
+			utm_mediums: { title: 'UTM Mediums', items: (overview.top_utm_mediums ?? []).map(d => ({ label: d.value, count: d.count })), filterKey: '' },
+			utm_campaigns: { title: 'UTM Campaigns', items: (overview.top_utm_campaigns ?? []).map(d => ({ label: d.value, count: d.count })), filterKey: '' },
+			events: { title: 'Custom Events', items: (overview.top_events ?? []).map(d => ({ label: d.name, count: d.count })), filterKey: '' }
+		};
+		return configs[activeDrawer] ?? { title: '', items: [], filterKey: '' };
+	});
+
+	function applyDrawerFilter(value: string) {
+		const key = drawerConfig().filterKey;
+		if (key) {
+			activeFilters = { ...activeFilters, [key]: value };
+			showFilters = true;
+		}
+		activeDrawer = null;
+	}
 </script>
 
 <svelte:head><title>{site ? `${site.name} — Vision` : 'Vision'}</title></svelte:head>
@@ -709,10 +746,10 @@
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
 				{#if (overview?.top_utm_sources?.length ?? 0) > 0}
 					<Card.Root>
-						<Card.Header><Card.Title>UTM Sources</Card.Title></Card.Header>
+						<Card.Header><div class="flex items-center justify-between"><Card.Title>UTM Sources</Card.Title>{#if (overview?.top_utm_sources?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'utm_sources')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}</div></Card.Header>
 						<Card.Content>
 							<div class="space-y-1">
-								{#each overview?.top_utm_sources ?? [] as item}
+								{#each utmSourcesData as item}
 									<div class="relative">
 										<div
 											class="absolute inset-y-0 left-0 rounded bg-muted/50"
@@ -730,10 +767,10 @@
 				{/if}
 				{#if (overview?.top_utm_mediums?.length ?? 0) > 0}
 					<Card.Root>
-						<Card.Header><Card.Title>UTM Mediums</Card.Title></Card.Header>
+						<Card.Header><div class="flex items-center justify-between"><Card.Title>UTM Mediums</Card.Title>{#if (overview?.top_utm_mediums?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'utm_mediums')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}</div></Card.Header>
 						<Card.Content>
 							<div class="space-y-1">
-								{#each overview?.top_utm_mediums ?? [] as item}
+								{#each utmMediumsData as item}
 									<div class="relative">
 										<div
 											class="absolute inset-y-0 left-0 rounded bg-muted/50"
@@ -751,10 +788,10 @@
 				{/if}
 				{#if (overview?.top_utm_campaigns?.length ?? 0) > 0}
 					<Card.Root>
-						<Card.Header><Card.Title>UTM Campaigns</Card.Title></Card.Header>
+						<Card.Header><div class="flex items-center justify-between"><Card.Title>UTM Campaigns</Card.Title>{#if (overview?.top_utm_campaigns?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'utm_campaigns')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}</div></Card.Header>
 						<Card.Content>
 							<div class="space-y-1">
-								{#each overview?.top_utm_campaigns ?? [] as item}
+								{#each utmCampaignsData as item}
 									<div class="relative">
 										<div
 											class="absolute inset-y-0 left-0 rounded bg-muted/50"
@@ -776,11 +813,14 @@
 		{#if (overview?.top_events?.length ?? 0) > 0}
 			<Card.Root class="mb-8">
 				<Card.Header>
-					<Card.Title>Custom Events</Card.Title>
+					<div class="flex items-center justify-between">
+						<Card.Title>Custom Events</Card.Title>
+						{#if (overview?.top_events?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'events')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}
+					</div>
 				</Card.Header>
 				<Card.Content>
 					<div class="space-y-1">
-						{#each overview.top_events as item}
+						{#each eventsData as item}
 							<div class="relative">
 								<div
 									class="absolute inset-y-0 left-0 rounded bg-muted/50"
@@ -800,7 +840,10 @@
 		{#if overview.top_countries?.length > 0}
 			<Card.Root class="mb-8">
 				<Card.Header>
-					<Card.Title>Visitors</Card.Title>
+					<div class="flex items-center justify-between">
+						<Card.Title>Visitors</Card.Title>
+						{#if (overview?.top_countries?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'countries')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}
+					</div>
 				</Card.Header>
 				<Card.Content>
 					<WorldMap countries={overview.top_countries} />
@@ -812,10 +855,10 @@
 			<div class="grid md:grid-cols-2 gap-4 mb-8">
 				{#if (overview?.top_entry_pages?.length ?? 0) > 0}
 					<Card.Root>
-						<Card.Header><Card.Title>Entry Pages</Card.Title></Card.Header>
+						<Card.Header><div class="flex items-center justify-between"><Card.Title>Entry Pages</Card.Title>{#if (overview?.top_entry_pages?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'entry')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}</div></Card.Header>
 						<Card.Content>
 							<div class="space-y-1">
-								{#each overview?.top_entry_pages ?? [] as item}
+								{#each entryPagesData as item}
 									<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, path: item.path }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, path: item.path }; showFilters = true; } }}>
 										<div
 											class="absolute inset-y-0 left-0 rounded bg-muted/50"
@@ -833,10 +876,10 @@
 				{/if}
 				{#if (overview?.top_exit_pages?.length ?? 0) > 0}
 					<Card.Root>
-						<Card.Header><Card.Title>Exit Pages</Card.Title></Card.Header>
+						<Card.Header><div class="flex items-center justify-between"><Card.Title>Exit Pages</Card.Title>{#if (overview?.top_exit_pages?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'exit')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}</div></Card.Header>
 						<Card.Content>
 							<div class="space-y-1">
-								{#each overview?.top_exit_pages ?? [] as item}
+								{#each exitPagesData as item}
 									<div role="button" tabindex="0" class="relative cursor-pointer hover:bg-muted/30 rounded transition-colors" onclick={() => { activeFilters = { ...activeFilters, path: item.path }; showFilters = true; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeFilters = { ...activeFilters, path: item.path }; showFilters = true; } }}>
 										<div
 											class="absolute inset-y-0 left-0 rounded bg-muted/50"
@@ -859,7 +902,10 @@
 			{#if topPagesData.length > 0}
 				<Card.Root class="lg:col-span-2">
 					<Card.Header>
-						<Card.Title>Top Pages</Card.Title>
+						<div class="flex items-center justify-between">
+							<Card.Title>Top Pages</Card.Title>
+							{#if (overview?.top_pages?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'pages')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}
+						</div>
 					</Card.Header>
 					<Card.Content>
 						<div class="space-y-1">
@@ -913,7 +959,10 @@
 			{#if topReferrersData.length > 0}
 				<Card.Root class="lg:col-span-2">
 					<Card.Header>
-						<Card.Title>Top Referrers</Card.Title>
+						<div class="flex items-center justify-between">
+							<Card.Title>Top Referrers</Card.Title>
+							{#if (overview?.top_referrers?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'referrers')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}
+						</div>
 					</Card.Header>
 					<Card.Content>
 						<div class="space-y-1">
@@ -970,7 +1019,10 @@
 			{#if browsersData.length > 0}
 				<Card.Root>
 					<Card.Header>
-						<Card.Title>Browsers</Card.Title>
+						<div class="flex items-center justify-between">
+							<Card.Title>Browsers</Card.Title>
+							{#if (overview?.top_browsers?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'browsers')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}
+						</div>
 					</Card.Header>
 					<Card.Content>
 						<div class="space-y-1">
@@ -994,7 +1046,10 @@
 			{#if osData.length > 0}
 				<Card.Root class="lg:col-span-2">
 					<Card.Header>
-						<Card.Title>Operating Systems</Card.Title>
+						<div class="flex items-center justify-between">
+							<Card.Title>Operating Systems</Card.Title>
+							{#if (overview?.top_os?.length ?? 0) > 8}<button onclick={() => (activeDrawer = 'os')} class="text-xs text-muted-foreground hover:text-foreground transition-colors">See all →</button>{/if}
+						</div>
 					</Card.Header>
 					<Card.Content>
 						<div class="space-y-1">
@@ -1015,6 +1070,14 @@
 				</Card.Root>
 			{/if}
 		</div>
+
+		<StatsDrawer
+			open={activeDrawer !== null}
+			onclose={() => (activeDrawer = null)}
+			title={drawerConfig().title}
+			items={drawerConfig().items}
+			onFilter={drawerConfig().filterKey ? applyDrawerFilter : undefined}
+		/>
 
 	{/if}
 {/if}

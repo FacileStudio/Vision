@@ -59,7 +59,7 @@ Self-hosted analytics. Go + SvelteKit.
 - [ ] Multi-user / team access with roles (viewer, admin)
 - [ ] Email reports (weekly/monthly summary via scheduled job)
 - [ ] Lightweight embeddable widget (small stats badge for sites)
-- [ ] "See all" drawers for top pages / referrers (paginated, searchable)
+- [x] "See all" drawers for top pages / referrers / browsers / OS / countries / entry-exit / UTM / events (searchable)
 
 ## Long-term / Infrastructure
 

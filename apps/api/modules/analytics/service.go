@@ -71,7 +71,7 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	if err := applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("path, count(*) as count"), siteID, from, to, filters).
 		Group("path").
 		Order("count desc").
-		Limit(10).
+		Limit(100).
 		Scan(&topPages).Error; err != nil {
 		return nil, errors.Internal("failed to query top pages", err)
 	}
@@ -81,7 +81,7 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		Where("referrer != ''").
 		Group("referrer").
 		Order("count desc").
-		Limit(10).
+		Limit(100).
 		Scan(&topReferrers).Error; err != nil {
 		return nil, errors.Internal("failed to query top referrers", err)
 	}
@@ -91,7 +91,7 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		Where("country != ''").
 		Group("country").
 		Order("count desc").
-		Limit(10).
+		Limit(100).
 		Scan(&topCountries).Error; err != nil {
 		return nil, errors.Internal("failed to query top countries", err)
 	}
@@ -101,7 +101,7 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		Where("browser != ''").
 		Group("browser").
 		Order("count desc").
-		Limit(10).
+		Limit(100).
 		Scan(&topBrowsers).Error; err != nil {
 		return nil, errors.Internal("failed to query top browsers", err)
 	}
@@ -111,7 +111,7 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		Where("os != ''").
 		Group("os").
 		Order("count desc").
-		Limit(10).
+		Limit(100).
 		Scan(&topOS).Error; err != nil {
 		return nil, errors.Internal("failed to query top os", err)
 	}
@@ -121,7 +121,7 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		Where("device != ''").
 		Group("device").
 		Order("count desc").
-		Limit(10).
+		Limit(100).
 		Scan(&topDevices).Error; err != nil {
 		return nil, errors.Internal("failed to query top devices", err)
 	}
@@ -228,32 +228,32 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 	s.orm.WithContext(ctx).Table("visitor_sessions").
 		Select("entry_path as path, count(*) as count").
 		Where("site_id = ? AND started_at >= ? AND started_at <= ?", siteID, from, to).
-		Group("entry_path").Order("count desc").Limit(10).
+		Group("entry_path").Order("count desc").Limit(100).
 		Scan(&topEntryPages)
 
 	var topExitPages []PageStat
 	s.orm.WithContext(ctx).Table("visitor_sessions").
 		Select("exit_path as path, count(*) as count").
 		Where("site_id = ? AND started_at >= ? AND started_at <= ?", siteID, from, to).
-		Group("exit_path").Order("count desc").Limit(10).
+		Group("exit_path").Order("count desc").Limit(100).
 		Scan(&topExitPages)
 
 	var topUTMSources []UTMStat
 	applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("utm_source as value, count(*) as count"), siteID, from, to, filters).
 		Where("utm_source != ''").
-		Group("utm_source").Order("count desc").Limit(10).
+		Group("utm_source").Order("count desc").Limit(100).
 		Scan(&topUTMSources)
 
 	var topUTMMediums []UTMStat
 	applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("utm_medium as value, count(*) as count"), siteID, from, to, filters).
 		Where("utm_medium != ''").
-		Group("utm_medium").Order("count desc").Limit(10).
+		Group("utm_medium").Order("count desc").Limit(100).
 		Scan(&topUTMMediums)
 
 	var topUTMCampaigns []UTMStat
 	applyFilters(s.orm.WithContext(ctx).Table("pageviews").Select("utm_campaign as value, count(*) as count"), siteID, from, to, filters).
 		Where("utm_campaign != ''").
-		Group("utm_campaign").Order("count desc").Limit(10).
+		Group("utm_campaign").Order("count desc").Limit(100).
 		Scan(&topUTMCampaigns)
 
 	var prevPageviewsPerDay []DayStat
@@ -331,7 +331,7 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		Where("site_id = ? AND created_at >= ? AND created_at <= ?", siteID, from, to).
 		Group("name").
 		Order("count desc").
-		Limit(10).
+		Limit(100).
 		Scan(&topEvents)
 
 	if topEvents == nil {
