@@ -40,7 +40,7 @@
 		<img
 			src="https://{domain}/favicon.ico"
 			alt=""
-			class="absolute inset-0 h-full w-full object-cover transition-opacity duration-150 {loaded ? 'opacity-100' : 'opacity-0'}"
+			class="absolute inset-0 h-full w-full object-cover bg-background transition-opacity duration-150 {loaded ? 'opacity-100' : 'opacity-0'}"
 			onload={handleLoad}
 			onerror={() => (errored = true)}
 		/>
