@@ -21,7 +21,9 @@
 		trendPercent,
 		fmt,
 		classifyReferrer,
-		CHART_COLORS
+		CHART_COLORS,
+		defaultGranularity,
+		formatChartDate
 	} from '$lib/utils/analytics';
 
 	let siteName = $state('');
@@ -97,11 +99,13 @@
 		return trafficSourcesData().reduce((sum, d) => sum + d.value, 0);
 	});
 
+	let granularity = $derived(defaultGranularity(selectedRange));
+
 	async function refresh() {
 		const token = (page.params as Record<string, string>).token;
 		try {
 			const { from, to } = rangeDates(selectedRange);
-			const data = await api.share.overview(token, from, to);
+			const data = await api.share.overview(token, from, to, granularity);
 			siteName = data.site.name;
 			siteDomain = data.site.domain;
 			overview = data.overview;
@@ -276,10 +280,7 @@
 							]}
 							props={{
 								xAxis: {
-									format: (d: string) => {
-										const date = new Date(d);
-										return `${date.getMonth() + 1}/${date.getDate()}`;
-									}
+									format: (d: string) => formatChartDate(d, granularity)
 								}
 							}}
 						>

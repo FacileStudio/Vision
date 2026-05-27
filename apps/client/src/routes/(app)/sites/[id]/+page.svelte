@@ -21,13 +21,15 @@
 		type RangeKey,
 		type Granularity,
 		ranges,
-		granularities,
 		rangeDates,
 		formatDateRange,
 		trendPercent,
 		fmt,
 		classifyReferrer,
-		CHART_COLORS
+		CHART_COLORS,
+		allowedGranularities,
+		defaultGranularity,
+		formatChartDate
 	} from '$lib/utils/analytics';
 
 	let site = $state<Site | null>(null);
@@ -64,6 +66,14 @@
 
 	function clearFilters() {
 		activeFilters = {};
+	}
+
+	let visibleGranularities = $derived(allowedGranularities(selectedRange));
+
+	function selectRange(v: string) {
+		const range = v as RangeKey;
+		selectedRange = range;
+		selectedGranularity = defaultGranularity(range);
 	}
 
 	function setFilter(key: string) {
@@ -479,7 +489,7 @@
 				size="sm"
 				value={selectedRange}
 				onValueChange={(v) => {
-					if (v) selectedRange = v as RangeKey;
+					if (v) selectRange(v);
 				}}
 			>
 				{#each ranges as r (r.key)}
@@ -585,7 +595,7 @@
 								if (v) selectedGranularity = v as Granularity;
 							}}
 						>
-							{#each granularities as g (g.key)}
+							{#each visibleGranularities as g (g.key)}
 								<ToggleGroup.Item value={g.key}>{g.label}</ToggleGroup.Item>
 							{/each}
 						</ToggleGroup.Root>
@@ -609,10 +619,7 @@
 							]}
 							props={{
 								xAxis: {
-									format: (d: string) => {
-										const date = new Date(d);
-										return `${date.getMonth() + 1}/${date.getDate()}`;
-									}
+									format: (d: string) => formatChartDate(d, selectedGranularity)
 								}
 							}}
 						>

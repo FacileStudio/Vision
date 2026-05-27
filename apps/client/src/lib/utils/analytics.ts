@@ -85,3 +85,46 @@ export const CHART_COLORS = [
 	'var(--chart-4)',
 	'var(--chart-5)'
 ];
+
+const ALLOWED_GRANULARITIES: Record<RangeKey, Granularity[]> = {
+	today: ['hour'],
+	'7d': ['hour', 'day'],
+	'30d': ['day', 'week'],
+	'90d': ['day', 'week', 'month'],
+	this_year: ['day', 'week', 'month'],
+	custom: ['hour', 'day', 'week', 'month']
+};
+
+const DEFAULT_GRANULARITY: Record<RangeKey, Granularity> = {
+	today: 'hour',
+	'7d': 'day',
+	'30d': 'day',
+	'90d': 'day',
+	this_year: 'week',
+	custom: 'day'
+};
+
+export function allowedGranularities(range: RangeKey) {
+	const allowed = ALLOWED_GRANULARITIES[range];
+	return granularities.filter((g) => allowed.includes(g.key));
+}
+
+export function defaultGranularity(range: RangeKey): Granularity {
+	return DEFAULT_GRANULARITY[range];
+}
+
+export function formatChartDate(d: string, granularity: Granularity): string {
+	if (granularity === 'hour') {
+		const parts = d.split(' ');
+		return parts[1] ?? d;
+	}
+	if (granularity === 'week') {
+		return `W${d.split('-').pop()}`;
+	}
+	if (granularity === 'month') {
+		const date = new Date(d + '-01T00:00:00');
+		return date.toLocaleDateString('en-US', { month: 'short' });
+	}
+	const date = new Date(d + 'T00:00:00');
+	return `${date.getMonth() + 1}/${date.getDate()}`;
+}

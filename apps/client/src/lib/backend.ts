@@ -92,10 +92,11 @@ export const api = {
 		}
 	},
 	share: {
-		overview: async (token: string, from?: string, to?: string) => {
+		overview: async (token: string, from?: string, to?: string, granularity?: string) => {
 			const params = new URLSearchParams();
 			if (from) params.set('from', from);
 			if (to) params.set('to', to);
+			if (granularity) params.set('granularity', granularity);
 			const qs = params.toString();
 			const res = await fetch(`/api/share/${token}${qs ? `?${qs}` : ''}`);
 			if (!res.ok) throw new Error('Not found');
