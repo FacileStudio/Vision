@@ -21,20 +21,27 @@
 		}
 		return `hsl(${Math.abs(hash % 360)} 45% 45%)`;
 	}
+
+	function handleLoad(e: Event) {
+		const img = e.currentTarget as HTMLImageElement;
+		if (img.naturalWidth > 0) {
+			loaded = true;
+		} else {
+			errored = true;
+		}
+	}
 </script>
 
 <div class="relative shrink-0 rounded overflow-hidden {className}" style="background: {colorFromDomain(domain)}">
-	{#if !loaded}
-		<span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white select-none">
-			{initial}
-		</span>
-	{/if}
+	<span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white select-none">
+		{initial}
+	</span>
 	{#if !errored}
 		<img
 			src="https://{domain}/favicon.ico"
 			alt=""
-			class="absolute inset-0 h-full w-full object-contain transition-opacity duration-150 {loaded ? 'opacity-100' : 'opacity-0'}"
-			onload={() => (loaded = true)}
+			class="absolute inset-0 h-full w-full object-cover transition-opacity duration-150 {loaded ? 'opacity-100' : 'opacity-0'}"
+			onload={handleLoad}
 			onerror={() => (errored = true)}
 		/>
 	{/if}
