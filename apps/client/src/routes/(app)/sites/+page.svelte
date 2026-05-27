@@ -2,28 +2,16 @@
 	import { onMount } from 'svelte';
 	import { api } from '$lib';
 	import type { Site } from '$lib';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import Icon from '@iconify/svelte';
+	import AddSiteDrawer from '$lib/components/add-site-drawer.svelte';
 
 	let sites = $state<Site[]>([]);
-	let name = $state('');
-	let domain = $state('');
-	let error = $state('');
+	let drawerOpen = $state(false);
 
 	onMount(async () => {
 		sites = await api.sites.list();
 	});
-
-	async function addSite() {
-		error = '';
-		try {
-			const site = await api.sites.create(name, domain);
-			sites = [site, ...sites];
-			name = '';
-			domain = '';
-		} catch (e: any) {
-			error = e.message;
-		}
-	}
 
 	async function deleteSite(id: number) {
 		await api.sites.delete(id);
@@ -33,20 +21,15 @@
 
 <svelte:head><title>Sites — Vision</title></svelte:head>
 
-<h1 class="text-2xl font-bold mb-6">Sites</h1>
+<AddSiteDrawer bind:open={drawerOpen} onCreated={(site) => { sites = [site, ...sites]; }} />
 
-<form onsubmit={addSite} class="flex gap-2 mb-6">
-	<input bind:value={name} placeholder="Site name" class="rounded-md border bg-background px-3 py-2 text-sm" required />
-	<input bind:value={domain} placeholder="example.com" class="rounded-md border bg-background px-3 py-2 text-sm" required />
-	<button type="submit" class="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">
-		<Icon icon="mdi:plus" class="h-4 w-4" />
-		Add
-	</button>
-</form>
-
-{#if error}
-	<p class="text-destructive text-sm mb-4">{error}</p>
-{/if}
+<div class="flex items-center justify-between mb-6">
+	<h1 class="text-2xl font-bold">Sites</h1>
+	<Button variant="default" size="sm" onclick={() => (drawerOpen = true)}>
+		<Icon icon="mdi:plus" class="h-4 w-4 mr-1.5" />
+		Add site
+	</Button>
+</div>
 
 <div class="space-y-2">
 	{#each sites as site}
