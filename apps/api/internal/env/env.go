@@ -19,6 +19,7 @@ type Config struct {
 	Port        string
 	Domain      string
 	LogLevel    string
+	StorageDir  string
 	OIDC        *OIDCConfig
 	SSOOnly     bool
 }
@@ -29,6 +30,7 @@ func Load() (Config, error) {
 		Port:        valueOrDefault("PORT", "4000"),
 		Domain:      valueOrDefault("DOMAIN", "http://localhost:5173"),
 		LogLevel:    valueOrDefault("LOG_LEVEL", "info"),
+		StorageDir:  valueOrDefault("STORAGE_DIR", "./data"),
 	}
 
 	port, err := strconv.Atoi(env.Port)

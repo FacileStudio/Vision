@@ -3,11 +3,14 @@ package schemas
 import "time"
 
 type User struct {
-	ID           int64     `gorm:"column:id;primaryKey"`
-	Email        string    `gorm:"column:email;uniqueIndex"`
-	Name         string    `gorm:"column:name"`
-	PasswordHash string    `gorm:"column:password_hash"`
-	CreatedAt    time.Time `gorm:"column:created_at;autoCreateTime"`
+	ID             int64     `gorm:"column:id;primaryKey"`
+	Email          string    `gorm:"column:email;uniqueIndex"`
+	Name           string    `gorm:"column:name"`
+	PasswordHash   string    `gorm:"column:password_hash"`
+	AvatarURL      string    `gorm:"column:avatar_url"`
+	AvatarSource   string    `gorm:"column:avatar_source"`
+	OIDCPictureURL string    `gorm:"column:oidc_picture_url"`
+	CreatedAt      time.Time `gorm:"column:created_at;autoCreateTime"`
 }
 
 func (User) TableName() string { return "users" }
