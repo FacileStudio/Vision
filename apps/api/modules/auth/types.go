@@ -26,11 +26,12 @@ type ChangePasswordRequest struct {
 }
 
 type ProfileResponse struct {
-	ID        string `json:"id"`
-	Email     string `json:"email"`
-	Name      string `json:"name"`
-	AvatarURL string `json:"avatar_url"`
-	CreatedAt string `json:"created_at"`
+	ID           string `json:"id"`
+	Email        string `json:"email"`
+	Name         string `json:"name"`
+	AvatarURL    string `json:"avatar_url"`
+	AvatarSource string `json:"avatar_source"`
+	CreatedAt    string `json:"created_at"`
 }
 
 type Data struct {

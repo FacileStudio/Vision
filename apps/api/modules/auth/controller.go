@@ -38,11 +38,12 @@ func (controller *Controller) getMe(context context.Context, userID string) (*Pr
 		return nil, err
 	}
 	return &ProfileResponse{
-		ID:        strconv.FormatInt(user.ID, 10),
-		Email:     user.Email,
-		Name:      user.Name,
-		AvatarURL: user.AvatarURL,
-		CreatedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:           strconv.FormatInt(user.ID, 10),
+		Email:        user.Email,
+		Name:         user.Name,
+		AvatarURL:    user.AvatarURL,
+		AvatarSource: user.AvatarSource,
+		CreatedAt:    user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}, nil
 }
 
@@ -58,11 +59,12 @@ func (controller *Controller) updateMe(context context.Context, userID string, r
 		return nil, err
 	}
 	return &ProfileResponse{
-		ID:        strconv.FormatInt(user.ID, 10),
-		Email:     user.Email,
-		Name:      user.Name,
-		AvatarURL: user.AvatarURL,
-		CreatedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:           strconv.FormatInt(user.ID, 10),
+		Email:        user.Email,
+		Name:         user.Name,
+		AvatarURL:    user.AvatarURL,
+		AvatarSource: user.AvatarSource,
+		CreatedAt:    user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}, nil
 }
 

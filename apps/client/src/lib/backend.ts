@@ -117,6 +117,7 @@ export interface UserProfile {
 	email: string;
 	name: string;
 	avatar_url: string;
+	avatar_source: string;
 	created_at: string;
 }
 

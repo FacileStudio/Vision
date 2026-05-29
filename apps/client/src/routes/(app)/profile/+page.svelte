@@ -118,6 +118,10 @@
 				</button>
 			</form>
 
+			{#if profile.avatar_source === 'oidc'}
+				<p class="text-xs text-muted-foreground mt-4">Synced from SSO</p>
+			{/if}
+
 			<p class="text-xs text-muted-foreground mt-4">
 				Member since {new Date(profile.created_at).toLocaleDateString()}
 			</p>
