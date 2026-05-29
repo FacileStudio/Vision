@@ -15,6 +15,8 @@ import (
 	"api/internal/oidcavatar"
 	"api/schemas"
 
+	gooidc "github.com/coreos/go-oidc/v3/oidc"
+	"golang.org/x/oauth2"
 	"gorm.io/gorm"
 )
 
@@ -137,7 +139,7 @@ func (service *Service) Authenticate(context context.Context, authorization stri
 	return service.authenticateRequest(context, authorization)
 }
 
-func (service *Service) upsertOIDCUser(context context.Context, email string, profile oidcavatar.Profile) (userID string, token string, err error) {
+func (service *Service) upsertOIDCUser(context context.Context, email string, profile oidcavatar.Profile, oauth2Token *oauth2.Token) (userID string, token string, err error) {
 	var record schemas.User
 	err = service.orm.WithContext(context).Where("email = ?", email).First(&record).Error
 	if err != nil && !stderrors.Is(err, gorm.ErrRecordNotFound) {
@@ -160,6 +162,7 @@ func (service *Service) upsertOIDCUser(context context.Context, email string, pr
 			}
 			record.OIDCPictureURL = profile.Picture
 		}
+		storeOAuth2Tokens(&record, oauth2Token)
 		if err := service.orm.WithContext(context).Create(&record).Error; err != nil {
 			return "", "", errors.Internal("failed to create user", err)
 		}
@@ -193,6 +196,9 @@ func (service *Service) upsertOIDCUser(context context.Context, email string, pr
 			}
 			dirty = true
 		}
+		if storeOAuth2Tokens(&record, oauth2Token) {
+			dirty = true
+		}
 		if dirty {
 			if err := service.orm.WithContext(context).Save(&record).Error; err != nil {
 				return "", "", errors.Internal("failed to update user", err)
@@ -208,6 +214,105 @@ func (service *Service) upsertOIDCUser(context context.Context, email string, pr
 		return "", "", err
 	}
 	return strconv.FormatInt(record.ID, 10), token, nil
+}
+
+func storeOAuth2Tokens(record *schemas.User, tok *oauth2.Token) bool {
+	if tok == nil {
+		return false
+	}
+	changed := false
+	if tok.AccessToken != "" && tok.AccessToken != record.OIDCAccessToken {
+		record.OIDCAccessToken = tok.AccessToken
+		changed = true
+	}
+	if tok.RefreshToken != "" && tok.RefreshToken != record.OIDCRefreshToken {
+		record.OIDCRefreshToken = tok.RefreshToken
+		changed = true
+	}
+	if !tok.Expiry.IsZero() && !tok.Expiry.Equal(record.OIDCTokenExpiry) {
+		record.OIDCTokenExpiry = tok.Expiry
+		changed = true
+	}
+	return changed
+}
+
+const profileSyncCooldown = 5 * time.Minute
+
+func (service *Service) SyncOIDCProfile(ctx context.Context, userID string, provider *gooidc.Provider, oauth2Cfg *oauth2.Config) error {
+	var record schemas.User
+	if err := service.orm.WithContext(ctx).Where("id = ?", userID).First(&record).Error; err != nil {
+		return errors.NotFound("user not found")
+	}
+
+	if record.OIDCAccessToken == "" {
+		return errors.Invalid("no OIDC tokens stored for this user")
+	}
+
+	if !record.ProfileSyncedAt.IsZero() && time.Since(record.ProfileSyncedAt) < profileSyncCooldown {
+		return nil
+	}
+
+	tok := &oauth2.Token{
+		AccessToken:  record.OIDCAccessToken,
+		RefreshToken: record.OIDCRefreshToken,
+		Expiry:       record.OIDCTokenExpiry,
+		TokenType:    "Bearer",
+	}
+
+	tokenSource := oauth2Cfg.TokenSource(ctx, tok)
+	refreshedToken, err := tokenSource.Token()
+	if err != nil {
+		return errors.Internal("failed to refresh OIDC token", err)
+	}
+
+	userInfo, err := provider.UserInfo(ctx, oauth2.StaticTokenSource(refreshedToken))
+	if err != nil {
+		return errors.Internal("failed to fetch UserInfo", err)
+	}
+
+	var claims struct {
+		Name              string `json:"name"`
+		PreferredUsername string `json:"preferred_username"`
+		GivenName         string `json:"given_name"`
+		FamilyName        string `json:"family_name"`
+		Picture           string `json:"picture"`
+	}
+	if err := userInfo.Claims(&claims); err != nil {
+		return errors.Internal("failed to parse UserInfo claims", err)
+	}
+	profile := oidcavatar.Profile{
+		Name:             claims.Name,
+		PreferredUsername: claims.PreferredUsername,
+		GivenName:        claims.GivenName,
+		FamilyName:       claims.FamilyName,
+		Picture:          claims.Picture,
+	}
+
+	if displayName := profile.DisplayName(); displayName != "" && displayName != record.Name {
+		record.Name = displayName
+	}
+	if profile.Picture != "" && profile.Picture != record.OIDCPictureURL {
+		record.OIDCPictureURL = profile.Picture
+		if record.AvatarSource != "upload" {
+			oldRel := strings.TrimPrefix(record.AvatarURL, "/files/")
+			relPath, fetchErr := oidcavatar.FetchAvatar(profile.Picture, service.storageDir, record.ID, service.logger)
+			if fetchErr != nil {
+				service.logger.Warn("failed to fetch OIDC avatar during sync", slog.Any("error", fetchErr))
+			} else {
+				oidcavatar.RemoveFile(service.storageDir, oldRel)
+				record.AvatarURL = "/files/" + relPath
+				record.AvatarSource = "oidc"
+			}
+		}
+	}
+	storeOAuth2Tokens(&record, refreshedToken)
+
+	record.ProfileSyncedAt = time.Now()
+	if err := service.orm.WithContext(ctx).Save(&record).Error; err != nil {
+		return errors.Internal("failed to save synced profile", err)
+	}
+
+	return nil
 }
 
 func (service *Service) getUser(context context.Context, userID string) (*schemas.User, error) {

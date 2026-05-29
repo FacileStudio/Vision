@@ -31,6 +31,11 @@
 		try {
 			userStore.value = await api.auth.me();
 		} catch {}
+		api.auth.syncProfile().then(async () => {
+			try {
+				userStore.value = await api.auth.me();
+			} catch {}
+		}).catch(() => {});
 	});
 
 	function logout() {

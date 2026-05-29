@@ -109,6 +109,10 @@ func RegisterRoutes(router chi.Router, service *Service, appEnv env.Config) {
 			} else {
 				router.Get("/oidc", oidc.login)
 				router.Get("/oidc/callback", oidc.callback)
+				router.Group(func(router chi.Router) {
+					router.Use(middleware.RequireAuth(service))
+					router.Post("/sync-profile", oidc.syncProfile)
+				})
 			}
 		}
 	})

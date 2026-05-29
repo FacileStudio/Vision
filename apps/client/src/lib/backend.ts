@@ -53,7 +53,8 @@ export const api = {
 			request<{ status: string }>('PUT', '/auth/password', {
 				current_password: currentPassword,
 				new_password: newPassword
-			})
+			}),
+		syncProfile: () => request<{ status: string }>('POST', '/auth/sync-profile')
 	},
 	sites: {
 		list: () => request<Site[]>('GET', '/sites'),

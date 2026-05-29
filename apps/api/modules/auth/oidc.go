@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"time"
 
+	"api/internal/authcontext"
 	"api/internal/env"
 	"api/internal/errors"
 	"api/internal/httpjson"
@@ -40,7 +41,7 @@ func newOIDCHandler(ctx context.Context, cfg *env.OIDCConfig, service *Service) 
 		ClientSecret: cfg.ClientSecret,
 		RedirectURL:  cfg.RedirectURL,
 		Endpoint:     provider.Endpoint(),
-		Scopes:       []string{gooidc.ScopeOpenID, "email", "profile"},
+		Scopes:       []string{gooidc.ScopeOpenID, "email", "profile", "offline_access"},
 	}
 	verifier := provider.Verifier(&gooidc.Config{ClientID: cfg.ClientID})
 	return &oidcHandler{
@@ -127,7 +128,7 @@ func (h *oidcHandler) callback(w http.ResponseWriter, r *http.Request) {
 		Picture:          claims.Picture,
 	}
 
-	_, token, err := h.service.upsertOIDCUser(r.Context(), claims.Email, profile)
+	_, token, err := h.service.upsertOIDCUser(r.Context(), claims.Email, profile, oauth2Token)
 	if err != nil {
 		httpjson.WriteError(w, err)
 		return
@@ -138,6 +139,19 @@ func (h *oidcHandler) callback(w http.ResponseWriter, r *http.Request) {
 	q.Set("token", token)
 	dest.RawQuery = q.Encode()
 	http.Redirect(w, r, dest.String(), http.StatusFound)
+}
+
+func (h *oidcHandler) syncProfile(w http.ResponseWriter, r *http.Request) {
+	identity, ok := authcontext.IdentityFromContext(r.Context())
+	if !ok {
+		httpjson.WriteError(w, errors.Unauthorized("missing auth"))
+		return
+	}
+	if err := h.service.SyncOIDCProfile(r.Context(), identity.UserID, h.provider, &h.oauth2Cfg); err != nil {
+		httpjson.WriteError(w, err)
+		return
+	}
+	httpjson.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func randomState() (string, error) {
