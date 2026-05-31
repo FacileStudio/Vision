@@ -51,7 +51,10 @@ func (s *Service) createKey(ctx context.Context, ownerID string, name string, sc
 		return nil, errors.Internal("failed to generate key", err)
 	}
 
-	prefix := "vis_" + scopes[:1]
+	prefix := "vis_ro"
+	if scopes == "read,write" {
+		prefix = "vis_rw"
+	}
 	fullKey := prefix + "_" + rawKey
 	hint := fullKey[len(fullKey)-4:]
 	hash := hashKey(fullKey)
