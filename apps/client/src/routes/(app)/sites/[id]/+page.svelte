@@ -643,7 +643,7 @@
 							onclick={() => (showGoalForm = true)}
 							class="flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
 						>
-							<Icon icon="solar:add-circle-linear" class="h-4 w-4" />
+							<Icon icon="mdi:plus" class="h-4 w-4" />
 							Add Goal
 						</button>
 					{/if}
