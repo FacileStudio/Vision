@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"api/internal/authcontext"
+	"api/internal/errors"
 	"api/internal/httpjson"
 	"api/internal/middleware"
 
@@ -34,7 +35,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			siteID := request.URL.Query().Get("site_id")
 			if siteID == "" {
-				httpjson.WriteError(w, nil)
+				httpjson.WriteError(w, errors.Invalid("site_id is required"))
 				return
 			}
 			resp, err := service.controller.list(request.Context(), identity.UserID, siteID)

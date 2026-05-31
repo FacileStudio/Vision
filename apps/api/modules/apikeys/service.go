@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	stderrors "errors"
@@ -125,12 +124,6 @@ func (s *Service) AuthenticateKey(ctx context.Context, rawKey string) (userID st
 	}
 	if dbErr != nil {
 		return "", "", errors.Internal("failed to validate api key", dbErr)
-	}
-
-	storedHash, _ := hex.DecodeString(record.KeyHash)
-	providedHash, _ := hex.DecodeString(hash)
-	if subtle.ConstantTimeCompare(storedHash, providedHash) != 1 {
-		return "", "", errors.Unauthorized("invalid api key")
 	}
 
 	if record.ExpiresAt != nil && time.Now().After(*record.ExpiresAt) {

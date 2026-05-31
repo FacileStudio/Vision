@@ -4,6 +4,7 @@ import (
 	"context"
 	stderrors "errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"api/internal/errors"
@@ -11,6 +12,13 @@ import (
 
 	"gorm.io/gorm"
 )
+
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "%", "\\%")
+	s = strings.ReplaceAll(s, "_", "\\_")
+	return s
+}
 
 type Service struct {
 	orm        *gorm.DB
@@ -142,11 +150,12 @@ func (s *Service) conversions(ctx context.Context, ownerID string, siteID string
 			q := s.orm.WithContext(ctx).Table("pageviews").
 				Where("site_id = ? AND created_at >= ? AND created_at <= ? AND visitor_id != ''", sid, from, to)
 
+			escaped := escapeLike(*g.PagePath)
 			switch g.MatchType {
 			case "starts_with":
-				q = q.Where("path LIKE ?", *g.PagePath+"%")
+				q = q.Where("path LIKE ?", escaped+"%")
 			case "contains":
-				q = q.Where("path LIKE ?", "%"+*g.PagePath+"%")
+				q = q.Where("path LIKE ?", "%"+escaped+"%")
 			default:
 				q = q.Where("path = ?", *g.PagePath)
 			}
