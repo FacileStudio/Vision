@@ -18,8 +18,10 @@ import (
 	"api/internal/logger"
 	"api/internal/middleware"
 	"api/modules/analytics"
+	"api/modules/apikeys"
 	"api/modules/auth"
 	"api/modules/events"
+	"api/modules/goals"
 	"api/modules/sites"
 	"api/modules/webhooks"
 	"api/schemas"
@@ -70,12 +72,17 @@ func main() {
 	eventService := events.NewService(db)
 	eventService.SetHub(eventHub)
 	analyticsService := analytics.NewService(db)
+	goalService := goals.NewService(db)
+	apiKeyService := apikeys.NewService(db)
+	middleware.SetAPIKeyAuthenticator(apiKeyService)
 	docs := documentation.Response{
 		Modules: []documentation.Module{
 			auth.Documentation,
 			sites.Documentation,
 			events.Documentation,
 			analytics.Documentation,
+			goals.Documentation,
+			apikeys.Documentation,
 		},
 	}
 
@@ -112,6 +119,9 @@ func main() {
 	sites.RegisterRoutes(router, siteService, authService)
 	events.RegisterRoutes(router, eventService, eventHub, activeTracker, authService, db)
 	analytics.RegisterRoutes(router, analyticsService, activeTracker, db, authService)
+
+	goals.RegisterRoutes(router, goalService, authService)
+	apikeys.RegisterRoutes(router, apiKeyService, authService)
 
 	webhookService := webhooks.NewService(db)
 	webhooks.RegisterRoutes(router, webhookService, analyticsService, authService)

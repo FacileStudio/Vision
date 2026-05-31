@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api } from '$lib';
-	import type { Webhook } from '$lib';
+	import type { Webhook, APIKeyItem } from '$lib';
 	import Icon from '@iconify/svelte';
+	import { Copy, Check } from '@lucide/svelte';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
 
 	let webhooks = $state<Webhook[]>([]);
@@ -15,6 +16,15 @@
 	let editingWebhookId = $state<number | null>(null);
 	let webhookSaving = $state(false);
 	let deletingWebhookId = $state<number | null>(null);
+
+	let apiKeys = $state<APIKeyItem[]>([]);
+	let showKeyForm = $state(false);
+	let keyName = $state('');
+	let keyScopes = $state('read');
+	let keySaving = $state(false);
+	let newKeyValue = $state<string | null>(null);
+	let keyCopied = $state(false);
+	let deletingKeyId = $state<number | null>(null);
 
 	const frequencyPresets = [
 		{ hours: 1, label: 'Hourly' },
@@ -134,8 +144,49 @@
 		} catch {}
 	}
 
+	async function loadAPIKeys() {
+		try {
+			apiKeys = await api.apiKeys.list();
+		} catch {}
+	}
+
+	function resetKeyForm() {
+		keyName = '';
+		keyScopes = 'read';
+		showKeyForm = false;
+		newKeyValue = null;
+		keyCopied = false;
+	}
+
+	async function createAPIKey() {
+		keySaving = true;
+		try {
+			const resp = await api.apiKeys.create({ name: keyName, scopes: keyScopes });
+			newKeyValue = resp.key;
+			keyName = '';
+			await loadAPIKeys();
+		} catch {}
+		keySaving = false;
+	}
+
+	async function revokeAPIKey(id: number) {
+		try {
+			await api.apiKeys.revoke(id);
+			deletingKeyId = null;
+			await loadAPIKeys();
+		} catch {}
+	}
+
+	async function copyKey() {
+		if (newKeyValue) {
+			await navigator.clipboard.writeText(newKeyValue);
+			keyCopied = true;
+			setTimeout(() => (keyCopied = false), 2000);
+		}
+	}
+
 	onMount(async () => {
-		await loadWebhooks();
+		await Promise.all([loadWebhooks(), loadAPIKeys()]);
 	});
 </script>
 
@@ -337,6 +388,165 @@
 						class="flex items-center gap-1.5 rounded-full bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
 					>
 						<Icon icon="solar:close-circle-linear" class="h-4 w-4" />
+						Cancel
+					</button>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<div class="rounded-lg border p-6">
+		<div class="mb-1 flex items-center justify-between">
+			<h2 class="text-lg font-semibold">API Keys</h2>
+			{#if !showKeyForm && !newKeyValue && apiKeys.length > 0}
+				<button
+					onclick={() => (showKeyForm = true)}
+					class="flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+				>
+					<Icon icon="solar:add-circle-linear" class="h-4 w-4" />
+					Add
+				</button>
+			{/if}
+		</div>
+		<p class="mb-4 text-sm text-muted-foreground">
+			Programmatic access to your analytics data
+		</p>
+
+		{#if newKeyValue}
+			<div class="mb-4 space-y-3 rounded-lg border border-green-500/30 bg-green-50/50 p-4 dark:bg-green-950/20">
+				<p class="text-sm font-medium">Your API key has been created</p>
+				<p class="text-xs text-muted-foreground">Copy it now — you won't be able to see it again.</p>
+				<div class="group relative">
+					<pre class="overflow-x-auto rounded bg-background p-3 pr-12 text-xs font-mono border">{newKeyValue}</pre>
+					<button
+						onclick={copyKey}
+						class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+						aria-label="Copy API key"
+					>
+						{#if keyCopied}
+							<Check class="h-4 w-4 text-green-500" />
+						{:else}
+							<Copy class="h-4 w-4" />
+						{/if}
+					</button>
+				</div>
+				<button
+					onclick={resetKeyForm}
+					class="rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+				>
+					Done
+				</button>
+			</div>
+		{/if}
+
+		{#if apiKeys.length === 0 && !showKeyForm && !newKeyValue}
+			<button
+				onclick={() => (showKeyForm = true)}
+				class="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+			>
+				<Icon icon="solar:add-circle-linear" class="h-4 w-4" />
+				Create API Key
+			</button>
+		{/if}
+
+		{#if apiKeys.length > 0}
+			<div class="mb-4 space-y-3">
+				{#each apiKeys as key}
+					<div class="rounded-lg border p-4">
+						{#if deletingKeyId === key.id}
+							<div class="flex items-center justify-between">
+								<p class="text-sm">Revoke this key?</p>
+								<div class="flex gap-2">
+									<button
+										onclick={() => revokeAPIKey(key.id)}
+										class="rounded-full bg-red-500 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-red-600"
+									>
+										Revoke
+									</button>
+									<button
+										onclick={() => (deletingKeyId = null)}
+										class="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+									>
+										Cancel
+									</button>
+								</div>
+							</div>
+						{:else}
+							<div class="flex items-start justify-between gap-3">
+								<div class="min-w-0 flex-1">
+									<p class="text-sm font-medium">{key.name}</p>
+									<div class="mt-1.5 flex flex-wrap items-center gap-2">
+										<code class="rounded bg-muted px-2 py-0.5 text-xs">{key.prefix}_****{key.key_hint}</code>
+										<span class="rounded-full px-2.5 py-0.5 text-xs font-medium {key.is_active ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'}">
+											{key.scopes}
+										</span>
+										<span class="text-xs text-muted-foreground">
+											{key.last_used_at
+												? `Used ${new Date(key.last_used_at).toLocaleDateString()}`
+												: 'Never used'}
+										</span>
+										{#if !key.is_active}
+											<span class="text-xs text-red-500">Revoked</span>
+										{/if}
+									</div>
+								</div>
+								{#if key.is_active}
+									<button
+										onclick={() => (deletingKeyId = key.id)}
+										class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-red-500"
+										aria-label="Revoke key"
+									>
+										<Icon icon="solar:trash-bin-trash-linear" class="h-3.5 w-3.5" />
+									</button>
+								{/if}
+							</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		{/if}
+
+		{#if showKeyForm && !newKeyValue}
+			<div class="space-y-4 rounded-lg border p-4">
+				<div>
+					<label for="key-name" class="mb-1 block text-sm font-medium">Name</label>
+					<input
+						id="key-name"
+						type="text"
+						bind:value={keyName}
+						placeholder="e.g. CI Dashboard, My Script"
+						class="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+					/>
+				</div>
+				<div>
+					<span class="mb-1.5 block text-sm font-medium">Permissions</span>
+					<div class="flex gap-2">
+						<button
+							onclick={() => (keyScopes = 'read')}
+							class="rounded-full px-3 py-1 text-sm font-medium transition-colors {keyScopes === 'read' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground hover:text-foreground'}"
+						>
+							Read only
+						</button>
+						<button
+							onclick={() => (keyScopes = 'read,write')}
+							class="rounded-full px-3 py-1 text-sm font-medium transition-colors {keyScopes === 'read,write' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground hover:text-foreground'}"
+						>
+							Read & Write
+						</button>
+					</div>
+				</div>
+				<div class="flex gap-2 pt-1">
+					<button
+						onclick={createAPIKey}
+						disabled={keySaving || !keyName}
+						class="flex items-center gap-1.5 rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						{keySaving ? 'Creating…' : 'Create Key'}
+					</button>
+					<button
+						onclick={resetKeyForm}
+						class="rounded-full bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+					>
 						Cancel
 					</button>
 				</div>

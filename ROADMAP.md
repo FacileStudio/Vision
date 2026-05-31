@@ -54,8 +54,8 @@ Self-hosted analytics. Go + SvelteKit.
 
 ## Medium-term
 
-- [ ] Goal tracking (mark paths or events as goals, show conversion rates)
-- [ ] API keys for programmatic access
+- [x] Goal tracking (mark paths or events as goals, show conversion rates)
+- [x] API keys for programmatic access
 - [ ] Multi-user / team access with roles (viewer, admin)
 - [ ] Email reports (weekly/monthly summary via scheduled job)
 - [ ] Lightweight embeddable widget (small stats badge for sites)

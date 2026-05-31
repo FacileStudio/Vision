@@ -109,6 +109,24 @@ export const api = {
 			return res.json() as Promise<{ visitors: number }>;
 		}
 	},
+	goals: {
+		list: (siteId: number) => request<Goal[]>('GET', `/goals?site_id=${siteId}`),
+		create: (data: CreateGoalRequest) => request<Goal>('POST', '/goals', data),
+		update: (id: number, data: UpdateGoalRequest) => request<Goal>('PUT', `/goals/${id}`, data),
+		delete: (id: number) => request<void>('DELETE', `/goals/${id}`),
+		conversions: (siteId: number, from?: string, to?: string) => {
+			const params = new URLSearchParams();
+			if (from) params.set('from', from);
+			if (to) params.set('to', to);
+			const qs = params.toString();
+			return request<GoalConversionsResponse>('GET', `/goals/${siteId}/conversions${qs ? `?${qs}` : ''}`);
+		}
+	},
+	apiKeys: {
+		list: () => request<APIKeyItem[]>('GET', '/api-keys'),
+		create: (data: CreateAPIKeyRequest) => request<CreateAPIKeyResponse>('POST', '/api-keys', data),
+		revoke: (id: number) => request<void>('DELETE', `/api-keys/${id}`)
+	},
 	events: {}
 };
 
@@ -153,6 +171,71 @@ export interface UpdateWebhookRequest {
 	secret: string;
 	interval_hours: number;
 	enabled: boolean;
+}
+
+export interface Goal {
+	id: number;
+	site_id: number;
+	name: string;
+	goal_type: string;
+	event_name: string | null;
+	page_path: string | null;
+	match_type: string;
+	created_at: string;
+}
+
+export interface CreateGoalRequest {
+	site_id: number;
+	name: string;
+	goal_type: string;
+	event_name?: string;
+	page_path?: string;
+	match_type?: string;
+}
+
+export interface UpdateGoalRequest {
+	name: string;
+	goal_type: string;
+	event_name?: string;
+	page_path?: string;
+	match_type?: string;
+}
+
+export interface GoalConversion {
+	id: number;
+	name: string;
+	goal_type: string;
+	conversions: number;
+	conversion_rate: number;
+}
+
+export interface GoalConversionsResponse {
+	goals: GoalConversion[];
+	total_visitors: number;
+}
+
+export interface APIKeyItem {
+	id: number;
+	name: string;
+	prefix: string;
+	key_hint: string;
+	scopes: string;
+	site_id: number | null;
+	is_active: boolean;
+	last_used_at: string | null;
+	expires_at: string | null;
+	created_at: string;
+}
+
+export interface CreateAPIKeyRequest {
+	name: string;
+	scopes: string;
+	site_id?: number;
+}
+
+export interface CreateAPIKeyResponse {
+	key: string;
+	api_key: APIKeyItem;
 }
 
 export interface AnalyticsOverview {
