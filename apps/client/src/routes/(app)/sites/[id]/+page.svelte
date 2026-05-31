@@ -634,6 +634,155 @@
 			<StatCard label="Active Now" value={fmt(realtimeCount)} pulse />
 		</div>
 
+		<Card.Root class="mb-8">
+			<Card.Header>
+				<div class="flex items-center justify-between">
+					<Card.Title>Goals</Card.Title>
+					{#if !showGoalForm}
+						<button
+							onclick={() => (showGoalForm = true)}
+							class="flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+						>
+							<Icon icon="solar:add-circle-linear" class="h-4 w-4" />
+							Add Goal
+						</button>
+					{/if}
+				</div>
+			</Card.Header>
+			<Card.Content>
+				{#if showGoalForm}
+					<div class="mb-4 space-y-3 rounded-lg border p-4">
+						<div>
+							<label for="goal-name" class="mb-1 block text-sm font-medium">Name</label>
+							<input
+								id="goal-name"
+								type="text"
+								bind:value={goalName}
+								placeholder="e.g. Signup, Pricing page visit"
+								class="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+							/>
+						</div>
+						<div>
+							<span class="mb-1.5 block text-sm font-medium">Type</span>
+							<div class="flex gap-2">
+								<button
+									onclick={() => (goalType = 'pageview')}
+									class="rounded-full px-3 py-1 text-sm font-medium transition-colors {goalType === 'pageview' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground hover:text-foreground'}"
+								>
+									Pageview
+								</button>
+								<button
+									onclick={() => (goalType = 'event')}
+									class="rounded-full px-3 py-1 text-sm font-medium transition-colors {goalType === 'event' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground hover:text-foreground'}"
+								>
+									Custom Event
+								</button>
+							</div>
+						</div>
+						{#if goalType === 'pageview'}
+							<div class="flex gap-2">
+								<div class="flex-1">
+									<label for="goal-path" class="mb-1 block text-sm font-medium">Path</label>
+									<input
+										id="goal-path"
+										type="text"
+										bind:value={goalPagePath}
+										placeholder="/pricing"
+										class="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+									/>
+								</div>
+								<div class="w-36">
+									<label for="goal-match" class="mb-1 block text-sm font-medium">Match</label>
+									<select
+										id="goal-match"
+										bind:value={goalMatchType}
+										class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+									>
+										<option value="exact">Exact</option>
+										<option value="starts_with">Starts with</option>
+										<option value="contains">Contains</option>
+									</select>
+								</div>
+							</div>
+						{:else}
+							<div>
+								<label for="goal-event" class="mb-1 block text-sm font-medium">Event Name</label>
+								<input
+									id="goal-event"
+									type="text"
+									bind:value={goalEventName}
+									placeholder="signup"
+									class="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+								/>
+							</div>
+						{/if}
+						<div class="flex gap-2 pt-1">
+							<button
+								onclick={saveGoal}
+								disabled={goalSaving || !goalName || (goalType === 'pageview' ? !goalPagePath : !goalEventName)}
+								class="flex items-center gap-1.5 rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								{goalSaving ? 'Saving…' : 'Save'}
+							</button>
+							<button
+								onclick={resetGoalForm}
+								class="rounded-full bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+							>
+								Cancel
+							</button>
+						</div>
+					</div>
+				{/if}
+
+				{#if goalConversions && goalConversions.goals.length > 0}
+					{@const maxConv = Math.max(...goalConversions.goals.map((g: { conversions: number }) => g.conversions), 1)}
+					<div class="space-y-1">
+						{#each goalConversions.goals as goal (goal.id)}
+							<div class="group relative rounded transition-colors hover:bg-muted/30">
+								<div
+									class="absolute inset-y-0 left-0 rounded bg-muted/50"
+									style="width: {(goal.conversions / maxConv) * 100}%"
+								></div>
+								<div class="relative flex items-center justify-between px-3 py-1.5 text-sm">
+									<div class="flex items-center gap-2">
+										<Icon
+											icon={goal.goal_type === 'event' ? 'solar:bolt-linear' : 'solar:link-linear'}
+											class="h-3.5 w-3.5 text-muted-foreground"
+										/>
+										<span>{goal.name}</span>
+									</div>
+									<div class="flex items-center gap-3">
+										<span class="tabular-nums text-muted-foreground">{goal.conversions}</span>
+										<span class="w-14 text-right tabular-nums text-xs text-muted-foreground">
+											{goal.conversion_rate.toFixed(1)}%
+										</span>
+										<button
+											onclick={() => deleteGoal(goal.id)}
+											class="rounded-md p-1 text-muted-foreground opacity-0 transition-all hover:text-red-500 group-hover:opacity-100"
+											aria-label="Delete goal"
+										>
+											<Icon icon="solar:trash-bin-trash-linear" class="h-3.5 w-3.5" />
+										</button>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+					<p class="mt-3 text-xs text-muted-foreground">
+						Based on {goalConversions.total_visitors} unique visitors
+					</p>
+				{:else if siteGoals.length === 0 && !showGoalForm}
+					<p class="text-sm text-muted-foreground">
+						No goals configured. Add a goal to track conversion rates.
+					</p>
+				{:else if siteGoals.length > 0 && goalConversions?.goals.length === 0}
+					<p class="text-sm text-muted-foreground">
+						No conversions yet for the selected period.
+					</p>
+				{/if}
+			</Card.Content>
+		</Card.Root>
+
 		{#if overview.performance && overview.performance.sample_count > 0}
 			<PerformanceCard performance={overview.performance} />
 		{/if}
@@ -807,155 +956,6 @@
 				{/snippet}
 			</BarListCard>
 		{/if}
-
-		<Card.Root class="mb-8">
-			<Card.Header>
-				<div class="flex items-center justify-between">
-					<Card.Title>Goals</Card.Title>
-					{#if !showGoalForm}
-						<button
-							onclick={() => (showGoalForm = true)}
-							class="flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
-						>
-							<Icon icon="solar:add-circle-linear" class="h-4 w-4" />
-							Add Goal
-						</button>
-					{/if}
-				</div>
-			</Card.Header>
-			<Card.Content>
-				{#if showGoalForm}
-					<div class="mb-4 space-y-3 rounded-lg border p-4">
-						<div>
-							<label for="goal-name" class="mb-1 block text-sm font-medium">Name</label>
-							<input
-								id="goal-name"
-								type="text"
-								bind:value={goalName}
-								placeholder="e.g. Signup, Pricing page visit"
-								class="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-							/>
-						</div>
-						<div>
-							<span class="mb-1.5 block text-sm font-medium">Type</span>
-							<div class="flex gap-2">
-								<button
-									onclick={() => (goalType = 'pageview')}
-									class="rounded-full px-3 py-1 text-sm font-medium transition-colors {goalType === 'pageview' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground hover:text-foreground'}"
-								>
-									Pageview
-								</button>
-								<button
-									onclick={() => (goalType = 'event')}
-									class="rounded-full px-3 py-1 text-sm font-medium transition-colors {goalType === 'event' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground hover:text-foreground'}"
-								>
-									Custom Event
-								</button>
-							</div>
-						</div>
-						{#if goalType === 'pageview'}
-							<div class="flex gap-2">
-								<div class="flex-1">
-									<label for="goal-path" class="mb-1 block text-sm font-medium">Path</label>
-									<input
-										id="goal-path"
-										type="text"
-										bind:value={goalPagePath}
-										placeholder="/pricing"
-										class="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-									/>
-								</div>
-								<div class="w-36">
-									<label for="goal-match" class="mb-1 block text-sm font-medium">Match</label>
-									<select
-										id="goal-match"
-										bind:value={goalMatchType}
-										class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-									>
-										<option value="exact">Exact</option>
-										<option value="starts_with">Starts with</option>
-										<option value="contains">Contains</option>
-									</select>
-								</div>
-							</div>
-						{:else}
-							<div>
-								<label for="goal-event" class="mb-1 block text-sm font-medium">Event Name</label>
-								<input
-									id="goal-event"
-									type="text"
-									bind:value={goalEventName}
-									placeholder="signup"
-									class="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-								/>
-							</div>
-						{/if}
-						<div class="flex gap-2 pt-1">
-							<button
-								onclick={saveGoal}
-								disabled={goalSaving || !goalName || (goalType === 'pageview' ? !goalPagePath : !goalEventName)}
-								class="flex items-center gap-1.5 rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								{goalSaving ? 'Saving…' : 'Save'}
-							</button>
-							<button
-								onclick={resetGoalForm}
-								class="rounded-full bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-							>
-								Cancel
-							</button>
-						</div>
-					</div>
-				{/if}
-
-				{#if goalConversions && goalConversions.goals.length > 0}
-					{@const maxConv = Math.max(...goalConversions.goals.map((g: { conversions: number }) => g.conversions), 1)}
-					<div class="space-y-1">
-						{#each goalConversions.goals as goal (goal.id)}
-							<div class="group relative rounded transition-colors hover:bg-muted/30">
-								<div
-									class="absolute inset-y-0 left-0 rounded bg-muted/50"
-									style="width: {(goal.conversions / maxConv) * 100}%"
-								></div>
-								<div class="relative flex items-center justify-between px-3 py-1.5 text-sm">
-									<div class="flex items-center gap-2">
-										<Icon
-											icon={goal.goal_type === 'event' ? 'solar:bolt-linear' : 'solar:link-linear'}
-											class="h-3.5 w-3.5 text-muted-foreground"
-										/>
-										<span>{goal.name}</span>
-									</div>
-									<div class="flex items-center gap-3">
-										<span class="tabular-nums text-muted-foreground">{goal.conversions}</span>
-										<span class="w-14 text-right tabular-nums text-xs text-muted-foreground">
-											{goal.conversion_rate.toFixed(1)}%
-										</span>
-										<button
-											onclick={() => deleteGoal(goal.id)}
-											class="rounded-md p-1 text-muted-foreground opacity-0 transition-all hover:text-red-500 group-hover:opacity-100"
-											aria-label="Delete goal"
-										>
-											<Icon icon="solar:trash-bin-trash-linear" class="h-3.5 w-3.5" />
-										</button>
-									</div>
-								</div>
-							</div>
-						{/each}
-					</div>
-					<p class="mt-3 text-xs text-muted-foreground">
-						Based on {goalConversions.total_visitors} unique visitors
-					</p>
-				{:else if siteGoals.length === 0 && !showGoalForm}
-					<p class="text-sm text-muted-foreground">
-						No goals configured. Add a goal to track conversion rates.
-					</p>
-				{:else if siteGoals.length > 0 && goalConversions?.goals.length === 0}
-					<p class="text-sm text-muted-foreground">
-						No conversions yet for the selected period.
-					</p>
-				{/if}
-			</Card.Content>
-		</Card.Root>
 
 		{#if overview.top_countries?.length > 0}
 			<Card.Root class="mb-8">
