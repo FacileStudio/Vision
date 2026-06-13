@@ -7,6 +7,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
 	import { userStore } from '$lib/stores/user.svelte';
+	import MobileNav from '$lib/components/MobileNav.svelte';
 	import Globe from '@lucide/svelte/icons/globe';
 	import Settings from '@lucide/svelte/icons/settings';
 	import LogOut from '@lucide/svelte/icons/log-out';
@@ -50,7 +51,7 @@
 </script>
 
 <div class="flex h-screen w-full overflow-hidden">
-	<aside class="sticky top-0 flex h-screen w-60 flex-col border-r bg-background">
+	<aside class="sticky top-0 hidden h-screen w-60 flex-col border-r bg-background md:flex">
 		<div class="flex items-center gap-3 px-5 pt-8 pb-6">
 			<Icon icon="solar:panorama-bold-duotone" class="w-7 h-7" />
 			<span class="text-2xl font-bold tracking-tight">Vision</span>
@@ -106,7 +107,9 @@
 		</div>
 	</aside>
 
-	<main class="flex-1 overflow-auto p-8">
+	<main class="flex-1 overflow-auto p-4 pb-24 sm:p-6 md:p-8 md:pb-8">
 		{@render children()}
 	</main>
 </div>
+
+<MobileNav user={userStore.value} />

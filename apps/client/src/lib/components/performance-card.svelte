@@ -32,7 +32,7 @@
 		</div>
 	</Card.Header>
 	<Card.Content>
-		<div class="grid grid-cols-5 gap-4">
+		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
 			{#each metrics as m (m.label)}
 				<div>
 					<p class="text-xs text-muted-foreground">{m.label}</p>

@@ -450,21 +450,21 @@
 <svelte:head><title>{site ? `${site.name} — Vision` : 'Vision'}</title></svelte:head>
 
 {#if site}
-	<div class="mb-8 flex items-center justify-between">
-		<div>
+	<div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+		<div class="min-w-0">
 			<div class="flex items-center gap-3">
 				<SiteFavicon domain={site.domain} name={site.name} class="h-6 w-6" />
-				<h1 class="text-2xl font-bold">{site.name}</h1>
+				<h1 class="truncate text-2xl font-bold">{site.name}</h1>
 			</div>
-			<p class="text-muted-foreground">{site.domain}</p>
-			<div class="mt-2 flex items-center gap-2">
+			<p class="truncate text-muted-foreground">{site.domain}</p>
+			<div class="mt-2 flex flex-wrap items-center gap-2">
 				{#if site.share_token}
-					<div class="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5">
-						<Icon icon="solar:link-linear" class="h-4 w-4 text-muted-foreground" />
-						<code class="text-xs text-muted-foreground">{shareUrl}</code>
+					<div class="flex min-w-0 max-w-full items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5">
+						<Icon icon="solar:link-linear" class="h-4 w-4 shrink-0 text-muted-foreground" />
+						<code class="truncate text-xs text-muted-foreground">{shareUrl}</code>
 						<button
 							onclick={copyShareUrl}
-							class="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+							class="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
 							aria-label="Copy share link"
 						>
 							{#if shareCopied}
@@ -475,7 +475,7 @@
 						</button>
 						<button
 							onclick={revokeShare}
-							class="rounded p-1 text-red-500 transition-colors hover:bg-red-500/10"
+							class="shrink-0 rounded p-1 text-red-500 transition-colors hover:bg-red-500/10"
 							aria-label="Revoke share link"
 						>
 							<Icon icon="solar:trash-bin-trash-linear" class="h-4 w-4" />
@@ -848,7 +848,7 @@
 						<Card.Title>Traffic Sources</Card.Title>
 					</Card.Header>
 					<Card.Content>
-						<div class="flex items-center justify-center gap-6">
+						<div class="flex flex-col items-center justify-center gap-6 sm:flex-row">
 							<div class="aspect-square h-[200px]">
 								<Chart.Container config={trafficConfig} class="aspect-auto h-full w-full">
 									<PieChart
