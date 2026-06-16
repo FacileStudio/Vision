@@ -56,10 +56,25 @@ export const api = {
 			}),
 		syncProfile: () => request<{ status: string }>('POST', '/auth/sync-profile')
 	},
+	workspaces: {
+		list: () => request<Workspace[]>('GET', '/workspaces'),
+		create: (name: string) => request<Workspace>('POST', '/workspaces', { name }),
+		get: (id: number) => request<Workspace>('GET', `/workspaces/${id}`),
+		update: (id: number, name: string) => request<Workspace>('PUT', `/workspaces/${id}`, { name }),
+		delete: (id: number) => request<void>('DELETE', `/workspaces/${id}`),
+		members: (id: number) => request<WorkspaceMember[]>('GET', `/workspaces/${id}/members`),
+		addMember: (id: number, email: string, role: string) =>
+			request<WorkspaceMember>('POST', `/workspaces/${id}/members`, { email, role }),
+		updateMember: (id: number, userId: number, role: string) =>
+			request<void>('PUT', `/workspaces/${id}/members/${userId}`, { role }),
+		removeMember: (id: number, userId: number) =>
+			request<void>('DELETE', `/workspaces/${id}/members/${userId}`)
+	},
 	sites: {
 		list: () => request<Site[]>('GET', '/sites'),
 		get: (id: number) => request<Site>('GET', `/sites/${id}`),
-		create: (name: string, domain: string) => request<Site>('POST', '/sites', { name, domain }),
+		create: (name: string, domain: string, workspaceId: number) =>
+			request<Site>('POST', '/sites', { name, domain, workspace_id: workspaceId }),
 		update: (id: number, name: string, domain: string) =>
 			request<Site>('PUT', `/sites/${id}`, { name, domain }),
 		delete: (id: number) => request<void>('DELETE', `/sites/${id}`),
@@ -144,9 +159,28 @@ export interface Site {
 	name: string;
 	domain: string;
 	owner_id: number;
+	workspace_id: number;
 	share_token: string | null;
 	created_at: string;
 	updated_at: string;
+}
+
+export interface Workspace {
+	id: number;
+	name: string;
+	role: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface WorkspaceMember {
+	id: number;
+	user_id: number;
+	email: string;
+	name: string;
+	avatar_url: string;
+	role: string;
+	created_at: string;
 }
 
 export interface Webhook {

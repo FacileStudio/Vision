@@ -24,7 +24,10 @@ func (c *Controller) create(ctx context.Context, ownerID string, req *CreateRequ
 	if domain == "" {
 		return nil, errors.Invalid("domain is required")
 	}
-	return c.service.createSite(ctx, ownerID, name, domain)
+	if req.WorkspaceID == 0 {
+		return nil, errors.Invalid("workspace_id is required")
+	}
+	return c.service.createSite(ctx, ownerID, name, domain, req.WorkspaceID)
 }
 
 func (c *Controller) list(ctx context.Context, ownerID string) ([]SiteResponse, error) {

@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"api/internal/errors"
+	"api/internal/siteaccess"
 	"api/schemas"
 
 	"gorm.io/gorm"
@@ -24,13 +25,22 @@ func NewService(orm *gorm.DB) *Service {
 	return service
 }
 
-func (s *Service) createSite(ctx context.Context, ownerID string, name string, domain string) (*SiteResponse, error) {
+func (s *Service) createSite(ctx context.Context, ownerID string, name string, domain string, workspaceID int64) (*SiteResponse, error) {
 	uid, _ := strconv.ParseInt(ownerID, 10, 64)
 
+	var count int64
+	s.orm.WithContext(ctx).Model(&schemas.WorkspaceMember{}).
+		Where("workspace_id = ? AND user_id = ? AND role IN ?", workspaceID, uid, []string{"owner", "admin", "editor"}).
+		Count(&count)
+	if count == 0 {
+		return nil, errors.Forbidden("no write access to this workspace")
+	}
+
 	record := &schemas.Site{
-		Name:    name,
-		Domain:  domain,
-		OwnerID: uid,
+		Name:        name,
+		Domain:      domain,
+		OwnerID:     uid,
+		WorkspaceID: workspaceID,
 	}
 	if err := s.orm.WithContext(ctx).Create(record).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
@@ -42,10 +52,20 @@ func (s *Service) createSite(ctx context.Context, ownerID string, name string, d
 	return toResponse(record), nil
 }
 
-func (s *Service) listSites(ctx context.Context, ownerID string) ([]SiteResponse, error) {
-	uid, _ := strconv.ParseInt(ownerID, 10, 64)
+func (s *Service) listSites(ctx context.Context, userID string) ([]SiteResponse, error) {
+	uid, _ := strconv.ParseInt(userID, 10, 64)
+
+	var wsIDs []int64
+	s.orm.WithContext(ctx).Model(&schemas.WorkspaceMember{}).
+		Where("user_id = ?", uid).Pluck("workspace_id", &wsIDs)
+
+	if len(wsIDs) == 0 {
+		return []SiteResponse{}, nil
+	}
+
 	var records []schemas.Site
-	if err := s.orm.WithContext(ctx).Where("owner_id = ?", uid).Order("created_at desc").Find(&records).Error; err != nil {
+	if err := s.orm.WithContext(ctx).Where("workspace_id IN ?", wsIDs).
+		Order("created_at desc").Find(&records).Error; err != nil {
 		return nil, errors.Internal("failed to list sites", err)
 	}
 
@@ -56,16 +76,16 @@ func (s *Service) listSites(ctx context.Context, ownerID string) ([]SiteResponse
 	return out, nil
 }
 
-func (s *Service) getSite(ctx context.Context, ownerID string, siteID string) (*SiteResponse, error) {
-	record, err := s.findOwned(ctx, ownerID, siteID)
+func (s *Service) getSite(ctx context.Context, userID string, siteID string) (*SiteResponse, error) {
+	record, err := s.findAccessible(ctx, userID, siteID)
 	if err != nil {
 		return nil, err
 	}
 	return toResponse(record), nil
 }
 
-func (s *Service) updateSite(ctx context.Context, ownerID string, siteID string, name string, domain string) (*SiteResponse, error) {
-	record, err := s.findOwned(ctx, ownerID, siteID)
+func (s *Service) updateSite(ctx context.Context, userID string, siteID string, name string, domain string) (*SiteResponse, error) {
+	record, err := s.findWritable(ctx, userID, siteID)
 	if err != nil {
 		return nil, err
 	}
@@ -81,8 +101,8 @@ func (s *Service) updateSite(ctx context.Context, ownerID string, siteID string,
 	return toResponse(record), nil
 }
 
-func (s *Service) deleteSite(ctx context.Context, ownerID string, siteID string) error {
-	record, err := s.findOwned(ctx, ownerID, siteID)
+func (s *Service) deleteSite(ctx context.Context, userID string, siteID string) error {
+	record, err := s.findWritable(ctx, userID, siteID)
 	if err != nil {
 		return err
 	}
@@ -92,23 +112,44 @@ func (s *Service) deleteSite(ctx context.Context, ownerID string, siteID string)
 	return nil
 }
 
-func (s *Service) findOwned(ctx context.Context, ownerID string, siteID string) (*schemas.Site, error) {
-	uid, _ := strconv.ParseInt(ownerID, 10, 64)
+func (s *Service) findAccessible(ctx context.Context, userID string, siteID string) (*schemas.Site, error) {
+	uid, _ := strconv.ParseInt(userID, 10, 64)
 	sid, _ := strconv.ParseInt(siteID, 10, 64)
 
 	var record schemas.Site
-	err := s.orm.WithContext(ctx).Where("id = ? AND owner_id = ?", sid, uid).First(&record).Error
-	if stderrors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.NotFound("site not found")
-	}
-	if err != nil {
+	if err := s.orm.WithContext(ctx).First(&record, sid).Error; err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.NotFound("site not found")
+		}
 		return nil, errors.Internal("failed to read site", err)
+	}
+
+	if !siteaccess.CanAccess(ctx, s.orm, uid, sid) {
+		return nil, errors.NotFound("site not found")
 	}
 	return &record, nil
 }
 
-func (s *Service) generateShareToken(ctx context.Context, ownerID string, siteID string) (*SiteResponse, error) {
-	record, err := s.findOwned(ctx, ownerID, siteID)
+func (s *Service) findWritable(ctx context.Context, userID string, siteID string) (*schemas.Site, error) {
+	uid, _ := strconv.ParseInt(userID, 10, 64)
+	sid, _ := strconv.ParseInt(siteID, 10, 64)
+
+	var record schemas.Site
+	if err := s.orm.WithContext(ctx).First(&record, sid).Error; err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.NotFound("site not found")
+		}
+		return nil, errors.Internal("failed to read site", err)
+	}
+
+	if !siteaccess.CanWrite(ctx, s.orm, uid, sid) {
+		return nil, errors.Forbidden("access denied")
+	}
+	return &record, nil
+}
+
+func (s *Service) generateShareToken(ctx context.Context, userID string, siteID string) (*SiteResponse, error) {
+	record, err := s.findWritable(ctx, userID, siteID)
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +162,8 @@ func (s *Service) generateShareToken(ctx context.Context, ownerID string, siteID
 	return toResponse(record), nil
 }
 
-func (s *Service) revokeShareToken(ctx context.Context, ownerID string, siteID string) error {
-	record, err := s.findOwned(ctx, ownerID, siteID)
+func (s *Service) revokeShareToken(ctx context.Context, userID string, siteID string) error {
+	record, err := s.findWritable(ctx, userID, siteID)
 	if err != nil {
 		return err
 	}
@@ -139,12 +180,13 @@ func generateToken() string {
 
 func toResponse(record *schemas.Site) *SiteResponse {
 	return &SiteResponse{
-		ID:         record.ID,
-		Name:       record.Name,
-		Domain:     record.Domain,
-		OwnerID:    record.OwnerID,
-		ShareToken: record.ShareToken,
-		CreatedAt:  record.CreatedAt,
-		UpdatedAt:  record.UpdatedAt,
+		ID:          record.ID,
+		Name:        record.Name,
+		Domain:      record.Domain,
+		OwnerID:     record.OwnerID,
+		WorkspaceID: record.WorkspaceID,
+		ShareToken:  record.ShareToken,
+		CreatedAt:   record.CreatedAt,
+		UpdatedAt:   record.UpdatedAt,
 	}
 }

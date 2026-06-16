@@ -10,6 +10,7 @@ import (
 	"api/internal/errors"
 	"api/internal/httpjson"
 	"api/internal/middleware"
+	"api/internal/siteaccess"
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
@@ -211,9 +212,7 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, tracker *Acti
 			}
 
 			ownerID, _ := strconv.ParseInt(userID, 10, 64)
-			var count int64
-			orm.Table("sites").Where("id = ? AND owner_id = ?", siteID, ownerID).Count(&count)
-			if count == 0 {
+			if !siteaccess.CanAccess(request.Context(), orm, ownerID, siteID) {
 				httpjson.WriteError(w, errors.NotFound("site not found"))
 				return
 			}

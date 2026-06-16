@@ -8,8 +8,10 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import { userStore } from '$lib/stores/user.svelte';
 	import MobileNav from '$lib/components/MobileNav.svelte';
+	import { workspaceStore } from '$lib/stores/workspace.svelte';
 	import Globe from '@lucide/svelte/icons/globe';
 	import Settings from '@lucide/svelte/icons/settings';
+	import Users from '@lucide/svelte/icons/users';
 	import LogOut from '@lucide/svelte/icons/log-out';
 
 	let { children } = $props();
@@ -32,6 +34,11 @@
 		try {
 			userStore.value = await api.auth.me();
 		} catch {}
+		try {
+			const ws = await api.workspaces.list();
+			workspaceStore.all = ws;
+			if (ws.length > 0) workspaceStore.current = ws[0];
+		} catch {}
 		api.auth.syncProfile().then(async () => {
 			try {
 				userStore.value = await api.auth.me();
@@ -46,6 +53,7 @@
 
 	const navLinks = [
 		{ href: '/sites', label: 'Sites', icon: Globe },
+		{ href: '/team', label: 'Team', icon: Users },
 		{ href: '/settings', label: 'Settings', icon: Settings }
 	];
 </script>
@@ -56,6 +64,13 @@
 			<Icon icon="solar:panorama-bold-duotone" class="w-7 h-7" />
 			<span class="text-2xl font-bold tracking-tight">Vision</span>
 		</div>
+
+		{#if workspaceStore.current}
+			<div class="mx-3 mb-3 rounded-md border border-border/60 bg-muted/40 px-3 py-2">
+				<p class="truncate text-xs font-medium text-muted-foreground">Workspace</p>
+				<p class="truncate text-sm font-semibold">{workspaceStore.current.name}</p>
+			</div>
+		{/if}
 
 		<nav class="flex flex-1 flex-col gap-1 px-3">
 			{#each navLinks as link}

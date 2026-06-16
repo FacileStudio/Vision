@@ -11,6 +11,7 @@ import (
 	"api/internal/errors"
 	"api/internal/httpjson"
 	"api/internal/middleware"
+	"api/internal/siteaccess"
 	"api/modules/events"
 	"api/schemas"
 
@@ -73,9 +74,7 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 			}
 
 			ownerID, _ := strconv.ParseInt(identity.UserID, 10, 64)
-			var count int64
-			orm.Table("sites").Where("id = ? AND owner_id = ?", siteID, ownerID).Count(&count)
-			if count == 0 {
+			if !siteaccess.CanAccess(request.Context(), orm, ownerID, siteID) {
 				httpjson.WriteError(w, errors.NotFound("site not found"))
 				return
 			}
@@ -102,9 +101,7 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 			}
 
 			ownerID, _ := strconv.ParseInt(identity.UserID, 10, 64)
-			var count int64
-			orm.Table("sites").Where("id = ? AND owner_id = ?", siteID, ownerID).Count(&count)
-			if count == 0 {
+			if !siteaccess.CanAccess(request.Context(), orm, ownerID, siteID) {
 				httpjson.WriteError(w, errors.NotFound("site not found"))
 				return
 			}
@@ -122,9 +119,7 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 			}
 
 			ownerID, _ := strconv.ParseInt(identity.UserID, 10, 64)
-			var count int64
-			orm.Table("sites").Where("id = ? AND owner_id = ?", siteID, ownerID).Count(&count)
-			if count == 0 {
+			if !siteaccess.CanAccess(request.Context(), orm, ownerID, siteID) {
 				httpjson.WriteError(w, errors.NotFound("site not found"))
 				return
 			}

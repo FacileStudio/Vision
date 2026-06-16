@@ -44,8 +44,10 @@ func processDueWebhooks(orm *gorm.DB, analyticsService *analytics.Service) {
 			continue
 		}
 
+		var wsIDs []int64
+		orm.Model(&schemas.WorkspaceMember{}).Where("user_id = ?", wh.OwnerID).Pluck("workspace_id", &wsIDs)
 		var sites []schemas.Site
-		if err := orm.Where("owner_id = ?", wh.OwnerID).Find(&sites).Error; err != nil {
+		if err := orm.Where("workspace_id IN ?", wsIDs).Find(&sites).Error; err != nil {
 			slog.Error("failed to load sites for webhook",
 				slog.Int64("webhook_id", wh.ID),
 				slog.Any("error", err),
@@ -86,8 +88,10 @@ func testWebhookReport(orm *gorm.DB, analyticsService *analytics.Service, ownerI
 		return errors.NotFound("webhook not found")
 	}
 
+	var testWsIDs []int64
+	orm.Model(&schemas.WorkspaceMember{}).Where("user_id = ?", ownerID).Pluck("workspace_id", &testWsIDs)
 	var sites []schemas.Site
-	if err := orm.Where("owner_id = ?", ownerID).Find(&sites).Error; err != nil {
+	if err := orm.Where("workspace_id IN ?", testWsIDs).Find(&sites).Error; err != nil {
 		return errors.Internal("failed to load sites", err)
 	}
 

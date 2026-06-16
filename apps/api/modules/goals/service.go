@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"api/internal/errors"
+	"api/internal/siteaccess"
 	"api/schemas"
 
 	"gorm.io/gorm"
@@ -34,9 +35,7 @@ func NewService(orm *gorm.DB) *Service {
 func (s *Service) createGoal(ctx context.Context, ownerID string, req *CreateRequest) (*GoalResponse, error) {
 	uid, _ := strconv.ParseInt(ownerID, 10, 64)
 
-	var siteCount int64
-	s.orm.WithContext(ctx).Table("sites").Where("id = ? AND owner_id = ?", req.SiteID, uid).Count(&siteCount)
-	if siteCount == 0 {
+	if !siteaccess.CanWrite(ctx, s.orm, uid, req.SiteID) {
 		return nil, errors.NotFound("site not found")
 	}
 
@@ -64,14 +63,12 @@ func (s *Service) listGoals(ctx context.Context, ownerID string, siteID string) 
 	uid, _ := strconv.ParseInt(ownerID, 10, 64)
 	sid, _ := strconv.ParseInt(siteID, 10, 64)
 
-	var siteCount int64
-	s.orm.WithContext(ctx).Table("sites").Where("id = ? AND owner_id = ?", sid, uid).Count(&siteCount)
-	if siteCount == 0 {
+	if !siteaccess.CanAccess(ctx, s.orm, uid, sid) {
 		return nil, errors.NotFound("site not found")
 	}
 
 	var records []schemas.Goal
-	if err := s.orm.WithContext(ctx).Where("site_id = ? AND owner_id = ?", sid, uid).Order("created_at desc").Find(&records).Error; err != nil {
+	if err := s.orm.WithContext(ctx).Where("site_id = ?", sid).Order("created_at desc").Find(&records).Error; err != nil {
 		return nil, errors.Internal("failed to list goals", err)
 	}
 
@@ -120,9 +117,7 @@ func (s *Service) conversions(ctx context.Context, ownerID string, siteID string
 	uid, _ := strconv.ParseInt(ownerID, 10, 64)
 	sid, _ := strconv.ParseInt(siteID, 10, 64)
 
-	var siteCount int64
-	s.orm.WithContext(ctx).Table("sites").Where("id = ? AND owner_id = ?", sid, uid).Count(&siteCount)
-	if siteCount == 0 {
+	if !siteaccess.CanAccess(ctx, s.orm, uid, sid) {
 		return nil, errors.NotFound("site not found")
 	}
 
@@ -133,7 +128,7 @@ func (s *Service) conversions(ctx context.Context, ownerID string, siteID string
 		Count(&totalVisitors)
 
 	var goals []schemas.Goal
-	if err := s.orm.WithContext(ctx).Where("site_id = ? AND owner_id = ?", sid, uid).Find(&goals).Error; err != nil {
+	if err := s.orm.WithContext(ctx).Where("site_id = ?", sid).Find(&goals).Error; err != nil {
 		return nil, errors.Internal("failed to load goals", err)
 	}
 

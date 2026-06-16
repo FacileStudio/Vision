@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"api/internal/errors"
+	"api/internal/siteaccess"
 	"api/schemas"
 
 	"gorm.io/gorm"
@@ -32,9 +33,7 @@ func (s *Service) createKey(ctx context.Context, ownerID string, name string, sc
 	uid, _ := strconv.ParseInt(ownerID, 10, 64)
 
 	if siteID != nil {
-		var siteCount int64
-		s.orm.WithContext(ctx).Table("sites").Where("id = ? AND owner_id = ?", *siteID, uid).Count(&siteCount)
-		if siteCount == 0 {
+		if !siteaccess.CanAccess(ctx, s.orm, uid, *siteID) {
 			return nil, errors.NotFound("site not found")
 		}
 	}

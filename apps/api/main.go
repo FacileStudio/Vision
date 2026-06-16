@@ -24,6 +24,7 @@ import (
 	"api/modules/goals"
 	"api/modules/sites"
 	"api/modules/webhooks"
+	"api/modules/workspaces"
 	"api/schemas"
 
 	"github.com/go-chi/chi/v5"
@@ -66,6 +67,7 @@ func main() {
 	}
 
 	authService := auth.NewService(db, appEnv.StorageDir, appLogger)
+	workspaceService := workspaces.NewService(db)
 	siteService := sites.NewService(db)
 	eventHub := events.NewHub()
 	activeTracker := events.NewActiveTracker()
@@ -116,6 +118,7 @@ func main() {
 	})
 
 	auth.RegisterRoutes(router, authService, appEnv)
+	workspaces.RegisterRoutes(router, workspaceService, authService)
 	sites.RegisterRoutes(router, siteService, authService)
 	events.RegisterRoutes(router, eventService, eventHub, activeTracker, authService, db)
 	analytics.RegisterRoutes(router, analyticsService, activeTracker, db, authService)
