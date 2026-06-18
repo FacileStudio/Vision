@@ -64,7 +64,7 @@
 		<h1 class="text-2xl font-bold">Teams</h1>
 		<Button size="sm" onclick={() => goto('/team/new')}>
 			<Plus class="mr-1.5 h-4 w-4" />
-			New workspace
+			New space
 		</Button>
 	</div>
 
@@ -73,7 +73,7 @@
 			<input
 				bind:value={search}
 				type="text"
-				placeholder="Search workspaces..."
+				placeholder="Search spaces..."
 				class="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			/>
 		</div>
@@ -87,7 +87,7 @@
 		<div class="rounded-lg border border-dashed p-8 text-center">
 			<Icon icon="solar:users-group-rounded-linear" class="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
 			<p class="text-sm text-muted-foreground">
-				{search ? 'No workspaces match your search.' : 'No workspaces yet. Create one to get started.'}
+				{search ? 'No spaces match your search.' : 'No spaces yet. Create one to get started.'}
 			</p>
 		</div>
 	{:else}

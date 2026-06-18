@@ -8,7 +8,7 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import { userStore } from '$lib/stores/user.svelte';
 	import MobileNav from '$lib/components/MobileNav.svelte';
-	import WorkspaceSwitcher from '$lib/components/WorkspaceSwitcher.svelte';
+	import SpaceSwitcher from '$lib/components/SpaceSwitcher.svelte';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
 	import Globe from '@lucide/svelte/icons/globe';
 	import Settings from '@lucide/svelte/icons/settings';
@@ -73,7 +73,7 @@
 		</div>
 
 		<div class="mx-3 mb-3">
-			<WorkspaceSwitcher />
+			<SpaceSwitcher />
 		</div>
 
 		<nav class="flex flex-1 flex-col gap-1 px-3">

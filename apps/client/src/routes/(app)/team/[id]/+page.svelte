@@ -53,7 +53,7 @@
 			workspace = ws;
 			members = m;
 		} catch (e: any) {
-			error = e.message || 'Failed to load workspace.';
+			error = e.message || 'Failed to load space.';
 		} finally {
 			loading = false;
 		}
@@ -156,7 +156,7 @@
 	}
 </script>
 
-<svelte:head><title>{workspace?.name ?? 'Workspace'} — Vision</title></svelte:head>
+<svelte:head><title>{workspace?.name ?? 'Space'} — Vision</title></svelte:head>
 
 <div class="mx-auto max-w-lg">
 	<a href="/team" class="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
@@ -307,9 +307,9 @@
 			<div>
 				{#if !isOwner}
 					<div class="rounded-lg border border-destructive/30 p-4">
-						<h3 class="mb-1 text-sm font-semibold text-destructive">Leave workspace</h3>
+						<h3 class="mb-1 text-sm font-semibold text-destructive">Leave space</h3>
 						<p class="mb-3 text-xs text-muted-foreground">
-							You will lose access to all sites and data in this workspace.
+							You will lose access to all sites and data in this space.
 						</p>
 						{#if showLeaveConfirm}
 							<div class="flex items-center gap-2">
@@ -320,7 +320,7 @@
 							</div>
 						{:else}
 							<Button size="sm" variant="destructive" onclick={() => (showLeaveConfirm = true)}>
-								Leave workspace
+								Leave space
 							</Button>
 						{/if}
 					</div>
@@ -328,7 +328,7 @@
 
 				{#if isOwner}
 					<div class="rounded-lg border border-destructive/30 p-4">
-						<h3 class="mb-1 text-sm font-semibold text-destructive">Delete workspace</h3>
+						<h3 class="mb-1 text-sm font-semibold text-destructive">Delete space</h3>
 						<p class="mb-3 text-xs text-muted-foreground">
 							This action is irreversible. All sites must be removed first.
 						</p>
@@ -352,7 +352,7 @@
 							</div>
 						{:else}
 							<Button size="sm" variant="destructive" onclick={() => (showDeleteConfirm = true)}>
-								Delete workspace
+								Delete space
 							</Button>
 						{/if}
 					</div>

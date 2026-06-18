@@ -35,7 +35,7 @@
 	async function addSite() {
 		error = '';
 		if (!workspaceId) {
-			error = 'No workspace available';
+			error = 'No space available';
 			return;
 		}
 		submitting = true;
@@ -60,7 +60,7 @@
 		<form onsubmit={(e) => { e.preventDefault(); addSite(); }} class="flex flex-col gap-4 px-4">
 			{#if workspaceStore.all.length > 1}
 				<div class="space-y-2">
-					<Label for="site-workspace">Workspace</Label>
+					<Label for="site-workspace">Space</Label>
 					<select
 						id="site-workspace"
 						bind:value={workspaceId}

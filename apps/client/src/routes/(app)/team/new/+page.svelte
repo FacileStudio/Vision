@@ -21,14 +21,14 @@
 			const ws = await api.workspaces.create(trimmed);
 			goto(`/team/${ws.id}`);
 		} catch (e: any) {
-			error = e.message || 'Failed to create workspace.';
+			error = e.message || 'Failed to create space.';
 		} finally {
 			creating = false;
 		}
 	}
 </script>
 
-<svelte:head><title>New workspace — Vision</title></svelte:head>
+<svelte:head><title>New space — Vision</title></svelte:head>
 
 <div class="mx-auto max-w-md">
 	<a href="/team" class="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
@@ -36,9 +36,9 @@
 		Back to teams
 	</a>
 
-	<h1 class="mb-1 text-2xl font-bold">New workspace</h1>
+	<h1 class="mb-1 text-2xl font-bold">New space</h1>
 	<p class="mb-6 text-sm text-muted-foreground">
-		Create a workspace to collaborate with your team. You'll be the owner.
+		Create a space to collaborate with your team. You'll be the owner.
 	</p>
 
 	<form onsubmit={(e) => { e.preventDefault(); create(); }} class="space-y-4">
@@ -52,7 +52,7 @@
 		{/if}
 
 		<Button type="submit" class="w-full" disabled={creating || !name.trim()}>
-			{creating ? 'Creating...' : 'Create workspace'}
+			{creating ? 'Creating...' : 'Create space'}
 		</Button>
 	</form>
 </div>

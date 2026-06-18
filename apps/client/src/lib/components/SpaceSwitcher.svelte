@@ -54,7 +54,7 @@
 	>
 		<Users class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
 		<span class="min-w-0 flex-1 truncate text-left">
-			{workspaceStore.current?.name ?? 'Workspace'}
+			{workspaceStore.current?.name ?? 'Space'}
 		</span>
 		<ChevronsUpDown class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
 	</button>
@@ -91,7 +91,7 @@
 						class="flex h-9 w-full items-center gap-2 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 					>
 						<Plus class="h-3.5 w-3.5 shrink-0" />
-						<span>New workspace</span>
+						<span>New space</span>
 					</a>
 				</div>
 			{/if}
