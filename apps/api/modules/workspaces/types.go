@@ -20,11 +20,13 @@ type UpdateMemberRequest struct {
 }
 
 type WorkspaceResponse struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	Role      string    `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Role        string    `json:"role"`
+	MemberCount int64     `json:"member_count"`
+	SiteCount   int64     `json:"site_count"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type MemberResponse struct {

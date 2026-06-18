@@ -68,7 +68,9 @@ export const api = {
 		updateMember: (id: number, userId: number, role: string) =>
 			request<void>('PUT', `/workspaces/${id}/members/${userId}`, { role }),
 		removeMember: (id: number, userId: number) =>
-			request<void>('DELETE', `/workspaces/${id}/members/${userId}`)
+			request<void>('DELETE', `/workspaces/${id}/members/${userId}`),
+		leave: (id: number) =>
+			request<void>('POST', `/workspaces/${id}/leave`)
 	},
 	sites: {
 		list: () => request<Site[]>('GET', '/sites'),
@@ -169,6 +171,8 @@ export interface Workspace {
 	id: number;
 	name: string;
 	role: string;
+	member_count: number;
+	site_count: number;
 	created_at: string;
 	updated_at: string;
 }

@@ -120,5 +120,14 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			}
 			w.WriteHeader(http.StatusNoContent)
 		})
+
+		r.Post("/{id}/leave", func(w http.ResponseWriter, req *http.Request) {
+			identity, _ := authcontext.IdentityFromContext(req.Context())
+			if err := service.controller.leave(req.Context(), identity.UserID, chi.URLParam(req, "id")); err != nil {
+				httpjson.WriteError(w, err)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		})
 	})
 }

@@ -22,6 +22,18 @@ func NewService(orm *gorm.DB) *Service {
 	return s
 }
 
+func (s *Service) countMembers(ctx context.Context, wsID int64) int64 {
+	var c int64
+	s.orm.WithContext(ctx).Model(&schemas.WorkspaceMember{}).Where("workspace_id = ?", wsID).Count(&c)
+	return c
+}
+
+func (s *Service) countSites(ctx context.Context, wsID int64) int64 {
+	var c int64
+	s.orm.WithContext(ctx).Model(&schemas.Site{}).Where("workspace_id = ?", wsID).Count(&c)
+	return c
+}
+
 func (s *Service) createWorkspace(ctx context.Context, userID string, name string) (*WorkspaceResponse, error) {
 	uid, _ := strconv.ParseInt(userID, 10, 64)
 
@@ -37,6 +49,7 @@ func (s *Service) createWorkspace(ctx context.Context, userID string, name strin
 
 	return &WorkspaceResponse{
 		ID: ws.ID, Name: ws.Name, Role: "owner",
+		MemberCount: 1, SiteCount: 0,
 		CreatedAt: ws.CreatedAt, UpdatedAt: ws.UpdatedAt,
 	}, nil
 }
@@ -54,7 +67,9 @@ func (s *Service) listWorkspaces(ctx context.Context, userID string) ([]Workspac
 	for i, m := range members {
 		out[i] = WorkspaceResponse{
 			ID: m.Workspace.ID, Name: m.Workspace.Name, Role: m.Role,
-			CreatedAt: m.Workspace.CreatedAt, UpdatedAt: m.Workspace.UpdatedAt,
+			MemberCount: s.countMembers(ctx, m.WorkspaceID),
+			SiteCount:   s.countSites(ctx, m.WorkspaceID),
+			CreatedAt:   m.Workspace.CreatedAt, UpdatedAt: m.Workspace.UpdatedAt,
 		}
 	}
 	return out, nil
@@ -73,7 +88,9 @@ func (s *Service) getWorkspace(ctx context.Context, userID string, wsID string) 
 
 	return &WorkspaceResponse{
 		ID: ws.ID, Name: ws.Name, Role: member.Role,
-		CreatedAt: ws.CreatedAt, UpdatedAt: ws.UpdatedAt,
+		MemberCount: s.countMembers(ctx, ws.ID),
+		SiteCount:   s.countSites(ctx, ws.ID),
+		CreatedAt:   ws.CreatedAt, UpdatedAt: ws.UpdatedAt,
 	}, nil
 }
 
@@ -94,7 +111,9 @@ func (s *Service) updateWorkspace(ctx context.Context, userID string, wsID strin
 
 	return &WorkspaceResponse{
 		ID: ws.ID, Name: ws.Name, Role: member.Role,
-		CreatedAt: ws.CreatedAt, UpdatedAt: ws.UpdatedAt,
+		MemberCount: s.countMembers(ctx, ws.ID),
+		SiteCount:   s.countSites(ctx, ws.ID),
+		CreatedAt:   ws.CreatedAt, UpdatedAt: ws.UpdatedAt,
 	}, nil
 }
 
@@ -238,4 +257,15 @@ func (s *Service) requireRole(ctx context.Context, userID string, wsID string, r
 		}
 	}
 	return nil, errors.Forbidden("insufficient permissions")
+}
+
+func (s *Service) leaveWorkspace(ctx context.Context, userID string, wsID string) error {
+	member, err := s.findMembership(ctx, userID, wsID)
+	if err != nil {
+		return err
+	}
+	if member.Role == "owner" {
+		return errors.Forbidden("owner cannot leave, transfer ownership or delete the workspace")
+	}
+	return s.orm.WithContext(ctx).Delete(member).Error
 }

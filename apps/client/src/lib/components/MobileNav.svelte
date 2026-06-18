@@ -25,6 +25,7 @@
 
 	const items = [
 		{ href: '/sites', label: 'Sites', icon: 'solar:global-linear' },
+		{ href: '/team', label: 'Teams', icon: 'solar:users-group-rounded-linear' },
 		{ href: '/settings', label: 'Settings', icon: 'solar:settings-linear' }
 	];
 

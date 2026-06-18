@@ -72,3 +72,7 @@ func (c *Controller) updateMember(ctx context.Context, userID string, wsID strin
 func (c *Controller) removeMember(ctx context.Context, userID string, wsID string, targetUserID string) error {
 	return c.service.removeMember(ctx, userID, wsID, targetUserID)
 }
+
+func (c *Controller) leave(ctx context.Context, userID string, wsID string) error {
+	return c.service.leaveWorkspace(ctx, userID, wsID)
+}
