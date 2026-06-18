@@ -33,7 +33,7 @@ func (s *Service) createSite(ctx context.Context, ownerID string, name string, d
 		Where("workspace_id = ? AND user_id = ? AND role IN ?", workspaceID, uid, []string{"owner", "admin", "editor"}).
 		Count(&count)
 	if count == 0 {
-		return nil, errors.Forbidden("no write access to this workspace")
+		return nil, errors.Forbidden("no write access to this space")
 	}
 
 	record := &schemas.Site{

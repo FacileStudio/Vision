@@ -39,7 +39,7 @@ func (s *Service) createWorkspace(ctx context.Context, userID string, name strin
 
 	ws := &schemas.Workspace{Name: name}
 	if err := s.orm.WithContext(ctx).Create(ws).Error; err != nil {
-		return nil, errors.Internal("failed to create workspace", err)
+		return nil, errors.Internal("failed to create space", err)
 	}
 
 	member := &schemas.WorkspaceMember{WorkspaceID: ws.ID, UserID: uid, Role: "owner"}
@@ -60,7 +60,7 @@ func (s *Service) listWorkspaces(ctx context.Context, userID string) ([]Workspac
 	var members []schemas.WorkspaceMember
 	if err := s.orm.WithContext(ctx).Preload("Workspace").
 		Where("user_id = ?", uid).Find(&members).Error; err != nil {
-		return nil, errors.Internal("failed to list workspaces", err)
+		return nil, errors.Internal("failed to list spaces", err)
 	}
 
 	out := make([]WorkspaceResponse, len(members))
@@ -83,7 +83,7 @@ func (s *Service) getWorkspace(ctx context.Context, userID string, wsID string) 
 
 	var ws schemas.Workspace
 	if err := s.orm.WithContext(ctx).First(&ws, member.WorkspaceID).Error; err != nil {
-		return nil, errors.Internal("failed to load workspace", err)
+		return nil, errors.Internal("failed to load space", err)
 	}
 
 	return &WorkspaceResponse{
@@ -102,11 +102,11 @@ func (s *Service) updateWorkspace(ctx context.Context, userID string, wsID strin
 
 	var ws schemas.Workspace
 	if err := s.orm.WithContext(ctx).First(&ws, member.WorkspaceID).Error; err != nil {
-		return nil, errors.Internal("failed to load workspace", err)
+		return nil, errors.Internal("failed to load space", err)
 	}
 	ws.Name = name
 	if err := s.orm.WithContext(ctx).Save(&ws).Error; err != nil {
-		return nil, errors.Internal("failed to update workspace", err)
+		return nil, errors.Internal("failed to update space", err)
 	}
 
 	return &WorkspaceResponse{
@@ -127,7 +127,7 @@ func (s *Service) deleteWorkspace(ctx context.Context, userID string, wsID strin
 	var siteCount int64
 	s.orm.WithContext(ctx).Model(&schemas.Site{}).Where("workspace_id = ?", wid).Count(&siteCount)
 	if siteCount > 0 {
-		return errors.Invalid("workspace still has sites, remove them first")
+		return errors.Invalid("space still has sites, remove them first")
 	}
 
 	s.orm.WithContext(ctx).Where("workspace_id = ?", wid).Delete(&schemas.WorkspaceMember{})
@@ -265,7 +265,7 @@ func (s *Service) leaveWorkspace(ctx context.Context, userID string, wsID string
 		return err
 	}
 	if member.Role == "owner" {
-		return errors.Forbidden("owner cannot leave, transfer ownership or delete the workspace")
+		return errors.Forbidden("owner cannot leave, transfer ownership or delete the space")
 	}
 	return s.orm.WithContext(ctx).Delete(member).Error
 }
