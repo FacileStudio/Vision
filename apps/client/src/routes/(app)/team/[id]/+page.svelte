@@ -35,6 +35,8 @@
 	let showLeaveConfirm = $state(false);
 	let leaving = $state(false);
 
+	let failedAvatars = $state<Record<number, boolean>>({});
+
 	const wsId = $derived(Number(page.params.id));
 	const myUserId = $derived(Number(userStore.value?.id));
 	const myRole = $derived(workspace?.role ?? 'viewer');
@@ -220,11 +222,12 @@
 					{#each members as member (member.id)}
 						<div class="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2.5">
 							<div class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-foreground text-xs font-semibold text-background">
-								{#if member.avatar_url}
+								{#if member.avatar_url && !failedAvatars[member.id]}
 									<img
 										src="/api{member.avatar_url}"
 										alt={member.name || member.email}
 										class="h-full w-full object-cover"
+										onerror={() => (failedAvatars[member.id] = true)}
 									/>
 								{:else}
 									{getInitials(member.name || member.email)}

@@ -17,6 +17,13 @@
 
 	let { children } = $props();
 
+	let avatarFailed = $state(false);
+
+	$effect(() => {
+		void userStore.value?.avatar_url;
+		avatarFailed = false;
+	});
+
 	function getInitials(name: string): string {
 		return name
 			.split(' ')
@@ -92,11 +99,12 @@
 				class="flex items-center gap-3 rounded-lg border border-border/70 bg-muted/40 p-2.5 transition-colors hover:bg-muted"
 			>
 				<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-foreground text-xs font-semibold text-background overflow-hidden">
-					{#if userStore.value?.avatar_url}
+					{#if userStore.value?.avatar_url && !avatarFailed}
 						<img
 							src="/api{userStore.value.avatar_url}"
 							alt={userStore.value.name || userStore.value.email}
 							class="h-full w-full object-cover"
+							onerror={() => (avatarFailed = true)}
 						/>
 					{:else}
 						{userStore.value ? getInitials(userStore.value.name || userStore.value.email) : '..'}

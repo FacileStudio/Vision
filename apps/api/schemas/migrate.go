@@ -14,6 +14,16 @@ func Migrate(db *gorm.DB) error {
 }
 
 func seedPersonalWorkspaces(db *gorm.DB) error {
+	db.Exec(`
+		UPDATE sites SET workspace_id = (
+			SELECT wm.workspace_id FROM workspace_members wm
+			WHERE wm.user_id = sites.owner_id
+			LIMIT 1
+		)
+		WHERE (workspace_id IS NULL OR workspace_id = 0)
+		AND owner_id IN (SELECT user_id FROM workspace_members)
+	`)
+
 	var users []User
 	db.Where("id NOT IN (SELECT user_id FROM workspace_members)").Find(&users)
 	if len(users) == 0 {
@@ -36,7 +46,7 @@ func seedPersonalWorkspaces(db *gorm.DB) error {
 		}).Error; err != nil {
 			return err
 		}
-		db.Model(&Site{}).Where("owner_id = ? AND workspace_id = 0", u.ID).Update("workspace_id", ws.ID)
+		db.Model(&Site{}).Where("owner_id = ? AND (workspace_id IS NULL OR workspace_id = 0)", u.ID).Update("workspace_id", ws.ID)
 	}
 	return nil
 }
