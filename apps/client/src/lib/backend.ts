@@ -73,7 +73,8 @@ export const api = {
 			request<void>('POST', `/workspaces/${id}/leave`)
 	},
 	sites: {
-		list: () => request<Site[]>('GET', '/sites'),
+		list: (workspaceId?: number) =>
+			request<Site[]>('GET', workspaceId ? `/sites?workspace_id=${workspaceId}` : '/sites'),
 		get: (id: number) => request<Site>('GET', `/sites/${id}`),
 		create: (name: string, domain: string, workspaceId: number) =>
 			request<Site>('POST', '/sites', { name, domain, workspace_id: workspaceId }),

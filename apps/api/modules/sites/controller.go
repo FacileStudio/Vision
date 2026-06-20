@@ -30,8 +30,8 @@ func (c *Controller) create(ctx context.Context, ownerID string, req *CreateRequ
 	return c.service.createSite(ctx, ownerID, name, domain, req.WorkspaceID)
 }
 
-func (c *Controller) list(ctx context.Context, ownerID string) ([]SiteResponse, error) {
-	return c.service.listSites(ctx, ownerID)
+func (c *Controller) list(ctx context.Context, ownerID string, workspaceID int64) ([]SiteResponse, error) {
+	return c.service.listSites(ctx, ownerID, workspaceID)
 }
 
 func (c *Controller) get(ctx context.Context, ownerID string, siteID string) (*SiteResponse, error) {

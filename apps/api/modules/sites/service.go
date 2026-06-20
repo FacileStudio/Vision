@@ -52,19 +52,33 @@ func (s *Service) createSite(ctx context.Context, ownerID string, name string, d
 	return toResponse(record), nil
 }
 
-func (s *Service) listSites(ctx context.Context, userID string) ([]SiteResponse, error) {
+func (s *Service) listSites(ctx context.Context, userID string, workspaceID int64) ([]SiteResponse, error) {
 	uid, _ := strconv.ParseInt(userID, 10, 64)
 
-	var wsIDs []int64
-	s.orm.WithContext(ctx).Model(&schemas.WorkspaceMember{}).
-		Where("user_id = ?", uid).Pluck("workspace_id", &wsIDs)
+	if workspaceID > 0 {
+		var count int64
+		s.orm.WithContext(ctx).Model(&schemas.WorkspaceMember{}).
+			Where("workspace_id = ? AND user_id = ?", workspaceID, uid).
+			Count(&count)
+		if count == 0 {
+			return []SiteResponse{}, nil
+		}
 
-	if len(wsIDs) == 0 {
-		return []SiteResponse{}, nil
+		var records []schemas.Site
+		if err := s.orm.WithContext(ctx).Where("workspace_id = ?", workspaceID).
+			Order("created_at desc").Find(&records).Error; err != nil {
+			return nil, errors.Internal("failed to list sites", err)
+		}
+
+		out := make([]SiteResponse, len(records))
+		for i := range records {
+			out[i] = *toResponse(&records[i])
+		}
+		return out, nil
 	}
 
 	var records []schemas.Site
-	if err := s.orm.WithContext(ctx).Where("workspace_id IN ?", wsIDs).
+	if err := s.orm.WithContext(ctx).Where("owner_id = ?", uid).
 		Order("created_at desc").Find(&records).Error; err != nil {
 		return nil, errors.Internal("failed to list sites", err)
 	}

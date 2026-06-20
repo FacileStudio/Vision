@@ -1,17 +1,22 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { api } from '$lib';
 	import type { Site } from '$lib';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import Icon from '@iconify/svelte';
 	import AddSiteDrawer from '$lib/components/add-site-drawer.svelte';
 	import SiteFavicon from '$lib/components/site-favicon.svelte';
+	import { workspaceStore } from '$lib/stores/workspace.svelte';
 
 	let sites = $state<Site[]>([]);
 	let drawerOpen = $state(false);
 
-	onMount(async () => {
-		sites = await api.sites.list();
+	async function loadSites() {
+		sites = await api.sites.list(workspaceStore.current?.id);
+	}
+
+	$effect(() => {
+		workspaceStore.current;
+		loadSites();
 	});
 
 	async function deleteSite(id: number) {
