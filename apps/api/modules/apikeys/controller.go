@@ -29,11 +29,11 @@ func (c *Controller) create(ctx context.Context, ownerID string, req *CreateRequ
 		return nil, errors.Invalid("scopes must be read or read,write")
 	}
 
-	return c.service.createKey(ctx, ownerID, name, scopes, req.SiteID)
+	return c.service.createKey(ctx, ownerID, name, scopes, req.SiteID, req.WorkspaceID)
 }
 
-func (c *Controller) list(ctx context.Context, ownerID string) ([]APIKeyResponse, error) {
-	return c.service.listKeys(ctx, ownerID)
+func (c *Controller) list(ctx context.Context, ownerID string, workspaceID int64) ([]APIKeyResponse, error) {
+	return c.service.listKeys(ctx, ownerID, workspaceID)
 }
 
 func (c *Controller) revoke(ctx context.Context, ownerID string, keyID string) error {

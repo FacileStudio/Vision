@@ -38,8 +38,12 @@ func RegisterRoutes(router chi.Router, service *Service, analyticsService *analy
 		router.Get("/", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			ownerID, _ := strconv.ParseInt(identity.UserID, 10, 64)
+			var workspaceID int64
+			if raw := request.URL.Query().Get("workspace_id"); raw != "" {
+				workspaceID, _ = strconv.ParseInt(raw, 10, 64)
+			}
 
-			resp, err := service.list(request.Context(), ownerID)
+			resp, err := service.list(request.Context(), ownerID, workspaceID)
 			if err != nil {
 				httpjson.WriteError(w, err)
 				return

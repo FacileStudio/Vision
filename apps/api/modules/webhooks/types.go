@@ -6,6 +6,7 @@ type CreateWebhookRequest struct {
 	URL           string `json:"url"`
 	Secret        string `json:"secret"`
 	IntervalHours int    `json:"interval_hours"`
+	WorkspaceID   *int64 `json:"workspace_id"`
 }
 
 type UpdateWebhookRequest struct {
@@ -21,6 +22,7 @@ type WebhookResponse struct {
 	Period        string  `json:"period"`
 	IntervalHours int     `json:"interval_hours"`
 	Enabled       bool    `json:"enabled"`
+	WorkspaceID   *int64  `json:"workspace_id"`
 	LastSentAt    *string `json:"last_sent_at"`
 	CreatedAt     string  `json:"created_at"`
 	UpdatedAt     string  `json:"updated_at"`

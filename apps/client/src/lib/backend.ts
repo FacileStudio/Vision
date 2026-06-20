@@ -85,7 +85,8 @@ export const api = {
 		revokeShare: (id: number) => request<void>('DELETE', `/sites/${id}/share`)
 	},
 	webhooks: {
-		list: () => request<Webhook[]>('GET', '/webhooks'),
+		list: (workspaceId?: number) =>
+			request<Webhook[]>('GET', workspaceId ? `/webhooks?workspace_id=${workspaceId}` : '/webhooks'),
 		create: (data: CreateWebhookRequest) => request<Webhook>('POST', '/webhooks', data),
 		update: (id: number, data: UpdateWebhookRequest) => request<Webhook>('PUT', `/webhooks/${id}`, data),
 		delete: (id: number) => request<void>('DELETE', `/webhooks/${id}`),
@@ -141,7 +142,8 @@ export const api = {
 		}
 	},
 	apiKeys: {
-		list: () => request<APIKeyItem[]>('GET', '/api-keys'),
+		list: (workspaceId?: number) =>
+			request<APIKeyItem[]>('GET', workspaceId ? `/api-keys?workspace_id=${workspaceId}` : '/api-keys'),
 		create: (data: CreateAPIKeyRequest) => request<CreateAPIKeyResponse>('POST', '/api-keys', data),
 		revoke: (id: number) => request<void>('DELETE', `/api-keys/${id}`)
 	},
@@ -194,6 +196,7 @@ export interface Webhook {
 	period: string;
 	interval_hours: number;
 	enabled: boolean;
+	workspace_id: number | null;
 	last_sent_at: string | null;
 	created_at: string;
 	updated_at: string;
@@ -203,6 +206,7 @@ export interface CreateWebhookRequest {
 	url: string;
 	secret: string;
 	interval_hours: number;
+	workspace_id?: number;
 }
 
 export interface UpdateWebhookRequest {
@@ -260,6 +264,7 @@ export interface APIKeyItem {
 	key_hint: string;
 	scopes: string;
 	site_id: number | null;
+	workspace_id: number | null;
 	is_active: boolean;
 	last_used_at: string | null;
 	expires_at: string | null;
@@ -270,6 +275,7 @@ export interface CreateAPIKeyRequest {
 	name: string;
 	scopes: string;
 	site_id?: number;
+	workspace_id?: number;
 }
 
 export interface CreateAPIKeyResponse {

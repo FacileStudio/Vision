@@ -5,6 +5,7 @@
 	import Icon from '@iconify/svelte';
 	import { Copy, Check } from '@lucide/svelte';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
+	import { workspaceStore } from '$lib/stores/workspace.svelte';
 
 	let webhooks = $state<Webhook[]>([]);
 	let showWebhookForm = $state(false);
@@ -63,7 +64,7 @@
 
 	async function loadWebhooks() {
 		try {
-			webhooks = await api.webhooks.list();
+			webhooks = await api.webhooks.list(workspaceStore.current?.id);
 		} catch {}
 	}
 
@@ -109,7 +110,8 @@
 				await api.webhooks.create({
 					url: webhookUrl,
 					secret: webhookSecret,
-					interval_hours: effectiveIntervalHours
+					interval_hours: effectiveIntervalHours,
+					workspace_id: workspaceStore.current?.id
 				});
 			}
 			resetWebhookForm();
@@ -146,7 +148,7 @@
 
 	async function loadAPIKeys() {
 		try {
-			apiKeys = await api.apiKeys.list();
+			apiKeys = await api.apiKeys.list(workspaceStore.current?.id);
 		} catch {}
 	}
 
@@ -161,7 +163,7 @@
 	async function createAPIKey() {
 		keySaving = true;
 		try {
-			const resp = await api.apiKeys.create({ name: keyName, scopes: keyScopes });
+			const resp = await api.apiKeys.create({ name: keyName, scopes: keyScopes, workspace_id: workspaceStore.current?.id });
 			newKeyValue = resp.key;
 			keyName = '';
 			await loadAPIKeys();
@@ -187,6 +189,12 @@
 
 	onMount(async () => {
 		await Promise.all([loadWebhooks(), loadAPIKeys()]);
+	});
+
+	$effect(() => {
+		workspaceStore.current;
+		loadWebhooks();
+		loadAPIKeys();
 	});
 </script>
 

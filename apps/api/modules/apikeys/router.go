@@ -2,6 +2,7 @@ package apikeys
 
 import (
 	"net/http"
+	"strconv"
 
 	"api/internal/authcontext"
 	"api/internal/httpjson"
@@ -31,7 +32,11 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 
 		router.Get("/", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
-			resp, err := service.controller.list(request.Context(), identity.UserID)
+			var workspaceID int64
+			if raw := request.URL.Query().Get("workspace_id"); raw != "" {
+				workspaceID, _ = strconv.ParseInt(raw, 10, 64)
+			}
+			resp, err := service.controller.list(request.Context(), identity.UserID, workspaceID)
 			if err != nil {
 				httpjson.WriteError(w, err)
 				return

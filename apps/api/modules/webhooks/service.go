@@ -29,6 +29,7 @@ func (s *Service) create(ctx context.Context, ownerID int64, req *CreateWebhookR
 
 	record := &schemas.Webhook{
 		OwnerID:       ownerID,
+		WorkspaceID:   req.WorkspaceID,
 		URL:           req.URL,
 		Secret:        req.Secret,
 		Period:        periodLabel(req.IntervalHours),
@@ -42,9 +43,15 @@ func (s *Service) create(ctx context.Context, ownerID int64, req *CreateWebhookR
 	return toResponse(record), nil
 }
 
-func (s *Service) list(ctx context.Context, ownerID int64) ([]WebhookResponse, error) {
+func (s *Service) list(ctx context.Context, ownerID int64, workspaceID int64) ([]WebhookResponse, error) {
 	var records []schemas.Webhook
-	if err := s.orm.WithContext(ctx).Where("owner_id = ?", ownerID).Order("created_at desc").Find(&records).Error; err != nil {
+	q := s.orm.WithContext(ctx).Where("owner_id = ?", ownerID)
+	if workspaceID > 0 {
+		q = q.Where("workspace_id = ?", workspaceID)
+	} else {
+		q = q.Where("workspace_id IS NULL")
+	}
+	if err := q.Order("created_at desc").Find(&records).Error; err != nil {
 		return nil, errors.Internal("failed to list webhooks", err)
 	}
 
@@ -139,6 +146,7 @@ func toResponse(w *schemas.Webhook) *WebhookResponse {
 		Period:        periodLabel(hours),
 		IntervalHours: hours,
 		Enabled:       w.Enabled,
+		WorkspaceID:   w.WorkspaceID,
 		CreatedAt:     w.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:     w.UpdatedAt.Format(time.RFC3339),
 	}

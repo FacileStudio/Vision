@@ -29,7 +29,7 @@ func NewService(orm *gorm.DB) *Service {
 	return service
 }
 
-func (s *Service) createKey(ctx context.Context, ownerID string, name string, scopes string, siteID *int64) (*CreateResponse, error) {
+func (s *Service) createKey(ctx context.Context, ownerID string, name string, scopes string, siteID *int64, workspaceID *int64) (*CreateResponse, error) {
 	uid, _ := strconv.ParseInt(ownerID, 10, 64)
 
 	if siteID != nil {
@@ -58,14 +58,15 @@ func (s *Service) createKey(ctx context.Context, ownerID string, name string, sc
 	hash := hashKey(fullKey)
 
 	record := &schemas.APIKey{
-		UserID:   uid,
-		SiteID:   siteID,
-		Name:     name,
-		Prefix:   prefix,
-		KeyHint:  hint,
-		KeyHash:  hash,
-		Scopes:   scopes,
-		IsActive: true,
+		UserID:      uid,
+		SiteID:      siteID,
+		WorkspaceID: workspaceID,
+		Name:        name,
+		Prefix:      prefix,
+		KeyHint:     hint,
+		KeyHash:     hash,
+		Scopes:      scopes,
+		IsActive:    true,
 	}
 
 	if err := s.orm.WithContext(ctx).Create(record).Error; err != nil {
@@ -78,11 +79,17 @@ func (s *Service) createKey(ctx context.Context, ownerID string, name string, sc
 	}, nil
 }
 
-func (s *Service) listKeys(ctx context.Context, ownerID string) ([]APIKeyResponse, error) {
+func (s *Service) listKeys(ctx context.Context, ownerID string, workspaceID int64) ([]APIKeyResponse, error) {
 	uid, _ := strconv.ParseInt(ownerID, 10, 64)
 
 	var records []schemas.APIKey
-	if err := s.orm.WithContext(ctx).Where("user_id = ?", uid).Order("created_at desc").Find(&records).Error; err != nil {
+	query := s.orm.WithContext(ctx).Where("user_id = ?", uid)
+	if workspaceID > 0 {
+		query = query.Where("workspace_id = ?", workspaceID)
+	} else {
+		query = query.Where("workspace_id IS NULL")
+	}
+	if err := query.Order("created_at desc").Find(&records).Error; err != nil {
 		return nil, errors.Internal("failed to list api keys", err)
 	}
 
@@ -157,15 +164,16 @@ func hashKey(key string) string {
 
 func toResponse(record *schemas.APIKey) *APIKeyResponse {
 	return &APIKeyResponse{
-		ID:         record.ID,
-		Name:       record.Name,
-		Prefix:     record.Prefix,
-		KeyHint:    record.KeyHint,
-		Scopes:     record.Scopes,
-		SiteID:     record.SiteID,
-		IsActive:   record.IsActive,
-		LastUsedAt: record.LastUsedAt,
-		ExpiresAt:  record.ExpiresAt,
-		CreatedAt:  record.CreatedAt,
+		ID:          record.ID,
+		Name:        record.Name,
+		Prefix:      record.Prefix,
+		KeyHint:     record.KeyHint,
+		Scopes:      record.Scopes,
+		SiteID:      record.SiteID,
+		WorkspaceID: record.WorkspaceID,
+		IsActive:    record.IsActive,
+		LastUsedAt:  record.LastUsedAt,
+		ExpiresAt:   record.ExpiresAt,
+		CreatedAt:   record.CreatedAt,
 	}
 }
