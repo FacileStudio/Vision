@@ -3,10 +3,10 @@
 	import { api } from '$lib';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
 	import type { Workspace } from '$lib/backend';
+	import Icon from '@iconify/svelte';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import Check from '@lucide/svelte/icons/check';
 	import Plus from '@lucide/svelte/icons/plus';
-	import Users from '@lucide/svelte/icons/users';
 
 	let open = $state(false);
 	let loading = $state(false);
@@ -52,7 +52,7 @@
 		onclick={toggle}
 		class="flex h-9 w-full items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-3 text-sm font-medium transition-colors hover:bg-muted"
 	>
-		<Users class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+		<Icon icon="solar:share-circle-linear" class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
 		<span class="min-w-0 flex-1 truncate text-left">
 			{workspaceStore.current?.name ?? 'Space'}
 		</span>
@@ -75,7 +75,7 @@
 								? 'bg-muted font-medium text-foreground'
 								: 'text-muted-foreground hover:bg-muted hover:text-foreground'}"
 						>
-							<Users class="h-3.5 w-3.5 shrink-0" />
+							<Icon icon="solar:share-circle-linear" class="h-3.5 w-3.5 shrink-0" />
 							<span class="min-w-0 flex-1 truncate text-left">{ws.name}</span>
 							{#if active}
 								<Check class="ml-auto h-3.5 w-3.5 shrink-0" />
