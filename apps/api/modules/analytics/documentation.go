@@ -1,6 +1,6 @@
 package analytics
 
-import documentation "api/internal/documentation"
+import documentation "github.com/FacileStudio/Vision/apps/api/internal/documentation"
 
 var Documentation = documentation.Module{
 	Name:        "analytics",

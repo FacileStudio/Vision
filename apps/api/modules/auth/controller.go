@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"api/internal/errors"
+	"github.com/FacileStudio/Vision/apps/api/internal/errors"
 )
 
 type Controller struct {

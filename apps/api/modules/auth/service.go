@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"api/internal/authcrypto"
-	"api/internal/errors"
-	"api/internal/oidcavatar"
-	"api/schemas"
+	"github.com/FacileStudio/Vision/apps/api/internal/authcrypto"
+	"github.com/FacileStudio/Vision/apps/api/internal/errors"
+	"github.com/FacileStudio/Vision/apps/api/internal/oidcavatar"
+	"github.com/FacileStudio/Vision/apps/api/schemas"
 
 	gooidc "github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"

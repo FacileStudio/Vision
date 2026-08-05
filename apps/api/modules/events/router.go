@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"time"
 
-	"api/internal/errors"
-	"api/internal/httpjson"
-	"api/internal/middleware"
-	"api/internal/siteaccess"
+	"github.com/FacileStudio/Vision/apps/api/internal/errors"
+	"github.com/FacileStudio/Vision/apps/api/internal/httpjson"
+	"github.com/FacileStudio/Vision/apps/api/internal/middleware"
+	"github.com/FacileStudio/Vision/apps/api/internal/siteaccess"
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"

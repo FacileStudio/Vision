@@ -8,11 +8,11 @@ import (
 	"net/url"
 	"time"
 
-	"api/internal/authcontext"
-	"api/internal/env"
-	"api/internal/errors"
-	"api/internal/httpjson"
-	"api/internal/oidcavatar"
+	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
+	"github.com/FacileStudio/Vision/apps/api/internal/env"
+	"github.com/FacileStudio/Vision/apps/api/internal/errors"
+	"github.com/FacileStudio/Vision/apps/api/internal/httpjson"
+	"github.com/FacileStudio/Vision/apps/api/internal/oidcavatar"
 
 	gooidc "github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"

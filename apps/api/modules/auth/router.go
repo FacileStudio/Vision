@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"net/http"
 
-	"api/internal/authcontext"
-	"api/internal/env"
-	"api/internal/httpjson"
-	"api/internal/middleware"
+	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
+	"github.com/FacileStudio/Vision/apps/api/internal/env"
+	"github.com/FacileStudio/Vision/apps/api/internal/httpjson"
+	"github.com/FacileStudio/Vision/apps/api/internal/middleware"
 
 	"github.com/go-chi/chi/v5"
 )

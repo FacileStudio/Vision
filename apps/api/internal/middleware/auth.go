@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"api/internal/authcontext"
-	"api/internal/errors"
-	"api/internal/httpjson"
+	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
+	"github.com/FacileStudio/Vision/apps/api/internal/errors"
+	"github.com/FacileStudio/Vision/apps/api/internal/httpjson"
 )
 
 type Authenticator interface {

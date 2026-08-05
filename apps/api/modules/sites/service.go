@@ -7,9 +7,9 @@ import (
 	stderrors "errors"
 	"strconv"
 
-	"api/internal/errors"
-	"api/internal/siteaccess"
-	"api/schemas"
+	"github.com/FacileStudio/Vision/apps/api/internal/errors"
+	"github.com/FacileStudio/Vision/apps/api/internal/siteaccess"
+	"github.com/FacileStudio/Vision/apps/api/schemas"
 
 	"gorm.io/gorm"
 )

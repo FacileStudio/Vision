@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"api/internal/authcontext"
-	"api/internal/errors"
-	"api/internal/httpjson"
-	"api/internal/middleware"
-	"api/modules/analytics"
+	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
+	"github.com/FacileStudio/Vision/apps/api/internal/errors"
+	"github.com/FacileStudio/Vision/apps/api/internal/httpjson"
+	"github.com/FacileStudio/Vision/apps/api/internal/middleware"
+	"github.com/FacileStudio/Vision/apps/api/modules/analytics"
 
 	"github.com/go-chi/chi/v5"
 )

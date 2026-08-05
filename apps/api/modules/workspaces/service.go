@@ -5,8 +5,8 @@ import (
 	stderrors "errors"
 	"strconv"
 
-	"api/internal/errors"
-	"api/schemas"
+	"github.com/FacileStudio/Vision/apps/api/internal/errors"
+	"github.com/FacileStudio/Vision/apps/api/schemas"
 
 	"gorm.io/gorm"
 )

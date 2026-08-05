@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"time"
 
-	"api/internal/authcontext"
-	"api/internal/errors"
-	"api/internal/httpjson"
-	"api/internal/middleware"
+	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
+	"github.com/FacileStudio/Vision/apps/api/internal/errors"
+	"github.com/FacileStudio/Vision/apps/api/internal/httpjson"
+	"github.com/FacileStudio/Vision/apps/api/internal/middleware"
 
 	"github.com/go-chi/chi/v5"
 )
