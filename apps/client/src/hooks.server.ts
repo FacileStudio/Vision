@@ -2,6 +2,17 @@ import type { Handle } from '@sveltejs/kit';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
+const strippedRequestHeaders = [
+	'host',
+	'connection',
+	'keep-alive',
+	'te',
+	'upgrade',
+	'proxy-authorization'
+];
+
+const strippedResponseHeaders = ['content-encoding', 'content-length', 'transfer-encoding'];
+
 export const handle: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.startsWith('/api/e/')) {
 		const path = event.url.pathname.slice(4);
@@ -48,16 +59,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 		const path = event.url.pathname.slice(4);
 		const url = `${API_URL}${path}${event.url.search}`;
 
-		const headers = new Headers();
-		for (const [key, value] of event.request.headers.entries()) {
-			if (key === 'host') continue;
-			headers.set(key, value);
-		}
-
-		const cookieHeader = event.request.headers.get('cookie');
-		if (cookieHeader) {
-			headers.set('cookie', cookieHeader);
-		}
+		const headers = new Headers(event.request.headers);
+		for (const header of strippedRequestHeaders) headers.delete(header);
 
 		const res = await fetch(url, {
 			method: event.request.method,
@@ -74,6 +77,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		for (const [key, value] of res.headers.entries()) {
 			responseHeaders.append(key, value);
 		}
+		for (const header of strippedResponseHeaders) responseHeaders.delete(header);
 		const setCookies = res.headers.getSetCookie?.();
 		if (setCookies) {
 			responseHeaders.delete('set-cookie');

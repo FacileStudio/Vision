@@ -93,4 +93,5 @@ Vision/
 - API modules follow a consistent pattern: `types.go`, `service.go`, `router.go`, `controller.go` (where applicable), `documentation.go`.
 - Client uses shadcn-svelte with the `nova` style and `neutral` base color. Component aliases: `$lib/components/ui`.
 - Svelte 5 runes mode is enforced via `svelte.config.js` (`runes: true` for non-node_modules files).
-- No test runner is currently configured for either app.
+- The client uses Bun's built-in test runner (`bun test`, no extra dependency); `*.test.ts` files under `src/` are excluded from `svelte-check` via `tsconfig.json`. The API has no test runner configured.
+- The proxy strips `content-encoding`, `content-length`, and `transfer-encoding` from upstream responses: `fetch` transparently decompresses the body, so forwarding those headers verbatim would describe a body the client never receives.
