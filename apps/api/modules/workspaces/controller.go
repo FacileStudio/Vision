@@ -15,7 +15,9 @@ func newController(service *Service) *Controller {
 	return &Controller{service: service}
 }
 
-var validRoles = map[string]bool{"admin": true, "editor": true, "viewer": true}
+var validRoles = map[string]bool{"owner": true, "admin": true, "editor": true, "viewer": true}
+
+func assignableRole(role string) bool { return role != "owner" && validRoles[role] }
 
 func (c *Controller) create(ctx context.Context, userID string, req *CreateRequest) (*WorkspaceResponse, error) {
 	name := strings.TrimSpace(req.Name)
@@ -55,7 +57,7 @@ func (c *Controller) addMember(ctx context.Context, userID string, wsID string, 
 	if email == "" {
 		return nil, errors.Invalid("email is required")
 	}
-	if !validRoles[role] {
+	if !assignableRole(role) {
 		return nil, errors.Invalid("role must be admin, editor, or viewer")
 	}
 	return c.service.addMember(ctx, userID, wsID, email, role)
@@ -63,7 +65,7 @@ func (c *Controller) addMember(ctx context.Context, userID string, wsID string, 
 
 func (c *Controller) updateMember(ctx context.Context, userID string, wsID string, targetUserID string, req *UpdateMemberRequest) error {
 	role := strings.TrimSpace(strings.ToLower(req.Role))
-	if !validRoles[role] {
+	if !assignableRole(role) {
 		return errors.Invalid("role must be admin, editor, or viewer")
 	}
 	return c.service.updateMemberRole(ctx, userID, wsID, targetUserID, role)
