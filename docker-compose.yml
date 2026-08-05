@@ -1,6 +1,7 @@
 services:
   vision-db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -14,6 +15,7 @@ services:
       retries: 10
 
   vision-api:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -36,6 +38,7 @@ services:
         condition: service_healthy
 
   vision-client:
+    restart: unless-stopped
     build:
       context: apps/client
       dockerfile: Dockerfile
