@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
-	"github.com/FacileStudio/Vision/apps/api/internal/errors"
-	"github.com/FacileStudio/Vision/apps/api/internal/httpjson"
 	"github.com/FacileStudio/Vision/apps/api/internal/middleware"
 	"github.com/FacileStudio/Vision/apps/api/internal/siteaccess"
 	"github.com/FacileStudio/Vision/apps/api/modules/events"
 	"github.com/FacileStudio/Vision/apps/api/schemas"
+	"github.com/FacileStudio/tronc/errors"
+	"github.com/FacileStudio/tronc/httpjson"
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"

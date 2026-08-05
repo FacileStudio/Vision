@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/FacileStudio/Vision/apps/api/internal/errors"
+	"github.com/FacileStudio/tronc/errors"
 
 	"gorm.io/gorm"
 )

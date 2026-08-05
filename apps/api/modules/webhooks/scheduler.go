@@ -12,9 +12,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/FacileStudio/Vision/apps/api/internal/errors"
 	"github.com/FacileStudio/Vision/apps/api/modules/analytics"
 	"github.com/FacileStudio/Vision/apps/api/schemas"
+	"github.com/FacileStudio/tronc/errors"
 
 	"gorm.io/gorm"
 )

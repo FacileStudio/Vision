@@ -10,9 +10,9 @@ import (
 
 	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
 	"github.com/FacileStudio/Vision/apps/api/internal/env"
-	"github.com/FacileStudio/Vision/apps/api/internal/errors"
-	"github.com/FacileStudio/Vision/apps/api/internal/httpjson"
 	"github.com/FacileStudio/Vision/apps/api/internal/oidcavatar"
+	"github.com/FacileStudio/tronc/errors"
+	"github.com/FacileStudio/tronc/httpjson"
 
 	gooidc "github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"

@@ -9,8 +9,8 @@ import (
 
 	"encoding/json"
 
-	"github.com/FacileStudio/Vision/apps/api/internal/errors"
 	"github.com/FacileStudio/Vision/apps/api/schemas"
+	"github.com/FacileStudio/tronc/errors"
 
 	"gorm.io/gorm"
 )

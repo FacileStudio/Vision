@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/FacileStudio/Vision/apps/api/internal/authcrypto"
-	"github.com/FacileStudio/Vision/apps/api/internal/errors"
 	"github.com/FacileStudio/Vision/apps/api/internal/oidcavatar"
 	"github.com/FacileStudio/Vision/apps/api/schemas"
+	"github.com/FacileStudio/tronc/errors"
 
 	gooidc "github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
