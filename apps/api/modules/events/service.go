@@ -106,7 +106,7 @@ func (s *Service) recordPageview(ctx context.Context, site *schemas.Site, req *P
 			Referrer:  record.Referrer,
 			Country:   record.Country,
 			VisitorID: record.VisitorID,
-			Timestamp: record.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+			Timestamp: record.CreatedAt.UTC().Format(time.RFC3339),
 		})
 	}
 

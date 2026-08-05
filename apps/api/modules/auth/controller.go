@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/FacileStudio/Vision/apps/api/internal/errors"
 )
@@ -43,7 +44,7 @@ func (controller *Controller) getMe(context context.Context, userID string) (*Pr
 		Name:         user.Name,
 		AvatarURL:    user.AvatarURL,
 		AvatarSource: user.AvatarSource,
-		CreatedAt:    user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:    user.CreatedAt.Format(time.RFC3339),
 	}, nil
 }
 
@@ -64,7 +65,7 @@ func (controller *Controller) updateMe(context context.Context, userID string, r
 		Name:         user.Name,
 		AvatarURL:    user.AvatarURL,
 		AvatarSource: user.AvatarSource,
-		CreatedAt:    user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:    user.CreatedAt.Format(time.RFC3339),
 	}, nil
 }
 
