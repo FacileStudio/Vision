@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { api } from '$lib';
+	import { api, getToken } from '$lib';
 	import type { Site, AnalyticsOverview, GoalConversionsResponse, Goal } from '$lib';
 	import { AreaChart, BarChart, PieChart } from 'layerchart';
 	import { scaleBand } from 'd3-scale';
@@ -249,7 +249,7 @@
 
 	async function exportCSV() {
 		const { from, to } = rangeDates(selectedRange, customFrom, customTo);
-		const token = localStorage.getItem('token');
+		const token = getToken();
 		const res = await fetch(
 			`/api/analytics/${page.params.id}/export?from=${from}&to=${to}&format=csv`,
 			{ headers: { Authorization: `Bearer ${token}` } }
