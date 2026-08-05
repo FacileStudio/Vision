@@ -10,7 +10,7 @@ type CreateRequest struct {
 }
 
 type CreateResponse struct {
-	Key string      `json:"key"`
+	Key string         `json:"key"`
 	API APIKeyResponse `json:"api_key"`
 }
 

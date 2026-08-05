@@ -280,11 +280,11 @@ func (service *Service) SyncOIDCProfile(ctx context.Context, userID string, prov
 		return errors.Internal("failed to parse UserInfo claims", err)
 	}
 	profile := oidcavatar.Profile{
-		Name:             claims.Name,
+		Name:              claims.Name,
 		PreferredUsername: claims.PreferredUsername,
-		GivenName:        claims.GivenName,
-		FamilyName:       claims.FamilyName,
-		Picture:          claims.Picture,
+		GivenName:         claims.GivenName,
+		FamilyName:        claims.FamilyName,
+		Picture:           claims.Picture,
 	}
 
 	if displayName := profile.DisplayName(); displayName != "" && displayName != record.Name {

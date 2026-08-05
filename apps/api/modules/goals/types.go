@@ -40,5 +40,5 @@ type GoalConversion struct {
 
 type ConversionsResponse struct {
 	Goals         []GoalConversion `json:"goals"`
-	TotalVisitors int64           `json:"total_visitors"`
+	TotalVisitors int64            `json:"total_visitors"`
 }
