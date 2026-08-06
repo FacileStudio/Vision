@@ -26,9 +26,9 @@ import (
 	"github.com/FacileStudio/Vision/apps/api/schemas"
 
 	"github.com/FacileStudio/Journal/sdk/journal"
+	"github.com/FacileStudio/tronc/apiref"
 	"github.com/FacileStudio/tronc/health"
 	"github.com/FacileStudio/tronc/healthcheck"
-	"github.com/FacileStudio/tronc/httpjson"
 	"github.com/FacileStudio/tronc/httpx"
 	"github.com/FacileStudio/tronc/logger"
 	troncmiddleware "github.com/FacileStudio/tronc/middleware"
@@ -97,17 +97,6 @@ func main() {
 	goalService := goals.NewService(db)
 	apiKeyService := apikeys.NewService(db)
 	middleware.SetAPIKeyAuthenticator(apiKeyService)
-	docs := documentation.Response{
-		Modules: []documentation.Module{
-			auth.Documentation,
-			sites.Documentation,
-			events.Documentation,
-			analytics.Documentation,
-			goals.Documentation,
-			apikeys.Documentation,
-		},
-	}
-
 	router := httpx.NewRouter(httpx.Config{
 		Logger: appLogger,
 		CORS: troncmiddleware.CORSConfig{
@@ -116,9 +105,7 @@ func main() {
 	})
 
 	health.Mount(router, health.DB(sqlDB))
-	router.Get("/docs", func(w http.ResponseWriter, request *http.Request) {
-		httpjson.WriteJSON(w, http.StatusOK, docs)
-	})
+	apiref.Mount(router, referenceConfig())
 
 	avatarFS := http.StripPrefix("/files/", http.FileServer(http.Dir(appEnv.StorageDir)))
 	router.Get("/files/*", func(w http.ResponseWriter, r *http.Request) {
@@ -171,5 +158,23 @@ func main() {
 			return
 		}
 		appLogger.Info("server stopped")
+	}
+}
+
+// referenceConfig describes the API reference served at /docs. Registry paths
+// are written relative to /api, the one server every documented route hangs off.
+func referenceConfig() apiref.Config {
+	return apiref.Config{
+		Title:       "Vision API",
+		Description: "Self-hosted, privacy-friendly web analytics.",
+		Servers:     []string{"/api"},
+		Registry: documentation.Response{Modules: []documentation.Module{
+			auth.Documentation,
+			sites.Documentation,
+			events.Documentation,
+			analytics.Documentation,
+			goals.Documentation,
+			apikeys.Documentation,
+		}},
 	}
 }

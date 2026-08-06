@@ -1,5 +1,11 @@
 # Vision — API
 
+A Scalar reference is served at `GET /docs`, with the OpenAPI 3.1 document at
+`GET /docs/openapi.json`, built by `tronc/apiref` from the per-module `documentation.go`
+registries. Vision is the suite's three-container exception, so the SvelteKit proxy forwards
+`/docs` through to the Go API unstripped — every other `/api/*` path has its prefix removed.
+`/api/docs` also works, because the reference derives its spec URL from the request path.
+
 Every HTTP route the Go binary registers, grouped by module, generated from the routers in
 `apps/api/modules/`.
 

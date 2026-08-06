@@ -55,8 +55,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 		});
 	}
 
-	if (event.url.pathname.startsWith('/api/')) {
-		const path = event.url.pathname.slice(4);
+	// The API reference is the one Go route that keeps its own path through the
+	// proxy: every Facile backend answers it at /docs, and Vision is three
+	// containers rather than one, so the client has to forward it unstripped.
+	const isReference = event.url.pathname === '/docs' || event.url.pathname.startsWith('/docs/');
+
+	if (isReference || event.url.pathname.startsWith('/api/')) {
+		const path = isReference ? event.url.pathname : event.url.pathname.slice(4);
 		const url = `${API_URL}${path}${event.url.search}`;
 
 		const headers = new Headers(event.request.headers);
