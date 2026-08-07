@@ -43,7 +43,11 @@
 		<p class="text-fc-sm text-fc-fg-muted">{empty}</p>
 	{:else}
 		<div class="flex flex-col gap-0.5">
-			{#each items as item (item.label)}
+			<!-- Keyed by position, not by label. This is a ranked list: the row's identity IS
+			     its rank, and the label is API data with no uniqueness guarantee — a caller that
+			     skips mergeByLabel would otherwise take the whole page down with
+			     each_key_duplicate rather than render one row twice. -->
+			{#each items as item, i (i)}
 				{@const width = `${(item.count / maxCount) * 100}%`}
 				{#if onItemClick}
 					<button

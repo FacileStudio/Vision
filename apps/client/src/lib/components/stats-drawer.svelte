@@ -33,7 +33,9 @@
 		<Input bind:value={search} placeholder="Search…" aria-label="Search {title}" />
 
 		<div class="flex flex-col gap-0.5">
-			{#each filtered as item (item.label)}
+			<!-- Positional, same reasoning as bar-list: a ranked list keyed on API-supplied
+			     text is one duplicate away from a fatal each_key_duplicate. -->
+			{#each filtered as item, i (i)}
 				{@const width = `${(item.count / maxCount) * 100}%`}
 				{#if onFilter}
 					<button
