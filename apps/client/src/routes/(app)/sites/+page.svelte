@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { api } from '$lib';
 	import type { Site } from '$lib';
-	import { Button, Card, ConfirmModal, Skeleton, icons, toast } from '@facile/muse';
+	import { Button, Card, ConfirmModal, EmptyState, Skeleton, icons, toast } from '@facile/muse';
 	import AddSiteDrawer from '$lib/components/add-site-drawer.svelte';
 	import SiteFavicon from '$lib/components/site-favicon.svelte';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
@@ -66,14 +66,13 @@
 				<Skeleton class="h-16 w-full rounded-fc-md" />
 			{/each}
 		{:else if sites.length === 0}
-			<Card class="flex flex-col items-center gap-3 py-12 text-center">
-				<p class="text-fc-sm font-medium text-fc-fg">No sites yet</p>
-				<p class="max-w-sm text-fc-sm text-fc-fg-muted">
-					Add a domain and drop one script tag on it. Numbers start arriving on the next
-					pageview.
-				</p>
+			<EmptyState
+				icon={icons.globe}
+				title="No sites yet"
+				description="Add a domain and drop one script tag on it. Numbers start arriving on the next pageview."
+			>
 				<Button size="lg" icon={icons.plus} onclick={() => (drawerOpen = true)}>Add site</Button>
-			</Card>
+			</EmptyState>
 		{:else}
 			{#each sites as site (site.id)}
 				<Card class="flex items-center gap-4">

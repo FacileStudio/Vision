@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { api } from '$lib';
 	import type { Workspace } from '$lib';
-	import { Avatar, Badge, Button, Card, Input, Skeleton, icons, toast } from '@facile/muse';
+	import { Avatar, Badge, Button, Card, EmptyState, Input, Skeleton, icons, toast } from '@facile/muse';
 
 	let workspaces = $state<Workspace[]>([]);
 	let loading = $state(true);
@@ -64,16 +64,13 @@
 				<Skeleton class="h-20 w-full rounded-fc-md" />
 			{/each}
 		{:else if filtered.length === 0}
-			<Card class="flex flex-col items-center gap-3 py-12 text-center">
-				<p class="text-fc-sm font-medium text-fc-fg">
-					{search ? `No space matches “${search}”` : 'No spaces yet'}
-				</p>
-				<p class="max-w-sm text-fc-sm text-fc-fg-muted">
-					{search
-						? 'Try another name, or clear the search.'
-						: 'A space holds sites and the people who can read them.'}
-				</p>
-			</Card>
+			<EmptyState
+				icon={icons.usersGroup}
+				title={search ? `No space matches “${search}”` : 'No spaces yet'}
+				description={search
+					? 'Try another name, or clear the search.'
+					: 'A space holds sites and the people who can read them.'}
+			/>
 		{:else}
 			{#each filtered as ws (ws.id)}
 				<a
