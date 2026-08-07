@@ -19,3 +19,17 @@ type User struct {
 }
 
 func (User) TableName() string { return "users" }
+
+// Avatar is the picture to render. Vision has no upload, so the IdP's URL is the only
+// source there is — nothing is copied locally, which is why there is no file to serve and
+// no storage directory to lose. An empty value means the client draws initials.
+func (u User) Avatar() string { return u.OIDCPictureURL }
+
+// AvatarOrigin exists so the settings page can say where the picture comes from without
+// the client re-deriving it from the URL's shape.
+func (u User) AvatarOrigin() string {
+	if u.OIDCPictureURL != "" {
+		return "oidc"
+	}
+	return ""
+}

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -89,12 +88,7 @@ func run() int {
 		}
 	}()
 
-	if err := os.MkdirAll(filepath.Join(appEnv.StorageDir, "avatars"), 0o755); err != nil {
-		appLogger.Error("failed to create avatar directory", slog.Any("error", err))
-		return 1
-	}
-
-	authService := auth.NewService(db, appEnv.StorageDir, appLogger)
+	authService := auth.NewService(db, appLogger)
 	workspaceService := workspaces.NewService(db)
 	siteService := sites.NewService(db)
 	eventHub := events.NewHub()
@@ -114,12 +108,6 @@ func run() int {
 
 	health.Mount(router, health.DB(sqlDB))
 	apiref.Mount(router, referenceConfig())
-
-	avatarFS := http.StripPrefix("/files/", http.FileServer(http.Dir(appEnv.StorageDir)))
-	router.Get("/files/*", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age=86400, immutable")
-		avatarFS.ServeHTTP(w, r)
-	})
 
 	auth.RegisterRoutes(router, authService, appEnv)
 	workspaces.RegisterRoutes(router, workspaceService, authService)
