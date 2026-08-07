@@ -194,8 +194,7 @@ func (service *Service) upsertOIDCUser(context context.Context, subject string, 
 			record.Name = displayName
 			dirty = true
 		}
-		needsAvatar := profile.Picture != "" && (profile.Picture != record.OIDCPictureURL || (record.AvatarSource != "upload" && record.AvatarURL == ""))
-		if needsAvatar && record.AvatarSource != "upload" {
+		if service.needsAvatarRefetch(record, profile.Picture) {
 			oldRel := strings.TrimPrefix(record.AvatarURL, "/files/")
 			relPath, fetchErr := oidcavatar.FetchAvatar(profile.Picture, service.storageDir, record.ID, service.logger)
 			if fetchErr != nil {
@@ -257,6 +256,20 @@ func storeOAuth2Tokens(record *schemas.User, tok *oauth2.Token) bool {
 	return changed
 }
 
+// needsAvatarRefetch decides whether to pull the avatar from the IdP again. An upload the
+// user made themselves always wins, and an IdP that offers no picture leaves the record
+// alone. Beyond that there are two reasons to refetch: the IdP is pointing somewhere new,
+// or what we recorded is no longer on disk — that second case is what makes a lost storage
+// directory heal on the next sync instead of serving a 404 until someone changes their
+// Authentik photo.
+func (service *Service) needsAvatarRefetch(record schemas.User, picture string) bool {
+	if picture == "" || record.AvatarSource == "upload" {
+		return false
+	}
+	return picture != record.OIDCPictureURL ||
+		oidcavatar.Missing(service.storageDir, strings.TrimPrefix(record.AvatarURL, "/files/"))
+}
+
 const profileSyncCooldown = 5 * time.Minute
 
 func (service *Service) SyncOIDCProfile(ctx context.Context, userID string, provider *gooidc.Provider, oauth2Cfg *oauth2.Config) error {
@@ -312,8 +325,7 @@ func (service *Service) SyncOIDCProfile(ctx context.Context, userID string, prov
 	if displayName := profile.DisplayName(); displayName != "" && displayName != record.Name {
 		record.Name = displayName
 	}
-	needsAvatar := profile.Picture != "" && (profile.Picture != record.OIDCPictureURL || (record.AvatarSource != "upload" && record.AvatarURL == ""))
-	if needsAvatar && record.AvatarSource != "upload" {
+	if service.needsAvatarRefetch(record, profile.Picture) {
 		oldRel := strings.TrimPrefix(record.AvatarURL, "/files/")
 		relPath, fetchErr := oidcavatar.FetchAvatar(profile.Picture, service.storageDir, record.ID, service.logger)
 		if fetchErr != nil {
