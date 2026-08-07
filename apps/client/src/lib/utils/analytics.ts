@@ -77,10 +77,12 @@ export function classifyReferrer(ref: string): 'search' | 'social' | 'other' {
 
 /*
  * Series colour comes from muse — six slots, assigned by index and never by rank, so a
- * filter that drops a series cannot repaint the survivors. Re-exported here only so the
- * analytics pages have one import for everything chart-shaped.
+ * filter that drops a series cannot repaint the survivors. Import `chartColor` straight
+ * from `@facile/muse` at the call site: this module used to re-export it for convenience,
+ * and nothing ever used the re-export, while it dragged muse's barrel — and therefore its
+ * `$state` rune modules — into every plain-TS import of this file. That makes the module
+ * unloadable outside the Svelte compiler, so it could not be unit-tested at all.
  */
-export { chartColor } from '@facile/muse';
 
 const ALLOWED_GRANULARITIES: Record<RangeKey, Granularity[]> = {
 	today: ['hour'],
@@ -123,4 +125,30 @@ export function formatChartDate(d: string, granularity: Granularity): string {
 	}
 	const date = new Date(d + 'T00:00:00');
 	return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+/*
+ * Collapse rows that carry the same label, summing their counts.
+ *
+ * Two reasons, and the second one is a crash. A breakdown list showing "/pricing" twice is
+ * meaningless to a reader — whatever the API grouped by, the label is all the UI shows, so
+ * rows sharing one are one row. And every list here is rendered with `(item.label)` as the
+ * `{#each}` key, so a repeat is a hard `each_key_duplicate` error that takes the whole page
+ * down rather than rendering it slightly wrong.
+ *
+ * Merge before slicing a top-N, never after: summing the tail is the entire point, and a
+ * post-slice merge would drop counts that belong in the total.
+ *
+ * Empty labels are kept and merged together rather than dropped — "(none)" is a real bucket
+ * in every one of these dimensions (no referrer, unknown OS), and silently discarding it
+ * makes the numbers stop adding up.
+ */
+export function mergeByLabel<T extends { label: string; count: number }>(rows: T[]): T[] {
+	const seen = new Map<string, T>();
+	for (const row of rows) {
+		const found = seen.get(row.label);
+		if (found) found.count += row.count;
+		else seen.set(row.label, { ...row });
+	}
+	return [...seen.values()].sort((a, b) => b.count - a.count);
 }

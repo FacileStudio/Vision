@@ -3,20 +3,10 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { isAuthenticated, setToken } from '$lib';
-	import { Card, Divider, icons } from '@facile/muse';
+	import { Button, Card, Divider, icons } from '@facile/muse';
 
 	let redirecting = $state(true);
 	let ssoOnly = $state(false);
-
-	/*
-	 * muse's Button renders a <button>, and a landing page's calls to action have to be
-	 * real anchors — crawlable, middle-clickable. These mirror Button's primary and outline
-	 * variants on an <a>; they are the only place in the app that restates them.
-	 */
-	const primaryLink =
-		'inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-fc-pill bg-fc-accent px-6 text-fc-md font-medium text-fc-accent-fg transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring';
-	const outlineLink =
-		'inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-fc-pill border border-fc-border px-6 text-fc-md font-medium text-fc-fg transition-colors hover:bg-fc-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring';
 
 	const features = [
 		{
@@ -80,10 +70,8 @@
 					<span class="text-fc-xl font-semibold tracking-tight">Vision</span>
 				</span>
 				<div class="flex items-center gap-2">
-					<a href="/login" class="{outlineLink} h-9 px-4 text-fc-sm">Log in</a>
-					<a href={startHref} class="{primaryLink} h-9 px-4 text-fc-sm">
-						{ssoOnly ? 'Continue with SSO' : 'Get started'}
-					</a>
+					<Button href="/login" variant="outline">Log in</Button>
+					<Button href={startHref}>{ssoOnly ? 'Continue with SSO' : 'Get started'}</Button>
 				</div>
 			</div>
 		</header>
@@ -98,10 +86,10 @@
 					tag, zero config, full visibility.
 				</p>
 				<div class="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-					<a href={startHref} class={primaryLink}>
+					<Button href={startHref} size="lg">
 						{ssoOnly ? 'Continue with SSO' : 'Start tracking'}
-					</a>
-					<a href="/login" class={outlineLink}>Log in</a>
+					</Button>
+					<Button href="/login" size="lg" variant="outline">Log in</Button>
 				</div>
 			</section>
 
@@ -137,9 +125,9 @@
 						? 'Use your organisation SSO to reach Vision.'
 						: 'Free to use. Self-hosted. No credit card, no third party.'}
 				</p>
-				<a href={startHref} class="{primaryLink} mt-8">
+				<Button href={startHref} size="lg" class="mt-8">
 					{ssoOnly ? 'Continue with SSO' : 'Create an account'}
-				</a>
+				</Button>
 			</section>
 		</main>
 

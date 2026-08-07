@@ -25,7 +25,8 @@
 		fmt,
 		classifyReferrer,
 		defaultGranularity,
-		formatChartDate
+		formatChartDate,
+		mergeByLabel
 	} from '$lib/utils/analytics';
 
 	let siteName = $state('');
@@ -114,8 +115,10 @@
 		].filter((d) => d.value > 0);
 	});
 
+	/* Merged before the slice, like the site dashboard: these lists key their `{#each}` on the
+	   label, so a repeated one is a fatal each_key_duplicate on a page anyone can open. */
 	function top<T extends { count: number }>(list: T[] | undefined, label: (d: T) => string) {
-		return (list ?? []).slice(0, 8).map((d) => ({ label: label(d), count: d.count }));
+		return mergeByLabel((list ?? []).map((d) => ({ label: label(d), count: d.count }))).slice(0, 8);
 	}
 
 	const topPages = $derived(top(overview?.top_pages, (d) => d.path));
@@ -123,10 +126,14 @@
 	const browsers = $derived(top(overview?.top_browsers, (d) => d.browser));
 	const operatingSystems = $derived(top(overview?.top_os, (d) => d.os));
 	const devices = $derived(
-		(overview?.top_devices ?? []).map((d) => ({ label: d.device, value: d.count }))
+		mergeByLabel((overview?.top_devices ?? []).map((d) => ({ label: d.device, count: d.count }))).map(
+			(d) => ({ label: d.label, value: d.count })
+		)
 	);
 	const screens = $derived(
-		(overview?.top_screens ?? []).map((d) => ({ label: d.screen, value: d.count }))
+		mergeByLabel((overview?.top_screens ?? []).map((d) => ({ label: d.screen, count: d.count }))).map(
+			(d) => ({ label: d.label, value: d.count })
+		)
 	);
 
 	async function refresh() {

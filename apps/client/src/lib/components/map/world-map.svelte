@@ -141,15 +141,27 @@
 		zoomAt(0.7, rect.width / 2, rect.height / 2);
 	}
 
-	const ranked = $derived(
-		[...countries]
-			.sort((a, b) => b.count - a.count)
-			.slice(0, 20)
-			.map((c) => {
-				const a2 = getAlpha2FromNumeric(getNumericCode(c.country) ?? '');
-				return { name: a2 ? getCountryName(a2) : c.country, count: c.count };
-			})
-	);
+	/*
+	 * Resolving a code to a display name is a *collapsing* transform: two distinct codes can
+	 * land on one name (an unmapped code falls through to its raw value, and several of those
+	 * are the empty string), so the rows have to be merged afterwards or the same country
+	 * appears twice with split counts — and this table used to key its `{#each}` on the name,
+	 * which turned that into a fatal each_key_duplicate.
+	 *
+	 * Merge first, then rank and slice, so a country split across two codes is ranked on its
+	 * real total rather than on whichever half was larger.
+	 */
+	const ranked = $derived.by(() => {
+		const byName = new Map<string, { name: string; count: number }>();
+		for (const c of countries) {
+			const a2 = getAlpha2FromNumeric(getNumericCode(c.country) ?? '');
+			const name = (a2 ? getCountryName(a2) : c.country) || 'Unknown';
+			const found = byName.get(name);
+			if (found) found.count += c.count;
+			else byName.set(name, { name, count: c.count });
+		}
+		return [...byName.values()].sort((a, b) => b.count - a.count).slice(0, 20);
+	});
 </script>
 
 <svelte:window onmouseup={handleMouseUp} onmousemove={handleMouseMove} />
@@ -202,7 +214,10 @@
 				<tr><th scope="col">Country</th><th scope="col">Visitors</th></tr>
 			</thead>
 			<tbody>
-				{#each ranked as row (row.name)}
+				<!-- Keyed by position: this is a ranked table, and a name is a rendering of the
+					     data, not an identity for it. `ranked` merges by name so the two agree —
+					     but the index is what stays correct if that merge ever stops. -->
+					{#each ranked as row, i (i)}
 					<tr><td>{row.name}</td><td>{row.count}</td></tr>
 				{/each}
 			</tbody>

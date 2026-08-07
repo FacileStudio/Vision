@@ -40,7 +40,8 @@
 		classifyReferrer,
 		allowedGranularities,
 		defaultGranularity,
-		formatChartDate
+		formatChartDate,
+		mergeByLabel
 	} from '$lib/utils/analytics';
 
 	let site = $state<Site | null>(null);
@@ -187,15 +188,26 @@
 	});
 
 	const devices = $derived(
-		(overview?.top_devices ?? []).map((d) => ({ label: d.device, value: d.count }))
+		mergeByLabel((overview?.top_devices ?? []).map((d) => ({ label: d.device, count: d.count }))).map(
+			(d) => ({ label: d.label, value: d.count })
+		)
 	);
 	const screens = $derived(
-		(overview?.top_screens ?? []).map((d) => ({ label: d.screen, value: d.count }))
+		mergeByLabel((overview?.top_screens ?? []).map((d) => ({ label: d.screen, count: d.count }))).map(
+			(d) => ({ label: d.label, value: d.count })
+		)
 	);
 
-	/* Every list on this page is the same shape with a different key for the label. */
+	/* Every list on this page is the same shape with a different key for the label. Rows are
+	   merged by label *before* the top-8 slice — see mergeByLabel: duplicates are both a
+	   wrong reading and a fatal `each_key_duplicate`, since these render keyed by label. */
 	function top<T extends { count: number }>(list: T[] | undefined, label: (d: T) => string) {
-		return (list ?? []).slice(0, 8).map((d) => ({ label: label(d), count: d.count }));
+		return mergeByLabel((list ?? []).map((d) => ({ label: label(d), count: d.count }))).slice(0, 8);
+	}
+
+	/* The drawer shows the same dimension unsliced, so it needs the same merge. */
+	function all<T extends { count: number }>(list: T[] | undefined, label: (d: T) => string) {
+		return mergeByLabel((list ?? []).map((d) => ({ label: label(d), count: d.count })));
 	}
 
 	const topPages = $derived(top(overview?.top_pages, (d) => d.path));
@@ -213,65 +225,57 @@
 		{
 			pages: {
 				title: 'Top pages',
-				items: () => (overview?.top_pages ?? []).map((d) => ({ label: d.path, count: d.count })),
+				items: () => all(overview?.top_pages, (d) => d.path),
 				filterKey: 'path'
 			},
 			referrers: {
 				title: 'Top referrers',
-				items: () =>
-					(overview?.top_referrers ?? []).map((d) => ({ label: d.referrer, count: d.count })),
+				items: () => all(overview?.top_referrers, (d) => d.referrer),
 				filterKey: 'referrer'
 			},
 			browsers: {
 				title: 'Browsers',
-				items: () =>
-					(overview?.top_browsers ?? []).map((d) => ({ label: d.browser, count: d.count })),
+				items: () => all(overview?.top_browsers, (d) => d.browser),
 				filterKey: 'browser'
 			},
 			os: {
 				title: 'Operating systems',
-				items: () => (overview?.top_os ?? []).map((d) => ({ label: d.os, count: d.count })),
+				items: () => all(overview?.top_os, (d) => d.os),
 				filterKey: 'os'
 			},
 			entry: {
 				title: 'Entry pages',
-				items: () =>
-					(overview?.top_entry_pages ?? []).map((d) => ({ label: d.path, count: d.count })),
+				items: () => all(overview?.top_entry_pages, (d) => d.path),
 				filterKey: 'path'
 			},
 			exit: {
 				title: 'Exit pages',
-				items: () =>
-					(overview?.top_exit_pages ?? []).map((d) => ({ label: d.path, count: d.count })),
+				items: () => all(overview?.top_exit_pages, (d) => d.path),
 				filterKey: 'path'
 			},
 			countries: {
 				title: 'Countries',
-				items: () =>
-					(overview?.top_countries ?? []).map((d) => ({ label: d.country, count: d.count })),
+				items: () => all(overview?.top_countries, (d) => d.country),
 				filterKey: 'country'
 			},
 			utm_sources: {
 				title: 'UTM sources',
-				items: () =>
-					(overview?.top_utm_sources ?? []).map((d) => ({ label: d.value, count: d.count })),
+				items: () => all(overview?.top_utm_sources, (d) => d.value),
 				filterKey: ''
 			},
 			utm_mediums: {
 				title: 'UTM mediums',
-				items: () =>
-					(overview?.top_utm_mediums ?? []).map((d) => ({ label: d.value, count: d.count })),
+				items: () => all(overview?.top_utm_mediums, (d) => d.value),
 				filterKey: ''
 			},
 			utm_campaigns: {
 				title: 'UTM campaigns',
-				items: () =>
-					(overview?.top_utm_campaigns ?? []).map((d) => ({ label: d.value, count: d.count })),
+				items: () => all(overview?.top_utm_campaigns, (d) => d.value),
 				filterKey: ''
 			},
 			events: {
 				title: 'Custom events',
-				items: () => (overview?.top_events ?? []).map((d) => ({ label: d.name, count: d.count })),
+				items: () => all(overview?.top_events, (d) => d.name),
 				filterKey: ''
 			}
 		};
