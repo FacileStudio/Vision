@@ -2,37 +2,22 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { api, isAuthenticated, clearToken } from '$lib';
-	import Icon from '@iconify/svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Separator } from '$lib/components/ui/separator';
+	import { api, isAuthenticated } from '$lib';
+	import {
+		MobileNav,
+		PageTransition,
+		SideBar,
+		SpaceSwitcher,
+		Topbar,
+		icons
+	} from '@facile/muse';
 	import { userStore } from '$lib/stores/user.svelte';
-	import MobileNav from '$lib/components/MobileNav.svelte';
-	import SpaceSwitcher from '$lib/components/SpaceSwitcher.svelte';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
-	import Globe from '@lucide/svelte/icons/globe';
-	import Settings from '@lucide/svelte/icons/settings';
-	import Users from '@lucide/svelte/icons/users';
-	import LogOut from '@lucide/svelte/icons/log-out';
 
 	let { children } = $props();
 
-	let avatarFailed = $state(false);
-
-	$effect(() => {
-		void userStore.value?.avatar_url;
-		avatarFailed = false;
-	});
-
-	function getInitials(name: string): string {
-		return name
-			.split(' ')
-			.map((w) => w[0])
-			.filter(Boolean)
-			.slice(0, 2)
-			.join('')
-			.toUpperCase();
-	}
+	let collapsed = $state(false);
+	let scroller: HTMLElement | null = $state(null);
 
 	onMount(async () => {
 		if (!isAuthenticated()) {
@@ -43,93 +28,96 @@
 			userStore.value = await api.auth.me();
 		} catch {}
 		try {
-			const ws = await api.workspaces.list();
-			workspaceStore.hydrate(ws);
+			workspaceStore.hydrate(await api.workspaces.list());
 		} catch {}
-		api.auth.syncProfile().then(async () => {
-			try {
-				userStore.value = await api.auth.me();
-			} catch {}
-		}).catch(() => {});
+		api.auth
+			.syncProfile()
+			.then(async () => {
+				try {
+					userStore.value = await api.auth.me();
+				} catch {}
+			})
+			.catch(() => {});
 	});
 
-	function logout() {
-		clearToken();
-		goto('/login');
+	/* <main> is the scroll container and sits outside PageTransition, so its scrollTop
+	   survives a route change unless someone puts it back. */
+	$effect(() => {
+		if (page.url.pathname) scroller?.scrollTo({ top: 0 });
+	});
+
+	/*
+	 * No Settings row here, by design — the user card at the bottom of the rail is the only
+	 * way in, and the avatar on MobileNav is its phone counterpart. See CHARTE §14.
+	 */
+	const links = [
+		{ href: '/sites', label: 'Sites', icon: icons.globe },
+		{ href: '/team', label: 'Teams', icon: icons.usersGroup }
+	];
+
+	function isActive(href: string) {
+		return page.url.pathname === href || page.url.pathname.startsWith(href + '/');
 	}
 
-	const navLinks = [
-		{ href: '/sites', label: 'Sites', icon: Globe },
-		{ href: '/team', label: 'Teams', icon: Users },
-		{ href: '/settings', label: 'Settings', icon: Settings }
-	];
+	const navPages = $derived(links.map((l) => ({ ...l, active: isActive(l.href) })));
+	const onSettings = $derived(isActive('/settings'));
+
+	const user = $derived({
+		name: userStore.value?.name?.trim() || userStore.value?.email || 'Account',
+		avatar: userStore.value?.avatar_url ? `/api${userStore.value.avatar_url}` : undefined
+	});
+
+	const spaces = $derived(workspaceStore.all.map((w) => ({ id: String(w.id), name: w.name })));
+	const activeSpaceId = $derived(
+		workspaceStore.current ? String(workspaceStore.current.id) : null
+	);
+
+	function selectSpace(id: string | null) {
+		const next = workspaceStore.all.find((w) => String(w.id) === id);
+		if (next) workspaceStore.switchTo(next);
+	}
 </script>
 
-<div class="flex h-screen w-full overflow-hidden">
-	<aside class="sticky top-0 hidden h-screen w-60 flex-col border-r bg-background md:flex">
-		<div class="flex items-center gap-3 px-5 pt-8 pb-6">
-			<Icon icon="solar:panorama-bold-duotone" class="w-7 h-7" />
-			<span class="text-2xl font-bold tracking-tight">Vision</span>
+<div class="flex h-dvh w-full overflow-hidden bg-fc-page">
+	<div class="hidden h-full shrink-0 p-3 md:block">
+		<SideBar
+			icon="solar:panorama-bold-duotone"
+			title="Vision"
+			bind:collapsed
+			pages={navPages}
+			{spaces}
+			{activeSpaceId}
+			onSpaceSelect={selectSpace}
+			manageSpacesHref="/team"
+			{user}
+			userHref="/settings"
+			userActive={onSettings}
+			class="h-full"
+		/>
+	</div>
+
+	<!-- `overscroll-contain`: <main> is the only scroller, so a flick past either end has
+	     nowhere useful to chain to and would otherwise rubber-band the whole shell.
+	     `min-w-0` is what lets it shrink below its content's intrinsic width. -->
+	<main
+		bind:this={scroller}
+		class="min-w-0 flex-1 overflow-auto overscroll-contain pb-28 md:pb-0"
+	>
+		<!-- Spaces live in the rail, and the rail is desktop-only — without this header there
+		     is no way to switch space on a phone at all. -->
+		<Topbar class="md:hidden">
+			<span class="text-fc-md font-semibold text-fc-fg">Vision</span>
+			<div class="min-w-0 max-w-56 flex-1">
+				<SpaceSwitcher {spaces} activeId={activeSpaceId} onSelect={selectSpace} manageHref="/team" />
+			</div>
+		</Topbar>
+
+		<div class="mx-auto flex max-w-fc-xl flex-col gap-8 px-4 py-8 sm:px-6 md:px-10 md:py-10">
+			<PageTransition key={page.url.pathname}>
+				{@render children()}
+			</PageTransition>
 		</div>
-
-		<div class="mx-3 mb-3">
-			<SpaceSwitcher />
-		</div>
-
-		<nav class="flex flex-1 flex-col gap-1 px-3">
-			{#each navLinks as link}
-				{@const active = page.url.pathname === link.href || page.url.pathname.startsWith(link.href + '/')}
-				<a
-					href={link.href}
-					class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors {active
-						? 'bg-foreground text-background font-medium'
-						: 'text-muted-foreground hover:bg-muted hover:text-foreground'}"
-				>
-					<link.icon class="h-4 w-4 shrink-0" />
-					{link.label}
-				</a>
-			{/each}
-		</nav>
-
-		<Separator />
-
-		<div class="flex flex-col gap-2 p-4">
-			<a
-				href="/profile"
-				class="flex items-center gap-3 rounded-lg border border-border/70 bg-muted/40 p-2.5 transition-colors hover:bg-muted"
-			>
-				<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-foreground text-xs font-semibold text-background overflow-hidden">
-					{#if userStore.value?.avatar_url && !avatarFailed}
-						<img
-							src="/api{userStore.value.avatar_url}"
-							alt={userStore.value.name || userStore.value.email}
-							class="h-full w-full object-cover"
-							onerror={() => (avatarFailed = true)}
-						/>
-					{:else}
-						{userStore.value ? getInitials(userStore.value.name || userStore.value.email) : '..'}
-					{/if}
-				</div>
-				<div class="min-w-0 flex-1">
-					<p class="truncate text-sm font-medium">{userStore.value?.name || 'Set your profile'}</p>
-					<p class="truncate text-xs text-muted-foreground">{userStore.value?.email ?? ''}</p>
-				</div>
-			</a>
-			<Button
-				variant="ghost"
-				size="sm"
-				class="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-				onclick={logout}
-			>
-				<LogOut class="h-4 w-4" />
-				Logout
-			</Button>
-		</div>
-	</aside>
-
-	<main class="flex-1 overflow-auto p-4 pb-24 sm:p-6 md:p-8 md:pb-8">
-		{@render children()}
 	</main>
-</div>
 
-<MobileNav user={userStore.value} />
+	<MobileNav items={navPages} {user} profileHref="/settings" profileActive={onSettings} />
+</div>

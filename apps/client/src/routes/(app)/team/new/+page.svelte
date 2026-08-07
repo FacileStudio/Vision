@@ -1,27 +1,29 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { api } from '$lib';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import { Alert, Button, Card, Field, Input, Spinner, icons, toast } from '@facile/muse';
 
 	let name = $state('');
 	let creating = $state(false);
 	let error = $state('');
 
-	async function create() {
+	const tooShort = $derived(name.trim().length > 0 && name.trim().length < 2);
+
+	async function create(e: Event) {
+		e.preventDefault();
 		const trimmed = name.trim();
-		if (!trimmed || trimmed.length < 2) {
-			error = 'Name must be at least 2 characters.';
+		if (trimmed.length < 2) {
+			error = 'A space name needs at least two characters.';
 			return;
 		}
 		creating = true;
 		error = '';
 		try {
 			const ws = await api.workspaces.create(trimmed);
+			toast.success(`${ws.name} is ready.`);
 			goto(`/team/${ws.id}`);
-		} catch (e: any) {
-			error = e.message || 'Failed to create space.';
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Could not create the space.';
 		} finally {
 			creating = false;
 		}
@@ -30,29 +32,46 @@
 
 <svelte:head><title>New space — Vision</title></svelte:head>
 
-<div class="mx-auto max-w-md">
-	<a href="/team" class="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-		<ArrowLeft class="h-4 w-4" />
+<div class="mx-auto flex w-full max-w-fc-sm flex-col gap-8">
+	<a
+		href="/team"
+		class="inline-flex items-center gap-1.5 self-start rounded-fc-sm text-fc-sm text-fc-fg-muted transition-colors hover:text-fc-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
+	>
+		<iconify-icon icon={icons.chevronLeft} width="16" height="16" class="block"></iconify-icon>
 		Back to teams
 	</a>
 
-	<h1 class="mb-1 text-2xl font-bold">New space</h1>
-	<p class="mb-6 text-sm text-muted-foreground">
-		Create a space to collaborate with your team. You'll be the owner.
-	</p>
+	<div class="flex flex-col gap-2">
+		<h1 class="text-fc-2xl font-semibold text-fc-fg">New space</h1>
+		<p class="text-fc-sm text-fc-fg-muted">
+			A space groups sites and the people who can read them. You will be its owner.
+		</p>
+	</div>
 
-	<form onsubmit={(e) => { e.preventDefault(); create(); }} class="space-y-4">
-		<div>
-			<label for="ws-name" class="mb-1.5 block text-sm font-medium">Name</label>
-			<Input id="ws-name" bind:value={name} placeholder="My team" autofocus />
-		</div>
+	<Card>
+		<form class="flex flex-col gap-4" onsubmit={create}>
+			<Field
+				label="Name"
+				error={tooShort ? 'At least two characters.' : undefined}
+				helper="Usually a client, a team or a product."
+			>
+				<Input bind:value={name} placeholder="Acme Studio" disabled={creating} />
+			</Field>
 
-		{#if error}
-			<p class="text-sm text-destructive">{error}</p>
-		{/if}
+			{#if error}
+				<Alert tone="danger" title="Not created">{error}</Alert>
+			{/if}
 
-		<Button type="submit" class="w-full" disabled={creating || !name.trim()}>
-			{creating ? 'Creating...' : 'Create space'}
-		</Button>
-	</form>
+			<Button
+				type="submit"
+				size="lg"
+				icon={icons.plus}
+				class="self-start"
+				disabled={creating || name.trim().length < 2}
+			>
+				{#if creating}<Spinner size="sm" />{/if}
+				{creating ? 'Creating…' : 'Create space'}
+			</Button>
+		</form>
+	</Card>
 </div>

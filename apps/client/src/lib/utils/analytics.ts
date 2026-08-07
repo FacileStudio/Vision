@@ -44,15 +44,12 @@ export function formatDateRange(from: string, to: string): string {
 	return `${f.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${t.toLocaleDateString('en-US', opts)}`;
 }
 
-export function trendPercent(
-	current: number,
-	prev: number
-): { text: string; color: string } {
-	if (prev === 0) return { text: '—', color: 'text-muted-foreground' };
+export function trendPercent(current: number, prev: number): { text: string; color: string } {
+	if (prev === 0) return { text: '—', color: 'text-fc-fg-muted' };
 	const pct = ((current - prev) / prev) * 100;
-	if (pct > 0) return { text: `↑ ${pct.toFixed(1)}%`, color: 'text-green-500' };
-	if (pct < 0) return { text: `↓ ${Math.abs(pct).toFixed(1)}%`, color: 'text-red-500' };
-	return { text: '—', color: 'text-muted-foreground' };
+	if (pct > 0) return { text: `↑ ${pct.toFixed(1)}%`, color: 'text-fc-success' };
+	if (pct < 0) return { text: `↓ ${Math.abs(pct).toFixed(1)}%`, color: 'text-fc-danger' };
+	return { text: '—', color: 'text-fc-fg-muted' };
 }
 
 export function fmt(n: number): string {
@@ -78,13 +75,12 @@ export function classifyReferrer(ref: string): 'search' | 'social' | 'other' {
 	return 'other';
 }
 
-export const CHART_COLORS = [
-	'var(--chart-1)',
-	'var(--chart-2)',
-	'var(--chart-3)',
-	'var(--chart-4)',
-	'var(--chart-5)'
-];
+/*
+ * Series colour comes from muse — six slots, assigned by index and never by rank, so a
+ * filter that drops a series cannot repaint the survivors. Re-exported here only so the
+ * analytics pages have one import for everything chart-shaped.
+ */
+export { chartColor } from '@facile/muse';
 
 const ALLOWED_GRANULARITIES: Record<RangeKey, Granularity[]> = {
 	today: ['hour'],

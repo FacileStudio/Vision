@@ -1,91 +1,96 @@
 <script lang="ts">
 	import { api } from '$lib';
 	import type { Site } from '$lib';
-	import * as Sheet from '$lib/components/ui/sheet/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
+	import { Alert, Button, Drawer, Field, Input, Select, Spinner, icons } from '@facile/muse';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
 
 	let {
 		open = $bindable(false),
 		onCreated
 	}: {
-		open: boolean;
+		open?: boolean;
 		onCreated: (site: Site) => void;
 	} = $props();
 
 	let name = $state('');
 	let domain = $state('');
-	let workspaceId = $state(0);
+	let workspaceId = $state('');
 	let error = $state('');
 	let submitting = $state(false);
 
+	/* Reopening must never show the previous attempt's error or half-typed domain. */
 	$effect(() => {
 		if (!open) {
 			name = '';
 			domain = '';
 			error = '';
+			return;
 		}
-		if (open && workspaceStore.current) {
-			workspaceId = workspaceStore.current.id;
-		}
+		if (workspaceStore.current) workspaceId = String(workspaceStore.current.id);
 	});
 
-	async function addSite() {
+	async function addSite(e: Event) {
+		e.preventDefault();
 		error = '';
-		if (!workspaceId) {
-			error = 'No space available';
+		const id = Number(workspaceId);
+		if (!id) {
+			error = 'No space available — create one first.';
 			return;
 		}
 		submitting = true;
 		try {
-			const site = await api.sites.create(name, domain, workspaceId);
+			const site = await api.sites.create(name.trim(), domain.trim(), id);
 			open = false;
 			onCreated(site);
-		} catch (e: any) {
-			error = e.message;
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Could not add the site.';
 		} finally {
 			submitting = false;
 		}
 	}
 </script>
 
-<Sheet.Root bind:open>
-	<Sheet.Content side="right">
-		<Sheet.Header>
-			<Sheet.Title>Add a new site</Sheet.Title>
-			<Sheet.Description>Enter the details of the website you want to track.</Sheet.Description>
-		</Sheet.Header>
-		<form onsubmit={(e) => { e.preventDefault(); addSite(); }} class="flex flex-col gap-4 px-4">
-			{#if workspaceStore.all.length > 1}
-				<div class="space-y-2">
-					<Label for="site-workspace">Space</Label>
-					<select
-						id="site-workspace"
-						bind:value={workspaceId}
-						class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-					>
-						{#each workspaceStore.all as ws}
-							<option value={ws.id}>{ws.name}</option>
-						{/each}
-					</select>
-				</div>
-			{/if}
-			<div class="space-y-2">
-				<Label for="site-name">Name</Label>
-				<Input id="site-name" bind:value={name} placeholder="My Website" required />
-			</div>
-			<div class="space-y-2">
-				<Label for="site-domain">Domain</Label>
-				<Input id="site-domain" bind:value={domain} placeholder="example.com" required />
-			</div>
-			{#if error}
-				<p class="text-sm text-destructive">{error}</p>
-			{/if}
-			<Button type="submit" disabled={submitting} class="w-full">
-				{submitting ? 'Adding...' : 'Add site'}
+<Drawer bind:open title="Add a site" description="Vision starts counting as soon as the script is on the page." showClose>
+	<form id="add-site" class="flex flex-col gap-4" onsubmit={addSite}>
+		{#if workspaceStore.all.length > 1}
+			<Field label="Space" helper="Everyone in the space can read this site's stats.">
+				<Select bind:value={workspaceId} disabled={submitting}>
+					{#each workspaceStore.all as ws (ws.id)}
+						<option value={String(ws.id)}>{ws.name}</option>
+					{/each}
+				</Select>
+			</Field>
+		{/if}
+
+		<Field label="Name" helper="How it appears in your site list.">
+			<Input bind:value={name} placeholder="My website" required disabled={submitting} />
+		</Field>
+
+		<Field label="Domain" helper="Events are verified against this domain — no subdomain, no scheme.">
+			<Input bind:value={domain} placeholder="example.com" required disabled={submitting} />
+		</Field>
+
+		{#if error}
+			<Alert tone="danger" title="Not added">{error}</Alert>
+		{/if}
+	</form>
+
+	{#snippet footer()}
+		<div class="flex gap-2">
+			<Button variant="ghost" size="lg" class="flex-1" disabled={submitting} onclick={() => (open = false)}>
+				Cancel
 			</Button>
-		</form>
-	</Sheet.Content>
-</Sheet.Root>
+			<Button
+				type="submit"
+				form="add-site"
+				size="lg"
+				icon={icons.plus}
+				class="flex-1"
+				disabled={submitting || !name.trim() || !domain.trim()}
+			>
+				{#if submitting}<Spinner size="sm" />{/if}
+				{submitting ? 'Adding…' : 'Add site'}
+			</Button>
+		</div>
+	{/snippet}
+</Drawer>

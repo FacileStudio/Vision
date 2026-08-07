@@ -6,13 +6,23 @@
 	import type { Workspace, WorkspaceMember } from '$lib';
 	import { userStore } from '$lib/stores/user.svelte';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Separator } from '$lib/components/ui/separator/index.js';
-	import Icon from '@iconify/svelte';
-	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
-	import Users from '@lucide/svelte/icons/users';
-	import Globe from '@lucide/svelte/icons/globe';
+	import {
+		Alert,
+		Avatar,
+		Badge,
+		Button,
+		Card,
+		ConfirmModal,
+		Field,
+		IconButton,
+		Input,
+		Select,
+		SettingsRow,
+		SettingsSection,
+		Skeleton,
+		icons,
+		toast
+	} from '@facile/muse';
 
 	let workspace = $state<Workspace | null>(null);
 	let members = $state<WorkspaceMember[]>([]);
@@ -28,20 +38,32 @@
 	let inviting = $state(false);
 	let inviteError = $state('');
 
-	let showDeleteConfirm = $state(false);
+	let removeTarget = $state<WorkspaceMember | null>(null);
+	let removeOpen = $state(false);
+
+	let deleteOpen = $state(false);
 	let deleteText = $state('');
-	let deleting = $state(false);
 
-	let showLeaveConfirm = $state(false);
-	let leaving = $state(false);
-
-	let failedAvatars = $state<Record<number, boolean>>({});
+	let leaveOpen = $state(false);
 
 	const wsId = $derived(Number(page.params.id));
 	const myUserId = $derived(Number(userStore.value?.id));
 	const myRole = $derived(workspace?.role ?? 'viewer');
 	const isOwnerOrAdmin = $derived(myRole === 'owner' || myRole === 'admin');
 	const isOwner = $derived(myRole === 'owner');
+
+	const roleLabels: Record<string, string> = {
+		owner: 'Owner',
+		admin: 'Admin',
+		editor: 'Editor',
+		viewer: 'Viewer'
+	};
+
+	const roleTones = { owner: 'owner', admin: 'admin' } as const;
+
+	function roleTone(role: string) {
+		return roleTones[role as keyof typeof roleTones] ?? 'neutral';
+	}
 
 	async function load() {
 		loading = true;
@@ -52,8 +74,8 @@
 			]);
 			workspace = ws;
 			members = m;
-		} catch (e: any) {
-			error = e.message || 'Failed to load space.';
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Could not load this space.';
 		} finally {
 			loading = false;
 		}
@@ -70,22 +92,26 @@
 			workspaceStore.all = workspaceStore.all.map((w) => (w.id === updated.id ? updated : w));
 			if (workspaceStore.current?.id === updated.id) workspaceStore.current = updated;
 			editingName = false;
-		} catch {
+			toast.success('Space renamed.');
+		} catch (e) {
+			toast.danger(e instanceof Error ? e.message : 'Could not rename the space.');
 		} finally {
 			savingName = false;
 		}
 	}
 
-	async function invite() {
+	async function invite(e: Event) {
+		e.preventDefault();
 		if (!inviteEmail.trim() || inviting) return;
 		inviting = true;
 		inviteError = '';
 		try {
 			const member = await api.workspaces.addMember(wsId, inviteEmail.trim(), inviteRole);
 			members = [...members, member];
+			toast.success(`${inviteEmail.trim()} was added.`);
 			inviteEmail = '';
-		} catch (e: any) {
-			inviteError = e.message || 'Failed to invite member.';
+		} catch (e) {
+			inviteError = e instanceof Error ? e.message : 'Could not add that person.';
 		} finally {
 			inviting = false;
 		}
@@ -95,269 +121,231 @@
 		try {
 			await api.workspaces.updateMember(wsId, userId, role);
 			members = members.map((m) => (m.user_id === userId ? { ...m, role } : m));
-		} catch {}
+			toast.success('Role updated.');
+		} catch (e) {
+			toast.danger(e instanceof Error ? e.message : 'Could not change that role.');
+		}
 	}
 
-	async function removeMember(userId: number) {
-		try {
-			await api.workspaces.removeMember(wsId, userId);
-			members = members.filter((m) => m.user_id !== userId);
-		} catch {}
+	async function removeMember() {
+		const target = removeTarget;
+		if (!target) return;
+		await api.workspaces.removeMember(wsId, target.user_id);
+		members = members.filter((m) => m.user_id !== target.user_id);
+		removeTarget = null;
+		toast.neutral(`${target.name || target.email} no longer has access.`);
+	}
+
+	function forgetSpace() {
+		workspaceStore.all = workspaceStore.all.filter((w) => w.id !== wsId);
+		if (workspaceStore.current?.id === wsId) {
+			workspaceStore.current = workspaceStore.all[0] ?? null;
+		}
+		goto('/team');
 	}
 
 	async function leaveWorkspace() {
-		leaving = true;
-		try {
-			await api.workspaces.leave(wsId);
-			workspaceStore.all = workspaceStore.all.filter((w) => w.id !== wsId);
-			if (workspaceStore.current?.id === wsId) {
-				workspaceStore.current = workspaceStore.all[0] ?? null;
-			}
-			goto('/team');
-		} catch {
-		} finally {
-			leaving = false;
-		}
+		await api.workspaces.leave(wsId);
+		toast.neutral('You left the space.');
+		forgetSpace();
 	}
 
+	/*
+	 * The typed confirmation stays inside the dialog rather than in front of it: rejecting
+	 * the promise is what keeps ConfirmModal open, so a mistyped word costs a retry instead
+	 * of reopening the whole flow.
+	 */
 	async function deleteWorkspace() {
-		deleting = true;
-		try {
-			await api.workspaces.delete(wsId);
-			workspaceStore.all = workspaceStore.all.filter((w) => w.id !== wsId);
-			if (workspaceStore.current?.id === wsId) {
-				workspaceStore.current = workspaceStore.all[0] ?? null;
-			}
-			goto('/team');
-		} catch {
-		} finally {
-			deleting = false;
+		if (deleteText !== 'DELETE') {
+			throw new Error('confirmation text does not match');
 		}
-	}
-
-	function getInitials(name: string): string {
-		return name
-			.split(' ')
-			.map((w) => w[0])
-			.filter(Boolean)
-			.slice(0, 2)
-			.join('')
-			.toUpperCase();
-	}
-
-	function roleLabel(role: string): string {
-		switch (role) {
-			case 'owner': return 'Owner';
-			case 'admin': return 'Admin';
-			case 'editor': return 'Editor';
-			case 'viewer': return 'Viewer';
-			default: return role;
-		}
+		await api.workspaces.delete(wsId);
+		toast.neutral('Space deleted.');
+		deleteText = '';
+		forgetSpace();
 	}
 </script>
 
 <svelte:head><title>{workspace?.name ?? 'Space'} — Vision</title></svelte:head>
 
-<div class="mx-auto max-w-lg">
-	<a href="/team" class="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-		<ArrowLeft class="h-4 w-4" />
+<div class="flex flex-col gap-10">
+	<a
+		href="/team"
+		class="inline-flex items-center gap-1.5 self-start rounded-fc-sm text-fc-sm text-fc-fg-muted transition-colors hover:text-fc-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
+	>
+		<iconify-icon icon={icons.chevronLeft} width="16" height="16" class="block"></iconify-icon>
 		Back to teams
 	</a>
 
 	{#if loading}
-		<div class="flex items-center justify-center py-12">
-			<div class="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-foreground"></div>
-		</div>
+		<Skeleton class="h-24 w-full rounded-fc-md" />
+		<Skeleton class="h-64 w-full rounded-fc-md" />
 	{:else if error}
-		<div class="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{error}</div>
+		<Alert tone="danger" title="Could not open this space">{error}</Alert>
 	{:else if workspace}
-		<div class="space-y-6">
-			<!-- Header -->
-			<div class="flex items-start gap-4">
-				<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-foreground text-lg font-bold text-background">
-					{workspace.name.charAt(0).toUpperCase()}
-				</div>
-				<div class="min-w-0 flex-1">
-					{#if editingName}
-						<div class="flex items-center gap-2">
-							<Input bind:value={wsName} class="flex-1" />
-							<Button size="sm" onclick={saveName} disabled={savingName}>Save</Button>
-							<Button size="sm" variant="ghost" onclick={() => (editingName = false)}>Cancel</Button>
-						</div>
-					{:else}
-						<div class="flex items-center gap-2">
-							<h1 class="truncate text-2xl font-bold">{workspace.name}</h1>
-							{#if isOwnerOrAdmin}
-								<button
-									onclick={() => { wsName = workspace?.name ?? ''; editingName = true; }}
-									class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-								>
-									<Icon icon="solar:pen-linear" class="h-3.5 w-3.5" />
-								</button>
-							{/if}
-						</div>
-					{/if}
-					<div class="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-						<span class="flex items-center gap-1">
-							<Users class="h-3 w-3" />
-							{members.length} {members.length === 1 ? 'member' : 'members'}
-						</span>
-						<span class="flex items-center gap-1">
-							<Globe class="h-3 w-3" />
-							{workspace.site_count} {workspace.site_count === 1 ? 'site' : 'sites'}
-						</span>
-						<span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
-							{roleLabel(workspace.role)}
-						</span>
+		<div class="flex items-start gap-4">
+			<Avatar name={workspace.name} size="lg" />
+			<div class="flex min-w-0 flex-1 flex-col gap-2">
+				{#if editingName}
+					<div class="flex flex-wrap items-center gap-2">
+						<Input bind:value={wsName} class="min-w-48 flex-1" aria-label="Space name" />
+						<Button icon={icons.check} disabled={savingName} onclick={saveName}>Save</Button>
+						<Button variant="ghost" onclick={() => (editingName = false)}>Cancel</Button>
 					</div>
-				</div>
-			</div>
-
-			<Separator />
-
-			<!-- Members -->
-			<div>
-				<h2 class="mb-3 text-lg font-semibold">Members</h2>
-				<div class="space-y-2">
-					{#each members as member (member.id)}
-						<div class="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2.5">
-							<div class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-foreground text-xs font-semibold text-background">
-								{#if member.avatar_url && !failedAvatars[member.id]}
-									<img
-										src="/api{member.avatar_url}"
-										alt={member.name || member.email}
-										class="h-full w-full object-cover"
-										onerror={() => (failedAvatars[member.id] = true)}
-									/>
-								{:else}
-									{getInitials(member.name || member.email)}
-								{/if}
-							</div>
-							<div class="min-w-0 flex-1">
-								<p class="truncate text-sm font-medium">
-									{member.name || member.email}
-									{#if member.user_id === myUserId}
-										<span class="text-xs text-muted-foreground">(you)</span>
-									{/if}
-								</p>
-								{#if member.name}
-									<p class="truncate text-xs text-muted-foreground">{member.email}</p>
-								{/if}
-							</div>
-
-							{#if isOwnerOrAdmin && member.role !== 'owner' && member.user_id !== myUserId}
-								<select
-									value={member.role}
-									onchange={(e) => updateRole(member.user_id, (e.target as HTMLSelectElement).value)}
-									class="rounded-md border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-								>
-									<option value="admin">Admin</option>
-									<option value="editor">Editor</option>
-									<option value="viewer">Viewer</option>
-								</select>
-								<button
-									onclick={() => removeMember(member.user_id)}
-									class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full bg-destructive text-white hover:bg-destructive/90"
-									title="Remove member"
-								>
-									<Icon icon="solar:trash-bin-2-linear" class="h-3.5 w-3.5" />
-								</button>
-							{:else}
-								<span class="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
-									{roleLabel(member.role)}
-								</span>
-							{/if}
-						</div>
-					{/each}
-				</div>
-
-				{#if isOwnerOrAdmin}
-					<div class="mt-4 rounded-lg border border-dashed p-4">
-						<p class="mb-3 text-xs font-medium text-muted-foreground">Invite a member</p>
-						<form onsubmit={(e) => { e.preventDefault(); invite(); }} class="flex items-end gap-2">
-							<div class="flex-1">
-								<Input
-									bind:value={inviteEmail}
-									placeholder="email@example.com"
-									type="email"
-								/>
-							</div>
-							<select
-								bind:value={inviteRole}
-								class="rounded-md border bg-background px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+				{:else}
+					<div class="flex min-w-0 items-center gap-2">
+						<h1 class="truncate text-fc-2xl font-semibold text-fc-fg">{workspace.name}</h1>
+						{#if isOwnerOrAdmin}
+							<IconButton
+								variant="ghost"
+								aria-label="Rename space"
+								onclick={() => {
+									wsName = workspace?.name ?? '';
+									editingName = true;
+								}}
 							>
-								<option value="viewer">Viewer</option>
-								<option value="editor">Editor</option>
-								<option value="admin">Admin</option>
-							</select>
-							<Button type="submit" size="sm" disabled={inviting || !inviteEmail.trim()}>
-								{inviting ? 'Inviting...' : 'Invite'}
-							</Button>
-						</form>
-						{#if inviteError}
-							<p class="mt-2 text-sm text-destructive">{inviteError}</p>
+								<iconify-icon icon={icons.edit} width="18" height="18" class="block"></iconify-icon>
+							</IconButton>
 						{/if}
 					</div>
 				{/if}
-			</div>
-
-			<Separator />
-
-			<!-- Danger zone -->
-			<div>
-				{#if !isOwner}
-					<div class="rounded-lg border border-destructive/30 p-4">
-						<h3 class="mb-1 text-sm font-semibold text-destructive">Leave space</h3>
-						<p class="mb-3 text-xs text-muted-foreground">
-							You will lose access to all sites and data in this space.
-						</p>
-						{#if showLeaveConfirm}
-							<div class="flex items-center gap-2">
-								<Button size="sm" variant="destructive" onclick={leaveWorkspace} disabled={leaving}>
-									{leaving ? 'Leaving...' : 'Confirm leave'}
-								</Button>
-								<Button size="sm" variant="ghost" onclick={() => (showLeaveConfirm = false)}>Cancel</Button>
-							</div>
-						{:else}
-							<Button size="sm" variant="destructive" onclick={() => (showLeaveConfirm = true)}>
-								Leave space
-							</Button>
-						{/if}
-					</div>
-				{/if}
-
-				{#if isOwner}
-					<div class="rounded-lg border border-destructive/30 p-4">
-						<h3 class="mb-1 text-sm font-semibold text-destructive">Delete space</h3>
-						<p class="mb-3 text-xs text-muted-foreground">
-							This action is irreversible. All sites must be removed first.
-						</p>
-						{#if showDeleteConfirm}
-							<p class="mb-2 text-xs text-muted-foreground">
-								Type <strong>DELETE</strong> to confirm:
-							</p>
-							<div class="flex items-center gap-2">
-								<Input bind:value={deleteText} placeholder="DELETE" class="w-32" />
-								<Button
-									size="sm"
-									variant="destructive"
-									onclick={deleteWorkspace}
-									disabled={deleting || deleteText !== 'DELETE'}
-								>
-									{deleting ? 'Deleting...' : 'Delete'}
-								</Button>
-								<Button size="sm" variant="ghost" onclick={() => { showDeleteConfirm = false; deleteText = ''; }}>
-									Cancel
-								</Button>
-							</div>
-						{:else}
-							<Button size="sm" variant="destructive" onclick={() => (showDeleteConfirm = true)}>
-								Delete space
-							</Button>
-						{/if}
-					</div>
-				{/if}
+				<div class="flex flex-wrap items-center gap-3 text-fc-sm text-fc-fg-muted">
+					<span>
+						{members.length}
+						{members.length === 1 ? 'member' : 'members'} · {workspace.site_count}
+						{workspace.site_count === 1 ? 'site' : 'sites'}
+					</span>
+					<Badge tone={roleTone(workspace.role)}>{roleLabels[workspace.role] ?? workspace.role}</Badge>
+				</div>
 			</div>
 		</div>
+
+		<SettingsSection
+			title="Members"
+			description="Owners cannot be removed, and nobody can change their own role."
+		>
+			{#each members as member (member.id)}
+				<SettingsRow
+					label={member.name || member.email}
+					description={member.name ? member.email : undefined}
+				>
+					{#if member.user_id === myUserId}
+						<span class="text-fc-xs text-fc-fg-muted">you</span>
+					{/if}
+					{#if isOwnerOrAdmin && member.role !== 'owner' && member.user_id !== myUserId}
+						<Select
+							value={member.role}
+							aria-label="Role for {member.name || member.email}"
+							class="w-32"
+							onchange={(e) => updateRole(member.user_id, e.currentTarget.value)}
+						>
+							<option value="admin">Admin</option>
+							<option value="editor">Editor</option>
+							<option value="viewer">Viewer</option>
+						</Select>
+						<Button
+							variant="ghost-danger"
+							icon={icons.remove}
+							aria-label="Remove {member.name || member.email}"
+							onclick={() => {
+								removeTarget = member;
+								removeOpen = true;
+							}}
+						>
+							Remove
+						</Button>
+					{:else}
+						<Badge tone={roleTone(member.role)}>{roleLabels[member.role] ?? member.role}</Badge>
+					{/if}
+				</SettingsRow>
+			{/each}
+		</SettingsSection>
+
+		{#if isOwnerOrAdmin}
+			<SettingsSection
+				title="Add someone"
+				description="They need a Vision account already — adding grants access immediately."
+			>
+				<form class="flex flex-col gap-3 sm:flex-row sm:items-end" onsubmit={invite}>
+					<div class="min-w-0 flex-1">
+						<Field label="Email">
+							<Input bind:value={inviteEmail} type="email" placeholder="name@studio.com" disabled={inviting} />
+						</Field>
+					</div>
+					<Field label="Role">
+						<Select bind:value={inviteRole} class="sm:w-40" disabled={inviting}>
+							<option value="viewer">Viewer</option>
+							<option value="editor">Editor</option>
+							<option value="admin">Admin</option>
+						</Select>
+					</Field>
+					<Button type="submit" icon={icons.plus} disabled={inviting || !inviteEmail.trim()}>
+						{inviting ? 'Adding…' : 'Add'}
+					</Button>
+				</form>
+
+				{#if inviteError}
+					<Alert tone="danger" title="Not added">{inviteError}</Alert>
+				{/if}
+			</SettingsSection>
+		{/if}
+
+		<SettingsSection title="Danger zone" description="Irreversible, and nobody can undo it for you.">
+			{#if isOwner}
+				<SettingsRow
+					label="Delete this space"
+					description="Every site must be removed first. Members lose access the moment it goes."
+				>
+					<Button variant="danger" icon={icons.remove} onclick={() => (deleteOpen = true)}>
+						Delete space
+					</Button>
+				</SettingsRow>
+			{:else}
+				<SettingsRow
+					label="Leave this space"
+					description="You lose access to every site in it. An owner can add you back."
+				>
+					<Button variant="danger" icon={icons.logout} onclick={() => (leaveOpen = true)}>
+						Leave space
+					</Button>
+				</SettingsRow>
+			{/if}
+		</SettingsSection>
 	{/if}
 </div>
+
+<ConfirmModal
+	bind:open={removeOpen}
+	tone="danger"
+	title="Remove {removeTarget?.name || removeTarget?.email || 'this member'}?"
+	description="They lose access to every site in this space immediately. The stats they looked at are unaffected — this only revokes access."
+	confirmLabel="Remove"
+	cancelLabel="Keep access"
+	onConfirm={removeMember}
+	onCancel={() => (removeTarget = null)}
+/>
+
+<ConfirmModal
+	bind:open={leaveOpen}
+	tone="danger"
+	title="Leave {workspace?.name ?? 'this space'}?"
+	description="You lose access to every site in it, and only an owner can add you back."
+	confirmLabel="Leave space"
+	cancelLabel="Stay"
+	onConfirm={leaveWorkspace}
+/>
+
+<ConfirmModal
+	bind:open={deleteOpen}
+	tone="danger"
+	title="Delete {workspace?.name ?? 'this space'}?"
+	description="The space and its membership are gone for good. Sites must already be removed."
+	confirmLabel="Delete space"
+	cancelLabel="Keep it"
+	onConfirm={deleteWorkspace}
+	onCancel={() => (deleteText = '')}
+>
+	<Field label="Type DELETE to confirm">
+		<Input bind:value={deleteText} placeholder="DELETE" autocomplete="off" />
+	</Field>
+</ConfirmModal>

@@ -3,11 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { api } from '$lib';
 	import type { Workspace } from '$lib';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import Icon from '@iconify/svelte';
-	import Plus from '@lucide/svelte/icons/plus';
-	import Users from '@lucide/svelte/icons/users';
-	import Globe from '@lucide/svelte/icons/globe';
+	import { Avatar, Badge, Button, Card, Input, Skeleton, icons, toast } from '@facile/muse';
 
 	let workspaces = $state<Workspace[]>([]);
 	let loading = $state(true);
@@ -15,112 +11,97 @@
 
 	const filtered = $derived(
 		search.trim()
-			? workspaces.filter((w) =>
-					w.name.toLowerCase().includes(search.trim().toLowerCase())
-				)
+			? workspaces.filter((w) => w.name.toLowerCase().includes(search.trim().toLowerCase()))
 			: workspaces
 	);
 
 	onMount(async () => {
 		try {
 			workspaces = await api.workspaces.list();
-		} catch {
+		} catch (e) {
+			toast.danger(e instanceof Error ? e.message : 'Could not load your spaces.');
 		} finally {
 			loading = false;
 		}
 	});
 
-	function roleLabel(role: string): string {
-		switch (role) {
-			case 'owner':
-				return 'Owner';
-			case 'admin':
-				return 'Admin';
-			case 'editor':
-				return 'Editor';
-			case 'viewer':
-				return 'Viewer';
-			default:
-				return role;
-		}
-	}
+	const roleLabels: Record<string, string> = {
+		owner: 'Owner',
+		admin: 'Admin',
+		editor: 'Editor',
+		viewer: 'Viewer'
+	};
 
-	function roleBadgeClass(role: string): string {
-		switch (role) {
-			case 'owner':
-				return 'bg-foreground text-background';
-			case 'admin':
-				return 'bg-primary/10 text-primary';
-			default:
-				return 'bg-muted text-muted-foreground';
-		}
+	/* `owner` and `admin` are the two role tones in the shared vocabulary; everything else
+	   is a plain member and gets `neutral`. */
+	const roleTones = { owner: 'owner', admin: 'admin' } as const;
+
+	function roleTone(role: string) {
+		return roleTones[role as keyof typeof roleTones] ?? 'neutral';
 	}
 </script>
 
 <svelte:head><title>Teams — Vision</title></svelte:head>
 
-<div class="mx-auto max-w-2xl">
-	<div class="mb-6 flex items-center justify-between">
-		<h1 class="text-2xl font-bold">Teams</h1>
-		<Button size="sm" onclick={() => goto('/team/new')}>
-			<Plus class="mr-1.5 h-4 w-4" />
-			New space
-		</Button>
-	</div>
-
-	{#if workspaces.length > 3}
-		<div class="mb-4">
-			<input
-				bind:value={search}
-				type="text"
-				placeholder="Search spaces..."
-				class="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-			/>
-		</div>
-	{/if}
-
-	{#if loading}
-		<div class="flex items-center justify-center py-12">
-			<div class="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-foreground"></div>
-		</div>
-	{:else if filtered.length === 0}
-		<div class="rounded-lg border border-dashed p-8 text-center">
-			<Icon icon="solar:users-group-rounded-linear" class="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-			<p class="text-sm text-muted-foreground">
-				{search ? 'No spaces match your search.' : 'No spaces yet. Create one to get started.'}
+<div class="flex flex-col gap-10">
+	<div class="flex flex-wrap items-start justify-between gap-4">
+		<div class="flex min-w-0 flex-col gap-2">
+			<h1 class="text-fc-2xl font-semibold text-fc-fg">Teams</h1>
+			<p class="text-fc-sm text-fc-fg-muted">
+				Spaces you belong to. Everyone in a space sees its sites and their stats.
 			</p>
 		</div>
-	{:else}
-		<div class="space-y-2">
+		<Button icon={icons.plus} onclick={() => goto('/team/new')}>New space</Button>
+	</div>
+
+	<section class="flex flex-col gap-4">
+		{#if workspaces.length > 3}
+			<Input bind:value={search} placeholder="Search spaces…" aria-label="Search spaces" />
+		{/if}
+
+		{#if loading}
+			{#each [0, 1, 2] as row (row)}
+				<Skeleton class="h-20 w-full rounded-fc-md" />
+			{/each}
+		{:else if filtered.length === 0}
+			<Card class="flex flex-col items-center gap-3 py-12 text-center">
+				<p class="text-fc-sm font-medium text-fc-fg">
+					{search ? `No space matches “${search}”` : 'No spaces yet'}
+				</p>
+				<p class="max-w-sm text-fc-sm text-fc-fg-muted">
+					{search
+						? 'Try another name, or clear the search.'
+						: 'A space holds sites and the people who can read them.'}
+				</p>
+			</Card>
+		{:else}
 			{#each filtered as ws (ws.id)}
 				<a
 					href="/team/{ws.id}"
-					class="group flex items-center gap-4 rounded-lg border border-border/60 p-4 transition-colors hover:bg-muted/50"
+					class="rounded-fc-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
 				>
-					<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-foreground text-sm font-bold text-background">
-						{ws.name.charAt(0).toUpperCase()}
-					</div>
-					<div class="min-w-0 flex-1">
-						<div class="flex items-center gap-2">
-							<p class="truncate text-sm font-semibold">{ws.name}</p>
-							<span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium {roleBadgeClass(ws.role)}">
-								{roleLabel(ws.role)}
+					<Card class="flex items-center gap-4 transition-colors hover:bg-fc-surface">
+						<Avatar name={ws.name} />
+						<div class="flex min-w-0 flex-1 flex-col gap-1">
+							<div class="flex min-w-0 items-center gap-2">
+								<span class="truncate text-fc-sm font-medium text-fc-fg">{ws.name}</span>
+								<Badge tone={roleTone(ws.role)}>{roleLabels[ws.role] ?? ws.role}</Badge>
+							</div>
+							<span class="text-fc-xs text-fc-fg-muted">
+								{ws.member_count}
+								{ws.member_count === 1 ? 'member' : 'members'} · {ws.site_count}
+								{ws.site_count === 1 ? 'site' : 'sites'}
 							</span>
 						</div>
-						<div class="mt-0.5 flex items-center gap-3 text-xs text-muted-foreground">
-							<span class="flex items-center gap-1">
-								<Users class="h-3 w-3" />
-								{ws.member_count} {ws.member_count === 1 ? 'member' : 'members'}
-							</span>
-							<span class="flex items-center gap-1">
-								<Globe class="h-3 w-3" />
-								{ws.site_count} {ws.site_count === 1 ? 'site' : 'sites'}
-							</span>
-						</div>
-					</div>
-					<Icon icon="solar:alt-arrow-right-linear" class="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+						<iconify-icon
+							icon={icons.arrow}
+							width="18"
+							height="18"
+							class="block shrink-0 text-fc-fg-muted"
+						></iconify-icon>
+					</Card>
 				</a>
 			{/each}
-		</div>
-	{/if}
+		{/if}
+	</section>
 </div>

@@ -3,20 +3,32 @@
 	import { page } from '$app/state';
 	import { api, getToken } from '$lib';
 	import type { Site, AnalyticsOverview, GoalConversionsResponse, Goal } from '$lib';
-	import { AreaChart, BarChart, PieChart } from 'layerchart';
-	import { scaleBand } from 'd3-scale';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Chart from '$lib/components/ui/chart/index.js';
-	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
-	import { Copy, Check } from '@lucide/svelte';
-	import Icon from '@iconify/svelte';
+	import {
+		Alert,
+		Badge,
+		BarChart,
+		Button,
+		Card,
+		ConfirmModal,
+		DonutChart,
+		Drawer,
+		Field,
+		Input,
+		LineChart,
+		SecretField,
+		Select,
+		SettingsRow,
+		Skeleton,
+		StatCard,
+		StatusDot,
+		Tabs,
+		icons,
+		toast
+	} from '@facile/muse';
 	import WorldMap from '$lib/components/map/world-map.svelte';
 	import StatsDrawer from '$lib/components/stats-drawer.svelte';
 	import SiteFavicon from '$lib/components/site-favicon.svelte';
-	import StatCard from '$lib/components/stat-card.svelte';
-	import BarListCard from '$lib/components/bar-list-card.svelte';
-	import PieLegendCard from '$lib/components/pie-legend-card.svelte';
-	import PerformanceCard from '$lib/components/performance-card.svelte';
+	import BarList from '$lib/components/bar-list.svelte';
 	import {
 		type RangeKey,
 		type Granularity,
@@ -26,7 +38,6 @@
 		trendPercent,
 		fmt,
 		classifyReferrer,
-		CHART_COLORS,
 		allowedGranularities,
 		defaultGranularity,
 		formatChartDate
@@ -36,22 +47,10 @@
 	let overview = $state<AnalyticsOverview | null>(null);
 	let goalConversions = $state<GoalConversionsResponse | null>(null);
 	let siteGoals = $state<Goal[]>([]);
-	let showGoalForm = $state(false);
-	let goalName = $state('');
-	let goalType = $state<'pageview' | 'event'>('pageview');
-	let goalPagePath = $state('');
-	let goalEventName = $state('');
-	let goalMatchType = $state('exact');
-	let goalSaving = $state(false);
 	let live = $state(false);
-	let copied = $state(false);
 	let realtimeCount = $state(0);
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 	let realtimeTimer: ReturnType<typeof setInterval> | null = null;
-	let shareCopied = $state(false);
-	let shareUrl = $derived(
-		site?.share_token ? `${page.url.origin}/share/${site.share_token}` : ''
-	);
 
 	let selectedRange = $state<RangeKey>('30d');
 	let customFrom = $state('');
@@ -59,81 +58,118 @@
 	let selectedGranularity = $state<Granularity>('day');
 
 	let activeFilters = $state<Record<string, string>>({});
-	let showFilters = $state(false);
-	let activeDrawer = $state<string | null>(null);
+	let filtersOpen = $state(false);
+
+	let drawerKey = $state<string | null>(null);
+	let drawerOpen = $state(false);
+
+	let goalOpen = $state(false);
+	let goalName = $state('');
+	let goalType = $state<'pageview' | 'event'>('pageview');
+	let goalPagePath = $state('');
+	let goalEventName = $state('');
+	let goalMatchType = $state('exact');
+	let goalSaving = $state(false);
+	let goalError = $state('');
+
+	let goalDeleteTarget = $state<{ id: number; name: string } | null>(null);
+	let goalDeleteOpen = $state(false);
+
+	let revokeShareOpen = $state(false);
+
+	const siteId = $derived(Number(page.params.id));
+
+	const shareUrl = $derived(site?.share_token ? `${page.url.origin}/share/${site.share_token}` : '');
+	const trackingSnippet = $derived(`<script defer src="${page.url.origin}/s.js"></` + 'script>');
 
 	const filterFields = [
-		{ key: 'country', label: 'Country', placeholder: 'e.g. US' },
-		{ key: 'browser', label: 'Browser', placeholder: 'e.g. Chrome' },
-		{ key: 'os', label: 'OS', placeholder: 'e.g. macOS' },
-		{ key: 'device', label: 'Device', placeholder: 'e.g. Desktop' },
-		{ key: 'path', label: 'Path', placeholder: 'e.g. /blog' },
-		{ key: 'referrer', label: 'Referrer', placeholder: 'e.g. google.com' }
+		{ key: 'country', label: 'Country', placeholder: 'US' },
+		{ key: 'browser', label: 'Browser', placeholder: 'Chrome' },
+		{ key: 'os', label: 'OS', placeholder: 'macOS' },
+		{ key: 'device', label: 'Device', placeholder: 'Desktop' },
+		{ key: 'path', label: 'Path', placeholder: '/blog' },
+		{ key: 'referrer', label: 'Referrer', placeholder: 'google.com' }
 	];
 
-	let activeFilterCount = $derived(Object.values(activeFilters).filter(Boolean).length);
+	const activeFilterCount = $derived(Object.values(activeFilters).filter(Boolean).length);
+	const visibleGranularities = $derived(allowedGranularities(selectedRange));
+	const dateRangeLabel = $derived.by(() => {
+		const { from, to } = rangeDates(selectedRange, customFrom, customTo);
+		return formatDateRange(from, to);
+	});
+
+	function selectRange(key: string) {
+		selectedRange = key as RangeKey;
+		selectedGranularity = defaultGranularity(selectedRange);
+	}
+
+	function setFilter(key: string) {
+		return (value: string) => {
+			activeFilters = { ...activeFilters, [key]: value };
+		};
+	}
 
 	function clearFilters() {
 		activeFilters = {};
 	}
 
-	let visibleGranularities = $derived(allowedGranularities(selectedRange));
+	const viewsPerVisitor = $derived(
+		overview && overview.unique_visitors > 0
+			? overview.total_pageviews / overview.unique_visitors
+			: 0
+	);
+	const prevViewsPerVisitor = $derived(
+		overview && overview.prev_unique_visitors > 0
+			? overview.prev_total_pageviews / overview.prev_unique_visitors
+			: 0
+	);
 
-	function selectRange(v: string) {
-		const range = v as RangeKey;
-		selectedRange = range;
-		selectedGranularity = defaultGranularity(range);
-	}
+	const pageviewsTrend = $derived(
+		trendPercent(overview?.total_pageviews ?? 0, overview?.prev_total_pageviews ?? 0)
+	);
+	const visitorsTrend = $derived(
+		trendPercent(overview?.unique_visitors ?? 0, overview?.prev_unique_visitors ?? 0)
+	);
+	const vpvTrend = $derived(trendPercent(viewsPerVisitor, prevViewsPerVisitor));
+	const bounceTrend = $derived(
+		trendPercent(overview?.bounce_rate ?? 0, overview?.prev_bounce_rate ?? 0)
+	);
 
-	function setFilter(key: string) {
-		return (label: string) => {
-			activeFilters = { ...activeFilters, [key]: label };
-			showFilters = true;
-		};
-	}
+	const chartLabels = $derived(
+		(overview?.pageviews_per_day ?? []).map((d) => formatChartDate(d.date, selectedGranularity))
+	);
 
-	let dateRangeLabel = $derived(() => {
-		const { from, to } = rangeDates(selectedRange, customFrom, customTo);
-		return formatDateRange(from, to);
-	});
+	/*
+	 * Two series, not four. The previous period used to ride along as a pair of ghost areas;
+	 * muse charts assign colour by series index and give every series equal weight, so the
+	 * comparison lives on the stat cards' deltas instead of as half-visible lines nobody
+	 * could read the axis against.
+	 */
+	const trafficSeries = $derived([
+		{ name: 'Pageviews', data: (overview?.pageviews_per_day ?? []).map((d) => d.count) },
+		{
+			name: 'Visitors',
+			data: (overview?.pageviews_per_day ?? []).map(
+				(d) => overview?.unique_visitors_per_day?.find((v) => v.date === d.date)?.count ?? 0
+			)
+		}
+	]);
 
-	let viewsPerVisitor = $derived(() => {
-		if (!overview || overview.unique_visitors === 0) return 0;
-		return overview.total_pageviews / overview.unique_visitors;
-	});
+	const hourlySeries = $derived([
+		{ name: 'Pageviews', data: (overview?.hourly_distribution ?? []).map((h) => h.count) }
+	]);
+	const hourlyLabels = $derived(
+		(overview?.hourly_distribution ?? []).map((h) => (h.hour % 3 === 0 ? `${h.hour}h` : ''))
+	);
 
-	let prevViewsPerVisitor = $derived(() => {
-		if (!overview || overview.prev_unique_visitors === 0) return 0;
-		return overview.prev_total_pageviews / overview.prev_unique_visitors;
-	});
-
-	const chartConfig = {
-		pageviews: { label: 'Pageviews', color: 'var(--chart-1)' },
-		visitors: { label: 'Visitors', color: 'var(--chart-2)' },
-		prev_pageviews: { label: 'Prev Pageviews', color: 'var(--chart-1)' },
-		prev_visitors: { label: 'Prev Visitors', color: 'var(--chart-2)' }
-	} satisfies Chart.ChartConfig;
-
-	const trafficConfig = {
-		direct: { label: 'Direct', color: 'var(--chart-1)' },
-		search: { label: 'Search', color: 'var(--chart-2)' },
-		social: { label: 'Social', color: 'var(--chart-3)' },
-		other: { label: 'Other', color: 'var(--chart-4)' }
-	} satisfies Chart.ChartConfig;
-
-	const hourlyConfig = {
-		count: { label: 'Pageviews', color: 'var(--chart-1)' }
-	} satisfies Chart.ChartConfig;
-
-	let trafficSourcesData = $derived(() => {
+	const trafficSources = $derived.by(() => {
 		if (!overview) return [];
-		const refs = overview.top_referrers ?? [];
 		let search = 0;
 		let social = 0;
 		let other = 0;
 		let refTotal = 0;
 
-		for (const r of refs) {
+		for (const r of overview.top_referrers ?? []) {
 			refTotal += r.count;
 			const cat = classifyReferrer(r.referrer);
 			if (cat === 'search') search += r.count;
@@ -142,136 +178,157 @@
 		}
 
 		const direct = Math.max(0, overview.total_pageviews - refTotal);
-
 		return [
-			{ key: 'direct', label: 'Direct', value: direct, color: 'var(--chart-1)' },
-			{ key: 'search', label: 'Search', value: search, color: 'var(--chart-2)' },
-			{ key: 'social', label: 'Social', value: social, color: 'var(--chart-3)' },
-			{ key: 'other', label: 'Other', value: other, color: 'var(--chart-4)' }
+			{ label: 'Direct', value: direct },
+			{ label: 'Search', value: search },
+			{ label: 'Social', value: social },
+			{ label: 'Other', value: other }
 		].filter((d) => d.value > 0);
 	});
 
-	let trafficSourcesTotal = $derived(() => {
-		return trafficSourcesData().reduce((sum, d) => sum + d.value, 0);
-	});
+	const devices = $derived(
+		(overview?.top_devices ?? []).map((d) => ({ label: d.device, value: d.count }))
+	);
+	const screens = $derived(
+		(overview?.top_screens ?? []).map((d) => ({ label: d.screen, value: d.count }))
+	);
 
-	function trackingSnippet(): string {
-		return `<script defer src="${page.url.origin}/s.js"><\/script>`;
+	/* Every list on this page is the same shape with a different key for the label. */
+	function top<T extends { count: number }>(list: T[] | undefined, label: (d: T) => string) {
+		return (list ?? []).slice(0, 8).map((d) => ({ label: label(d), count: d.count }));
 	}
 
-	async function generateShare() {
-		const id = Number(page.params.id);
-		site = await api.sites.share(id);
+	const topPages = $derived(top(overview?.top_pages, (d) => d.path));
+	const topReferrers = $derived(top(overview?.top_referrers, (d) => d.referrer));
+	const browsers = $derived(top(overview?.top_browsers, (d) => d.browser));
+	const operatingSystems = $derived(top(overview?.top_os, (d) => d.os));
+	const entryPages = $derived(top(overview?.top_entry_pages, (d) => d.path));
+	const exitPages = $derived(top(overview?.top_exit_pages, (d) => d.path));
+	const utmSources = $derived(top(overview?.top_utm_sources, (d) => d.value));
+	const utmMediums = $derived(top(overview?.top_utm_mediums, (d) => d.value));
+	const utmCampaigns = $derived(top(overview?.top_utm_campaigns, (d) => d.value));
+	const events = $derived(top(overview?.top_events, (d) => d.name));
+
+	const drawers: Record<string, { title: string; items: () => { label: string; count: number }[]; filterKey: string }> =
+		{
+			pages: {
+				title: 'Top pages',
+				items: () => (overview?.top_pages ?? []).map((d) => ({ label: d.path, count: d.count })),
+				filterKey: 'path'
+			},
+			referrers: {
+				title: 'Top referrers',
+				items: () =>
+					(overview?.top_referrers ?? []).map((d) => ({ label: d.referrer, count: d.count })),
+				filterKey: 'referrer'
+			},
+			browsers: {
+				title: 'Browsers',
+				items: () =>
+					(overview?.top_browsers ?? []).map((d) => ({ label: d.browser, count: d.count })),
+				filterKey: 'browser'
+			},
+			os: {
+				title: 'Operating systems',
+				items: () => (overview?.top_os ?? []).map((d) => ({ label: d.os, count: d.count })),
+				filterKey: 'os'
+			},
+			entry: {
+				title: 'Entry pages',
+				items: () =>
+					(overview?.top_entry_pages ?? []).map((d) => ({ label: d.path, count: d.count })),
+				filterKey: 'path'
+			},
+			exit: {
+				title: 'Exit pages',
+				items: () =>
+					(overview?.top_exit_pages ?? []).map((d) => ({ label: d.path, count: d.count })),
+				filterKey: 'path'
+			},
+			countries: {
+				title: 'Countries',
+				items: () =>
+					(overview?.top_countries ?? []).map((d) => ({ label: d.country, count: d.count })),
+				filterKey: 'country'
+			},
+			utm_sources: {
+				title: 'UTM sources',
+				items: () =>
+					(overview?.top_utm_sources ?? []).map((d) => ({ label: d.value, count: d.count })),
+				filterKey: ''
+			},
+			utm_mediums: {
+				title: 'UTM mediums',
+				items: () =>
+					(overview?.top_utm_mediums ?? []).map((d) => ({ label: d.value, count: d.count })),
+				filterKey: ''
+			},
+			utm_campaigns: {
+				title: 'UTM campaigns',
+				items: () =>
+					(overview?.top_utm_campaigns ?? []).map((d) => ({ label: d.value, count: d.count })),
+				filterKey: ''
+			},
+			events: {
+				title: 'Custom events',
+				items: () => (overview?.top_events ?? []).map((d) => ({ label: d.name, count: d.count })),
+				filterKey: ''
+			}
+		};
+
+	const activeDrawer = $derived(drawerKey ? drawers[drawerKey] : null);
+
+	function openDrawer(key: string) {
+		drawerKey = key;
+		drawerOpen = true;
 	}
 
-	async function revokeShare() {
-		const id = Number(page.params.id);
-		await api.sites.revokeShare(id);
-		site = await api.sites.get(id);
-	}
-
-	async function copyShareUrl() {
-		await navigator.clipboard.writeText(shareUrl);
-		shareCopied = true;
-		setTimeout(() => (shareCopied = false), 2000);
-	}
-
-	async function copySnippet() {
-		await navigator.clipboard.writeText(trackingSnippet());
-		copied = true;
-		setTimeout(() => (copied = false), 2000);
-	}
-
-	async function loadGoals(siteId: number) {
-		try {
-			siteGoals = await api.goals.list(siteId);
-		} catch {}
-	}
-
-	async function refreshGoalConversions(siteId: number) {
+	async function refresh() {
 		try {
 			const { from, to } = rangeDates(selectedRange, customFrom, customTo);
-			goalConversions = await api.goals.conversions(siteId, from, to);
-		} catch {}
-	}
-
-	function resetGoalForm() {
-		goalName = '';
-		goalType = 'pageview';
-		goalPagePath = '';
-		goalEventName = '';
-		goalMatchType = 'exact';
-		showGoalForm = false;
-	}
-
-	async function saveGoal() {
-		goalSaving = true;
-		try {
-			const id = Number(page.params.id);
-			await api.goals.create({
-				site_id: id,
-				name: goalName,
-				goal_type: goalType,
-				event_name: goalType === 'event' ? goalEventName : undefined,
-				page_path: goalType === 'pageview' ? goalPagePath : undefined,
-				match_type: goalType === 'pageview' ? goalMatchType : undefined
-			});
-			resetGoalForm();
-			await Promise.all([loadGoals(id), refreshGoalConversions(id)]);
-		} catch {}
-		goalSaving = false;
-	}
-
-	async function deleteGoal(goalId: number) {
-		try {
-			const id = Number(page.params.id);
-			await api.goals.delete(goalId);
-			await Promise.all([loadGoals(id), refreshGoalConversions(id)]);
-		} catch {}
-	}
-
-	async function refresh(siteId: number) {
-		try {
-			const { from, to } = rangeDates(selectedRange, customFrom, customTo);
-			overview = await api.analytics.overview(siteId, from, to, selectedGranularity, activeFilters);
+			overview = await api.analytics.overview(
+				siteId,
+				from,
+				to,
+				selectedGranularity,
+				activeFilters
+			);
 			live = true;
 		} catch {
 			live = false;
 		}
 	}
 
-	async function fetchRealtime(siteId: number) {
+	async function fetchRealtime() {
 		try {
-			const res = await api.analytics.realtime.visitors(siteId);
-			realtimeCount = res.visitors;
+			realtimeCount = (await api.analytics.realtime.visitors(siteId)).visitors;
 		} catch {}
 	}
 
-	async function exportCSV() {
-		const { from, to } = rangeDates(selectedRange, customFrom, customTo);
-		const token = getToken();
-		const res = await fetch(
-			`/api/analytics/${page.params.id}/export?from=${from}&to=${to}&format=csv`,
-			{ headers: { Authorization: `Bearer ${token}` } }
-		);
-		if (!res.ok) return;
-		const blob = await res.blob();
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = 'vision-export.csv';
-		a.click();
-		URL.revokeObjectURL(url);
+	async function loadGoals() {
+		try {
+			siteGoals = await api.goals.list(siteId);
+		} catch {}
+	}
+
+	async function refreshGoalConversions() {
+		try {
+			const { from, to } = rangeDates(selectedRange, customFrom, customTo);
+			goalConversions = await api.goals.conversions(siteId, from, to);
+		} catch {}
 	}
 
 	onMount(() => {
-		const id = Number(page.params.id);
-
 		(async () => {
-			site = await api.sites.get(id);
-			await Promise.all([refresh(id), fetchRealtime(id), loadGoals(id), refreshGoalConversions(id)]);
-			pollTimer = setInterval(() => refresh(id), 5000);
-			realtimeTimer = setInterval(() => fetchRealtime(id), 10000);
+			try {
+				site = await api.sites.get(siteId);
+			} catch (e) {
+				toast.danger(e instanceof Error ? e.message : 'Could not load this site.');
+				return;
+			}
+			await Promise.all([refresh(), fetchRealtime(), loadGoals(), refreshGoalConversions()]);
+			pollTimer = setInterval(refresh, 5000);
+			realtimeTimer = setInterval(fetchRealtime, 10000);
 		})();
 
 		return () => {
@@ -286,806 +343,584 @@
 		customTo;
 		selectedGranularity;
 		activeFilters;
-		const id = Number(page.params.id);
-		if (id && site) {
-			refresh(id);
-			refreshGoalConversions(id);
+		if (siteId && site) {
+			refresh();
+			refreshGoalConversions();
 		}
 	});
 
-	let chartData = $derived(
-		(overview?.pageviews_per_day ?? []).map((d, i) => ({
-			date: d.date,
-			pageviews: d.count,
-			visitors: overview?.unique_visitors_per_day?.find((v) => v.date === d.date)?.count ?? 0,
-			prev_pageviews: overview?.prev_pageviews_per_day?.[i]?.count ?? 0,
-			prev_visitors: overview?.prev_unique_visitors_per_day?.[i]?.count ?? 0
-		}))
-	);
-
-	let hourlyData = $derived(overview?.hourly_distribution ?? []);
-
-	let topPagesData = $derived(
-		(overview?.top_pages ?? []).slice(0, 8).map((d) => ({ label: d.path, count: d.count }))
-	);
-	let topReferrersData = $derived(
-		(overview?.top_referrers ?? []).slice(0, 8).map((d) => ({ label: d.referrer, count: d.count }))
-	);
-	let browsersData = $derived(
-		(overview?.top_browsers ?? []).slice(0, 8).map((d) => ({ label: d.browser, count: d.count }))
-	);
-	let osData = $derived(
-		(overview?.top_os ?? []).slice(0, 8).map((d) => ({ label: d.os, count: d.count }))
-	);
-	let entryPagesData = $derived(
-		(overview?.top_entry_pages ?? []).slice(0, 8).map((d) => ({ label: d.path, count: d.count }))
-	);
-	let exitPagesData = $derived(
-		(overview?.top_exit_pages ?? []).slice(0, 8).map((d) => ({ label: d.path, count: d.count }))
-	);
-	let utmSourcesData = $derived(
-		(overview?.top_utm_sources ?? []).slice(0, 8).map((d) => ({ label: d.value, count: d.count }))
-	);
-	let utmMediumsData = $derived(
-		(overview?.top_utm_mediums ?? []).slice(0, 8).map((d) => ({ label: d.value, count: d.count }))
-	);
-	let utmCampaignsData = $derived(
-		(overview?.top_utm_campaigns ?? []).slice(0, 8).map((d) => ({ label: d.value, count: d.count }))
-	);
-	let eventsData = $derived(
-		(overview?.top_events ?? []).slice(0, 8).map((d) => ({ label: d.name, count: d.count }))
-	);
-
-	let devicesPieData = $derived(
-		(overview?.top_devices ?? []).map((d, i) => ({
-			key: d.device,
-			label: d.device,
-			value: d.count,
-			color: CHART_COLORS[i % CHART_COLORS.length]
-		}))
-	);
-
-	let screensPieData = $derived(
-		(overview?.top_screens ?? []).map((d, i) => ({
-			key: d.screen,
-			label: d.screen,
-			value: d.count,
-			color: CHART_COLORS[i % CHART_COLORS.length]
-		}))
-	);
-
-	let pageviewsTrend = $derived(
-		overview
-			? trendPercent(overview.total_pageviews, overview.prev_total_pageviews)
-			: { text: '—', color: 'text-muted-foreground' }
-	);
-	let visitorsTrend = $derived(
-		overview
-			? trendPercent(overview.unique_visitors, overview.prev_unique_visitors)
-			: { text: '—', color: 'text-muted-foreground' }
-	);
-	let vpvTrend = $derived(trendPercent(viewsPerVisitor(), prevViewsPerVisitor()));
-	let bounceTrend = $derived(
-		overview
-			? trendPercent(overview.bounce_rate, overview.prev_bounce_rate)
-			: { text: '—', color: 'text-muted-foreground' }
-	);
-
-	let drawerConfig = $derived(() => {
-		if (!overview || !activeDrawer)
-			return { title: '', items: [] as { label: string; count: number }[], filterKey: '' };
-		const configs: Record<
-			string,
-			{ title: string; items: { label: string; count: number }[]; filterKey: string }
-		> = {
-			pages: {
-				title: 'Top Pages',
-				items: (overview.top_pages ?? []).map((d) => ({ label: d.path, count: d.count })),
-				filterKey: 'path'
-			},
-			referrers: {
-				title: 'Top Referrers',
-				items: (overview.top_referrers ?? []).map((d) => ({ label: d.referrer, count: d.count })),
-				filterKey: 'referrer'
-			},
-			browsers: {
-				title: 'Browsers',
-				items: (overview.top_browsers ?? []).map((d) => ({ label: d.browser, count: d.count })),
-				filterKey: 'browser'
-			},
-			os: {
-				title: 'Operating Systems',
-				items: (overview.top_os ?? []).map((d) => ({ label: d.os, count: d.count })),
-				filterKey: 'os'
-			},
-			entry: {
-				title: 'Entry Pages',
-				items: (overview.top_entry_pages ?? []).map((d) => ({ label: d.path, count: d.count })),
-				filterKey: 'path'
-			},
-			exit: {
-				title: 'Exit Pages',
-				items: (overview.top_exit_pages ?? []).map((d) => ({ label: d.path, count: d.count })),
-				filterKey: 'path'
-			},
-			countries: {
-				title: 'Countries',
-				items: (overview.top_countries ?? []).map((d) => ({ label: d.country, count: d.count })),
-				filterKey: 'country'
-			},
-			utm_sources: {
-				title: 'UTM Sources',
-				items: (overview.top_utm_sources ?? []).map((d) => ({ label: d.value, count: d.count })),
-				filterKey: ''
-			},
-			utm_mediums: {
-				title: 'UTM Mediums',
-				items: (overview.top_utm_mediums ?? []).map((d) => ({ label: d.value, count: d.count })),
-				filterKey: ''
-			},
-			utm_campaigns: {
-				title: 'UTM Campaigns',
-				items: (overview.top_utm_campaigns ?? []).map((d) => ({ label: d.value, count: d.count })),
-				filterKey: ''
-			},
-			events: {
-				title: 'Custom Events',
-				items: (overview.top_events ?? []).map((d) => ({ label: d.name, count: d.count })),
-				filterKey: ''
-			}
-		};
-		return configs[activeDrawer] ?? { title: '', items: [], filterKey: '' };
-	});
-
-	function applyDrawerFilter(value: string) {
-		const key = drawerConfig().filterKey;
-		if (key) {
-			activeFilters = { ...activeFilters, [key]: value };
-			showFilters = true;
-		}
-		activeDrawer = null;
+	async function generateShare() {
+		site = await api.sites.share(siteId);
+		toast.success('Public link created.');
 	}
+
+	async function revokeShare() {
+		await api.sites.revokeShare(siteId);
+		site = await api.sites.get(siteId);
+		toast.neutral('Public link revoked.');
+	}
+
+	async function exportCSV() {
+		const { from, to } = rangeDates(selectedRange, customFrom, customTo);
+		const res = await fetch(`/api/analytics/${siteId}/export?from=${from}&to=${to}&format=csv`, {
+			headers: { Authorization: `Bearer ${getToken()}` }
+		});
+		if (!res.ok) {
+			toast.danger('The export failed. Nothing was downloaded.');
+			return;
+		}
+		const url = URL.createObjectURL(await res.blob());
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = 'vision-export.csv';
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	function openGoal() {
+		goalName = '';
+		goalType = 'pageview';
+		goalPagePath = '';
+		goalEventName = '';
+		goalMatchType = 'exact';
+		goalError = '';
+		goalOpen = true;
+	}
+
+	async function saveGoal(e: Event) {
+		e.preventDefault();
+		goalSaving = true;
+		goalError = '';
+		try {
+			await api.goals.create({
+				site_id: siteId,
+				name: goalName.trim(),
+				goal_type: goalType,
+				event_name: goalType === 'event' ? goalEventName.trim() : undefined,
+				page_path: goalType === 'pageview' ? goalPagePath.trim() : undefined,
+				match_type: goalType === 'pageview' ? goalMatchType : undefined
+			});
+			goalOpen = false;
+			toast.success('Goal added.');
+			await Promise.all([loadGoals(), refreshGoalConversions()]);
+		} catch (e) {
+			goalError = e instanceof Error ? e.message : 'Could not save the goal.';
+		} finally {
+			goalSaving = false;
+		}
+	}
+
+	async function deleteGoal() {
+		const target = goalDeleteTarget;
+		if (!target) return;
+		await api.goals.delete(target.id);
+		goalDeleteTarget = null;
+		toast.neutral('Goal deleted.');
+		await Promise.all([loadGoals(), refreshGoalConversions()]);
+	}
+
+	const hasConversions = $derived((goalConversions?.goals.length ?? 0) > 0);
 </script>
 
 <svelte:head><title>{site ? `${site.name} — Vision` : 'Vision'}</title></svelte:head>
 
-{#if site}
-	<div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-		<div class="min-w-0">
-			<div class="flex items-center gap-3">
-				<SiteFavicon domain={site.domain} name={site.name} class="h-6 w-6" />
-				<h1 class="truncate text-2xl font-bold">{site.name}</h1>
-			</div>
-			<p class="truncate text-muted-foreground">{site.domain}</p>
-			<div class="mt-2 flex flex-wrap items-center gap-2">
-				{#if site.share_token}
-					<div class="flex min-w-0 max-w-full items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5">
-						<Icon icon="solar:link-linear" class="h-4 w-4 shrink-0 text-muted-foreground" />
-						<code class="truncate text-xs text-muted-foreground">{shareUrl}</code>
-						<button
-							onclick={copyShareUrl}
-							class="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
-							aria-label="Copy share link"
-						>
-							{#if shareCopied}
-								<Icon icon="solar:check-circle-linear" class="h-4 w-4 text-green-500" />
-							{:else}
-								<Icon icon="solar:copy-linear" class="h-4 w-4" />
-							{/if}
-						</button>
-						<button
-							onclick={revokeShare}
-							class="shrink-0 rounded p-1 text-red-500 transition-colors hover:bg-red-500/10"
-							aria-label="Revoke share link"
-						>
-							<Icon icon="solar:trash-bin-trash-linear" class="h-4 w-4" />
-						</button>
-					</div>
-				{:else}
-					<button
-						onclick={generateShare}
-						class="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-					>
-						<Icon icon="solar:share-linear" class="h-3.5 w-3.5" />
-						Create public link
-					</button>
-				{/if}
-			</div>
-		</div>
-		<div class="flex items-center gap-3 text-sm">
-			<button
-				onclick={exportCSV}
-				class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-				aria-label="Export CSV"
-			>
-				<Icon icon="solar:download-linear" class="h-4 w-4" />
-				Export
-			</button>
-			{#if live}
-				<span class="relative flex h-2.5 w-2.5">
-					<span
-						class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
-					></span>
-					<span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500"></span>
-				</span>
-				<span class="text-green-600">Live</span>
-			{:else}
-				<span class="h-2.5 w-2.5 rounded-full bg-gray-300"></span>
-				<span class="text-muted-foreground">Connecting…</span>
-			{/if}
-		</div>
+{#if !site}
+	<div class="flex flex-col gap-4">
+		<Skeleton class="h-16 w-full rounded-fc-md" />
+		<Skeleton class="h-64 w-full rounded-fc-md" />
 	</div>
-
-	<Card.Root class="mb-8">
-		<Card.Header>
-			<Card.Title>Tracking Script</Card.Title>
-			<Card.Description>Add this to your website's &lt;head&gt;</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<div class="group relative">
-				<pre
-					class="overflow-x-auto rounded bg-muted p-3 pr-12 text-xs"
-				>&lt;script defer src="{page.url.origin}/s.js"&gt;&lt;/script&gt;</pre>
-				<button
-					onclick={copySnippet}
-					class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-muted-foreground transition-colors hover:bg-background/80 hover:text-foreground"
-					aria-label="Copy tracking script"
-				>
-					{#if copied}
-						<Check class="h-4 w-4 text-green-500" />
-					{:else}
-						<Copy class="h-4 w-4" />
-					{/if}
-				</button>
+{:else}
+	<div class="flex flex-col gap-10">
+		<div class="flex flex-wrap items-start justify-between gap-4">
+			<div class="flex min-w-0 flex-col gap-2">
+				<div class="flex min-w-0 items-center gap-3">
+					<SiteFavicon domain={site.domain} name={site.name} class="size-7" />
+					<h1 class="truncate text-fc-2xl font-semibold text-fc-fg">{site.name}</h1>
+				</div>
+				<p class="truncate text-fc-sm text-fc-fg-muted">{site.domain}</p>
 			</div>
-		</Card.Content>
-	</Card.Root>
-
-	{#if overview}
-		<div class="mb-6 flex flex-wrap items-center gap-3">
-			<ToggleGroup.Root
-				type="single"
-				variant="outline"
-				size="sm"
-				value={selectedRange}
-				onValueChange={(v) => {
-					if (v) selectRange(v);
-				}}
-			>
-				{#each ranges as r (r.key)}
-					<ToggleGroup.Item value={r.key}>{r.label}</ToggleGroup.Item>
-				{/each}
-			</ToggleGroup.Root>
-
-			<button
-				onclick={() => (showFilters = !showFilters)}
-				class="flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors {activeFilterCount >
-				0
-					? 'border-foreground bg-foreground text-background'
-					: 'text-muted-foreground hover:text-foreground'}"
-			>
-				<Icon icon="solar:filter-linear" class="h-3.5 w-3.5" />
-				Filters
-				{#if activeFilterCount > 0}
-					<span class="rounded-full bg-background px-1.5 text-[10px] leading-4 text-foreground"
-						>{activeFilterCount}</span
-					>
-				{/if}
-			</button>
-			{#if activeFilterCount > 0}
-				<button
-					onclick={clearFilters}
-					class="text-xs text-muted-foreground transition-colors hover:text-foreground"
-				>
-					Clear
-				</button>
-			{/if}
-
-			<span class="ml-auto text-xs text-muted-foreground">{dateRangeLabel()}</span>
+			<div class="flex flex-wrap items-center gap-3">
+				<StatusDot
+					tone={live ? 'success' : 'warning'}
+					label={live ? 'Live' : 'Reconnecting…'}
+					pulse={!live}
+				/>
+				<Button variant="ghost" icon={icons.download} onclick={exportCSV}>Export</Button>
+			</div>
 		</div>
 
-		{#if selectedRange === 'custom'}
-			<div class="mb-4 flex items-center gap-2">
-				<input
-					type="date"
-					bind:value={customFrom}
-					class="rounded-md border bg-background px-3 py-1.5 text-sm"
-				/>
-				<span class="text-sm text-muted-foreground">to</span>
-				<input
-					type="date"
-					bind:value={customTo}
-					class="rounded-md border bg-background px-3 py-1.5 text-sm"
-				/>
+		<section class="flex flex-col gap-4">
+			<div class="flex flex-col gap-1">
+				<h2 class="text-fc-lg font-semibold text-fc-fg">Tracking</h2>
+				<p class="text-fc-sm text-fc-fg-muted">
+					Paste this in the site's <code class="font-fc-mono">&lt;head&gt;</code>. Nothing else to
+					configure.
+				</p>
 			</div>
-		{/if}
+			<Card class="flex flex-col gap-4">
+				<SecretField value={trackingSnippet} sensitive={false} label="Script tag" />
 
-		{#if showFilters}
-			<div class="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-				{#each filterFields as f}
-					<div>
-						<label for="filter-{f.key}" class="mb-1 block text-xs text-muted-foreground"
-							>{f.label}</label
-						>
-						<input
-							id="filter-{f.key}"
-							type="text"
-							value={activeFilters[f.key] ?? ''}
-							oninput={(e) => {
-								activeFilters = { ...activeFilters, [f.key]: e.currentTarget.value };
-							}}
-							placeholder={f.placeholder}
-							class="w-full rounded-md border bg-background px-2.5 py-1.5 text-sm placeholder:text-muted-foreground"
+				<SettingsRow
+					label="Public dashboard"
+					description={site.share_token
+						? 'Anyone with the link can read these numbers — and only these.'
+						: 'Create a read-only link you can hand to a client without an account.'}
+					stacked={Boolean(site.share_token)}
+				>
+					{#if site.share_token}
+						<div class="flex w-full flex-col gap-2">
+							<SecretField value={shareUrl} sensitive={false} label="Share link" class="w-full" />
+							<Button
+								variant="ghost-danger"
+								icon={icons.remove}
+								class="self-start"
+								onclick={() => (revokeShareOpen = true)}
+							>
+								Revoke link
+							</Button>
+						</div>
+					{:else}
+						<Button variant="outline" icon={icons.globe} onclick={generateShare}>
+							Create public link
+						</Button>
+					{/if}
+				</SettingsRow>
+			</Card>
+		</section>
+
+		{#if !overview}
+			<Skeleton class="h-64 w-full rounded-fc-md" />
+		{:else}
+			<section class="flex flex-col gap-4">
+				<div class="flex flex-wrap items-center gap-3">
+					<div class="min-w-0 flex-1">
+						<Tabs
+							items={ranges.map((r) => ({ id: r.key, label: r.label }))}
+							value={selectedRange}
+							onChange={selectRange}
+							label="Date range"
 						/>
 					</div>
-				{/each}
-			</div>
-		{/if}
+					<Button
+						variant={activeFilterCount > 0 ? 'primary' : 'outline'}
+						icon={icons.filter}
+						onclick={() => (filtersOpen = true)}
+					>
+						Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+					</Button>
+				</div>
 
-		<div class="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-			<StatCard label="Pageviews" value={fmt(overview.total_pageviews)} trend={pageviewsTrend} />
-			<StatCard label="Visitors" value={fmt(overview.unique_visitors)} trend={visitorsTrend} />
-			<StatCard label="Views / Visitor" value={viewsPerVisitor().toFixed(1)} trend={vpvTrend} />
-			<StatCard
-				label="Bounce Rate"
-				value="{overview.bounce_rate.toFixed(1)}%"
-				trend={bounceTrend}
-			/>
-			<StatCard label="Active Now" value={fmt(realtimeCount)} pulse />
-		</div>
+				{#if selectedRange === 'custom'}
+					<div class="flex flex-wrap items-end gap-3">
+						<Field label="From">
+							<Input bind:value={customFrom} type="date" />
+						</Field>
+						<Field label="To">
+							<Input bind:value={customTo} type="date" />
+						</Field>
+					</div>
+				{/if}
 
-		<Card.Root class="mb-8">
-			<Card.Header>
-				<div class="flex items-center justify-between">
-					<Card.Title>Goals</Card.Title>
-					{#if !showGoalForm}
-						<button
-							onclick={() => (showGoalForm = true)}
-							class="flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
-						>
-							<Icon icon="mdi:plus" class="h-4 w-4" />
-							Add Goal
-						</button>
+				<div class="flex flex-wrap items-center gap-2">
+					<span class="text-fc-xs text-fc-fg-muted">{dateRangeLabel}</span>
+					{#each Object.entries(activeFilters) as [key, value] (key)}
+						{#if value}
+							<Badge tone="accent">{key}: {value}</Badge>
+						{/if}
+					{/each}
+					{#if activeFilterCount > 0}
+						<Button variant="ghost" size="sm" icon={icons.refresh} onclick={clearFilters}>
+							Clear filters
+						</Button>
 					{/if}
 				</div>
-			</Card.Header>
-			<Card.Content>
-				{#if showGoalForm}
-					<div class="mb-4 space-y-3 rounded-lg border p-4">
-						<div>
-							<label for="goal-name" class="mb-1 block text-sm font-medium">Name</label>
-							<input
-								id="goal-name"
-								type="text"
-								bind:value={goalName}
-								placeholder="e.g. Signup, Pricing page visit"
-								class="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-							/>
-						</div>
-						<div>
-							<span class="mb-1.5 block text-sm font-medium">Type</span>
-							<div class="flex gap-2">
-								<button
-									onclick={() => (goalType = 'pageview')}
-									class="rounded-full px-3 py-1 text-sm font-medium transition-colors {goalType === 'pageview' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground hover:text-foreground'}"
-								>
-									Pageview
-								</button>
-								<button
-									onclick={() => (goalType = 'event')}
-									class="rounded-full px-3 py-1 text-sm font-medium transition-colors {goalType === 'event' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground hover:text-foreground'}"
-								>
-									Custom Event
-								</button>
-							</div>
-						</div>
-						{#if goalType === 'pageview'}
-							<div class="flex gap-2">
-								<div class="flex-1">
-									<label for="goal-path" class="mb-1 block text-sm font-medium">Path</label>
-									<input
-										id="goal-path"
-										type="text"
-										bind:value={goalPagePath}
-										placeholder="/pricing"
-										class="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-									/>
-								</div>
-								<div class="w-36">
-									<label for="goal-match" class="mb-1 block text-sm font-medium">Match</label>
-									<select
-										id="goal-match"
-										bind:value={goalMatchType}
-										class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-									>
-										<option value="exact">Exact</option>
-										<option value="starts_with">Starts with</option>
-										<option value="contains">Contains</option>
-									</select>
-								</div>
-							</div>
-						{:else}
-							<div>
-								<label for="goal-event" class="mb-1 block text-sm font-medium">Event Name</label>
-								<input
-									id="goal-event"
-									type="text"
-									bind:value={goalEventName}
-									placeholder="signup"
-									class="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-								/>
-							</div>
-						{/if}
-						<div class="flex gap-2 pt-1">
-							<button
-								onclick={saveGoal}
-								disabled={goalSaving || !goalName || (goalType === 'pageview' ? !goalPagePath : !goalEventName)}
-								class="flex items-center gap-1.5 rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								{goalSaving ? 'Saving…' : 'Save'}
-							</button>
-							<button
-								onclick={resetGoalForm}
-								class="rounded-full bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-							>
-								Cancel
-							</button>
-						</div>
-					</div>
-				{/if}
 
-				{#if goalConversions && goalConversions.goals.length > 0}
-					{@const maxConv = Math.max(...goalConversions.goals.map((g: { conversions: number }) => g.conversions), 1)}
-					<div class="space-y-1">
-						{#each goalConversions.goals as goal (goal.id)}
-							<div class="group relative rounded transition-colors hover:bg-muted/30">
-								<div
-									class="absolute inset-y-0 left-0 rounded bg-muted/50"
-									style="width: {(goal.conversions / maxConv) * 100}%"
-								></div>
-								<div class="relative flex items-center justify-between px-3 py-1.5 text-sm">
-									<div class="flex items-center gap-2">
-										<Icon
-											icon={goal.goal_type === 'event' ? 'solar:bolt-linear' : 'solar:link-linear'}
-											class="h-3.5 w-3.5 text-muted-foreground"
-										/>
-										<span>{goal.name}</span>
-									</div>
-									<div class="flex items-center gap-3">
-										<span class="tabular-nums text-muted-foreground">{goal.conversions}</span>
-										<span class="w-14 text-right tabular-nums text-xs text-muted-foreground">
-											{goal.conversion_rate.toFixed(1)}%
-										</span>
-										<button
-											onclick={() => deleteGoal(goal.id)}
-											class="rounded-md p-1 text-muted-foreground opacity-0 transition-all hover:text-red-500 group-hover:opacity-100"
-											aria-label="Delete goal"
-										>
-											<Icon icon="solar:trash-bin-trash-linear" class="h-3.5 w-3.5" />
-										</button>
-									</div>
-								</div>
-							</div>
-						{/each}
-					</div>
-					<p class="mt-3 text-xs text-muted-foreground">
-						Based on {goalConversions.total_visitors} unique visitors
-					</p>
-				{:else if siteGoals.length === 0 && !showGoalForm}
-					<p class="text-sm text-muted-foreground">
-						No goals configured. Add a goal to track conversion rates.
-					</p>
-				{:else if siteGoals.length > 0 && goalConversions?.goals.length === 0}
-					<p class="text-sm text-muted-foreground">
-						No conversions yet for the selected period.
-					</p>
-				{/if}
-			</Card.Content>
-		</Card.Root>
+				<div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+					<StatCard label="Pageviews" value={fmt(overview.total_pageviews)}>
+						<span class="text-fc-xs {pageviewsTrend.color}">{pageviewsTrend.text}</span>
+					</StatCard>
+					<StatCard label="Visitors" value={fmt(overview.unique_visitors)}>
+						<span class="text-fc-xs {visitorsTrend.color}">{visitorsTrend.text}</span>
+					</StatCard>
+					<StatCard label="Views / visitor" value={viewsPerVisitor.toFixed(1)}>
+						<span class="text-fc-xs {vpvTrend.color}">{vpvTrend.text}</span>
+					</StatCard>
+					<StatCard label="Bounce rate" value="{overview.bounce_rate.toFixed(1)}%">
+						<span class="text-fc-xs {bounceTrend.color}">{bounceTrend.text}</span>
+					</StatCard>
+					<StatCard label="Active now" value={fmt(realtimeCount)}>
+						<StatusDot tone="success" label="right now" pulse class="text-fc-xs" />
+					</StatCard>
+				</div>
+			</section>
 
-		{#if overview.performance && overview.performance.sample_count > 0}
-			<PerformanceCard performance={overview.performance} />
-		{/if}
-
-		{#if chartData.length > 0}
-			<Card.Root class="mb-8">
-				<Card.Header>
-					<div class="flex items-center justify-between">
-						<div>
-							<Card.Title>Traffic Over Time</Card.Title>
-							<Card.Description>Pageviews and unique visitors</Card.Description>
-						</div>
-						<ToggleGroup.Root
-							type="single"
-							variant="outline"
-							size="sm"
-							value={selectedGranularity}
-							onValueChange={(v) => {
-								if (v) selectedGranularity = v as Granularity;
-							}}
-						>
-							{#each visibleGranularities as g (g.key)}
-								<ToggleGroup.Item value={g.key}>{g.label}</ToggleGroup.Item>
-							{/each}
-						</ToggleGroup.Root>
+			<section class="flex flex-col gap-4">
+				<div class="flex flex-wrap items-end justify-between gap-3">
+					<div class="flex flex-col gap-1">
+						<h2 class="text-fc-lg font-semibold text-fc-fg">Traffic over time</h2>
+						<p class="text-fc-sm text-fc-fg-muted">Pageviews and unique visitors.</p>
 					</div>
-				</Card.Header>
-				<Card.Content class="px-0">
-					<Chart.Container
-						config={chartConfig}
-						class="aspect-auto h-[300px] w-full [&_.lc-area-path:nth-child(n+3)]:opacity-20"
+					<Select
+						value={selectedGranularity}
+						aria-label="Granularity"
+						class="w-40"
+						onchange={(e) => (selectedGranularity = e.currentTarget.value as Granularity)}
 					>
-						<AreaChart
-							data={chartData}
-							x="date"
-							xScale={scaleBand().padding(0.25)}
-							axis="x"
+						{#each visibleGranularities as g (g.key)}
+							<option value={g.key}>{g.label}</option>
+						{/each}
+					</Select>
+				</div>
+
+				<Card class="flex flex-col gap-4">
+					<LineChart series={trafficSeries} labels={chartLabels} area height={280} />
+				</Card>
+
+				<div class="grid gap-4 lg:grid-cols-2">
+					{#if trafficSources.length > 0}
+						<Card class="flex flex-col gap-4">
+							<p class="text-fc-sm font-medium text-fc-fg">Traffic sources</p>
+							<DonutChart
+								data={trafficSources}
+								centerLabel="pageviews"
+								centerValue={fmt(overview.total_pageviews)}
+								class="flex-1"
+							/>
+						</Card>
+					{/if}
+
+					{#if hourlySeries[0].data.length > 0}
+						<Card class="flex flex-col gap-4">
+							<p class="text-fc-sm font-medium text-fc-fg">By hour of day</p>
+							<BarChart series={hourlySeries} labels={hourlyLabels} height={220} />
+						</Card>
+					{/if}
+				</div>
+			</section>
+
+			<section class="flex flex-col gap-4">
+				<div class="flex flex-wrap items-start justify-between gap-3">
+					<div class="flex flex-col gap-1">
+						<h2 class="text-fc-lg font-semibold text-fc-fg">Goals</h2>
+						<p class="text-fc-sm text-fc-fg-muted">
+							{goalConversions
+								? `Measured against ${fmt(goalConversions.total_visitors)} unique visitors.`
+								: 'Conversion rates for the pages and events that matter.'}
+						</p>
+					</div>
+					<Button icon={icons.plus} onclick={openGoal}>Add goal</Button>
+				</div>
+
+				{#if hasConversions}
+					<!-- SettingsRow draws the rule on its own top edge and drops it on the first
+					     child, so the list needs no manual Divider and no index. -->
+					<Card class="flex flex-col">
+						{#each goalConversions?.goals ?? [] as goal (goal.id)}
+							<SettingsRow
+								label={goal.name}
+								description="{goal.conversions} conversions · {goal.conversion_rate.toFixed(
+									1
+								)}% of visitors"
+							>
+								<Badge tone={goal.goal_type === 'event' ? 'accent' : 'neutral'}>
+									{goal.goal_type === 'event' ? 'event' : 'pageview'}
+								</Badge>
+								<Button
+									variant="ghost-danger"
+									icon={icons.remove}
+									aria-label="Delete {goal.name}"
+									onclick={() => {
+										goalDeleteTarget = { id: goal.id, name: goal.name };
+										goalDeleteOpen = true;
+									}}
+								>
+									Delete
+								</Button>
+							</SettingsRow>
+						{/each}
+					</Card>
+				{:else if siteGoals.length > 0}
+					<Alert tone="info">No conversions in this period yet.</Alert>
+				{:else}
+					<Alert tone="neutral">
+						No goals yet. A goal is a page or a custom event you want a conversion rate for.
+					</Alert>
+				{/if}
+			</section>
+
+			{#if overview.performance && overview.performance.sample_count > 0}
+				{@const perf = overview.performance}
+				<section class="flex flex-col gap-4">
+					<div class="flex flex-col gap-1">
+						<h2 class="text-fc-lg font-semibold text-fc-fg">Page load</h2>
+						<p class="text-fc-sm text-fc-fg-muted">
+							Averaged over {fmt(perf.sample_count)} samples, in milliseconds.
+						</p>
+					</div>
+					<Card class="flex flex-col gap-4">
+						<BarChart
 							series={[
-								{ key: 'pageviews', label: 'Pageviews', color: 'var(--chart-1)' },
-								{ key: 'visitors', label: 'Visitors', color: 'var(--chart-2)' },
-								{ key: 'prev_pageviews', label: 'Prev Pageviews', color: 'var(--chart-1)' },
-								{ key: 'prev_visitors', label: 'Prev Visitors', color: 'var(--chart-2)' }
-							]}
-							props={{
-								xAxis: {
-									format: (d: string) => formatChartDate(d, selectedGranularity)
+								{
+									name: 'Milliseconds',
+									data: [
+										perf.avg_dns,
+										perf.avg_tcp,
+										perf.avg_ttfb,
+										perf.avg_dom_load,
+										perf.avg_page_load
+									].map((n) => Math.round(n))
 								}
-							}}
-						>
-							{#snippet tooltip()}
-								<Chart.Tooltip />
-							{/snippet}
-						</AreaChart>
-					</Chart.Container>
-				</Card.Content>
-			</Card.Root>
-		{/if}
+							]}
+							labels={['DNS', 'TCP', 'TTFB', 'DOM', 'Load']}
+							height={200}
+							yFormat={(n) => `${n} ms`}
+						/>
+					</Card>
+				</section>
+			{/if}
 
-		<div class="mb-8 grid gap-4 md:grid-cols-2">
-			{#if trafficSourcesData().length > 0}
-				<Card.Root>
-					<Card.Header>
-						<Card.Title>Traffic Sources</Card.Title>
-					</Card.Header>
-					<Card.Content>
-						<div class="flex flex-col items-center justify-center gap-6 sm:flex-row">
-							<div class="aspect-square h-[200px]">
-								<Chart.Container config={trafficConfig} class="aspect-auto h-full w-full">
-									<PieChart
-										data={trafficSourcesData()}
-										key="key"
-										label="label"
-										value="value"
-										innerRadius={0.6}
-									/>
-								</Chart.Container>
-							</div>
-							<div class="shrink-0 space-y-2">
-								{#each trafficSourcesData() as source}
-									{@const pct =
-										trafficSourcesTotal() > 0
-											? ((source.value / trafficSourcesTotal()) * 100).toFixed(1)
-											: '0'}
-									<div class="flex items-center gap-2 text-sm">
-										<span
-											class="h-3 w-3 shrink-0 rounded-full"
-											style="background: {source.color}"
-										></span>
-										<span>{source.label}</span>
-										<span class="tabular-nums text-muted-foreground">{pct}%</span>
-									</div>
-								{/each}
-							</div>
+			{#if (overview.top_countries?.length ?? 0) > 0}
+				<section class="flex flex-col gap-4">
+					<div class="flex flex-wrap items-start justify-between gap-3">
+						<div class="flex flex-col gap-1">
+							<h2 class="text-fc-lg font-semibold text-fc-fg">Where they are</h2>
+							<p class="text-fc-sm text-fc-fg-muted">Visitors by country.</p>
 						</div>
-					</Card.Content>
-				</Card.Root>
-			{/if}
-
-			{#if hourlyData.length > 0}
-				<Card.Root>
-					<Card.Header>
-						<Card.Title>Hourly Distribution</Card.Title>
-					</Card.Header>
-					<Card.Content>
-						<Chart.Container config={hourlyConfig} class="min-h-[200px] w-full">
-							<BarChart
-								data={hourlyData}
-								x="hour"
-								xScale={scaleBand().padding(0.25)}
-								axis="x"
-								series={[{ key: 'count', label: 'Pageviews', color: 'var(--chart-1)' }]}
-								props={{
-									xAxis: {
-										format: (d: number) => {
-											if (d % 3 === 0) return `${d}h`;
-											return '';
-										}
-									}
-								}}
-							>
-								{#snippet tooltip()}
-									<Chart.Tooltip />
-								{/snippet}
-							</BarChart>
-						</Chart.Container>
-					</Card.Content>
-				</Card.Root>
-			{/if}
-		</div>
-
-		{#if (overview?.top_utm_sources?.length ?? 0) > 0 || (overview?.top_utm_mediums?.length ?? 0) > 0 || (overview?.top_utm_campaigns?.length ?? 0) > 0}
-			<div class="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-				{#if (overview?.top_utm_sources?.length ?? 0) > 0}
-					<BarListCard
-						title="UTM Sources"
-						items={utmSourcesData}
-						showSeeAll={(overview?.top_utm_sources?.length ?? 0) > 8}
-						onSeeAll={() => (activeDrawer = 'utm_sources')}
-					/>
-				{/if}
-				{#if (overview?.top_utm_mediums?.length ?? 0) > 0}
-					<BarListCard
-						title="UTM Mediums"
-						items={utmMediumsData}
-						showSeeAll={(overview?.top_utm_mediums?.length ?? 0) > 8}
-						onSeeAll={() => (activeDrawer = 'utm_mediums')}
-					/>
-				{/if}
-				{#if (overview?.top_utm_campaigns?.length ?? 0) > 0}
-					<BarListCard
-						title="UTM Campaigns"
-						items={utmCampaignsData}
-						showSeeAll={(overview?.top_utm_campaigns?.length ?? 0) > 8}
-						onSeeAll={() => (activeDrawer = 'utm_campaigns')}
-					/>
-				{/if}
-			</div>
-		{/if}
-
-		{#if (overview?.top_events?.length ?? 0) > 0}
-			<BarListCard
-				title="Custom Events"
-				items={eventsData}
-				showSeeAll={(overview?.top_events?.length ?? 0) > 8}
-				onSeeAll={() => (activeDrawer = 'events')}
-				formatCount
-				class="mb-8"
-			>
-				{#snippet label(item)}
-					<span class="font-mono">{item.label}</span>
-				{/snippet}
-			</BarListCard>
-		{/if}
-
-		{#if overview.top_countries?.length > 0}
-			<Card.Root class="mb-8">
-				<Card.Header>
-					<div class="flex items-center justify-between">
-						<Card.Title>Visitors</Card.Title>
-						{#if (overview?.top_countries?.length ?? 0) > 8}
-							<button
-								onclick={() => (activeDrawer = 'countries')}
-								class="text-xs text-muted-foreground transition-colors hover:text-foreground"
-								>See all →</button
-							>
+						{#if (overview.top_countries?.length ?? 0) > 8}
+							<Button variant="ghost" iconRight={icons.arrow} onclick={() => openDrawer('countries')}>
+								See all
+							</Button>
 						{/if}
 					</div>
-				</Card.Header>
-				<Card.Content>
-					<WorldMap countries={overview.top_countries} />
-				</Card.Content>
-			</Card.Root>
-		{/if}
-
-		{#if (overview?.top_entry_pages?.length ?? 0) > 0 || (overview?.top_exit_pages?.length ?? 0) > 0}
-			<div class="mb-8 grid gap-4 md:grid-cols-2">
-				{#if (overview?.top_entry_pages?.length ?? 0) > 0}
-					<BarListCard
-						title="Entry Pages"
-						items={entryPagesData}
-						showSeeAll={(overview?.top_entry_pages?.length ?? 0) > 8}
-						onSeeAll={() => (activeDrawer = 'entry')}
-						onItemClick={setFilter('path')}
-					/>
-				{/if}
-				{#if (overview?.top_exit_pages?.length ?? 0) > 0}
-					<BarListCard
-						title="Exit Pages"
-						items={exitPagesData}
-						showSeeAll={(overview?.top_exit_pages?.length ?? 0) > 8}
-						onSeeAll={() => (activeDrawer = 'exit')}
-						onItemClick={setFilter('path')}
-					/>
-				{/if}
-			</div>
-		{/if}
-
-		<div class="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
-			{#if topPagesData.length > 0}
-				<BarListCard
-					title="Top Pages"
-					items={topPagesData}
-					showSeeAll={(overview?.top_pages?.length ?? 0) > 8}
-					onSeeAll={() => (activeDrawer = 'pages')}
-					onItemClick={setFilter('path')}
-					class="lg:col-span-2"
-				/>
+					<Card>
+						<WorldMap countries={overview.top_countries} />
+					</Card>
+				</section>
 			{/if}
 
-			{#if devicesPieData.length > 0}
-				<PieLegendCard
-					title="Devices"
-					data={devicesPieData}
-					configKey="devices"
-					onItemClick={setFilter('device')}
-				/>
-			{/if}
+			<section class="flex flex-col gap-4">
+				<h2 class="text-fc-lg font-semibold text-fc-fg">Content</h2>
+				<div class="grid gap-4 lg:grid-cols-3">
+					<BarList
+						title="Top pages"
+						items={topPages}
+						showSeeAll={(overview.top_pages?.length ?? 0) > 8}
+						onSeeAll={() => openDrawer('pages')}
+						onItemClick={setFilter('path')}
+						class="lg:col-span-2"
+					/>
+					{#if devices.length > 0}
+						<Card class="flex flex-col gap-4">
+							<p class="text-fc-sm font-medium text-fc-fg">Devices</p>
+							<DonutChart data={devices} class="flex-1" />
+						</Card>
+					{/if}
 
-			{#if topReferrersData.length > 0}
-				<BarListCard
-					title="Top Referrers"
-					items={topReferrersData}
-					showSeeAll={(overview?.top_referrers?.length ?? 0) > 8}
-					onSeeAll={() => (activeDrawer = 'referrers')}
-					onItemClick={setFilter('referrer')}
-					class="lg:col-span-2"
-				>
-					{#snippet label(item)}
-						<a
-							href="{item.label.includes('://') ? '' : 'https://'}{item.label}"
-							target="_blank"
-							rel="noopener noreferrer"
-							class="flex items-center gap-2 truncate mr-2 hover:underline"
-							onclick={(e) => e.stopPropagation()}
-						>
-							<img
-								src="https://www.google.com/s2/favicons?domain={item.label}&sz=16"
-								alt=""
-								class="h-4 w-4 shrink-0"
+					<BarList
+						title="Top referrers"
+						items={topReferrers}
+						showSeeAll={(overview.top_referrers?.length ?? 0) > 8}
+						onSeeAll={() => openDrawer('referrers')}
+						onItemClick={setFilter('referrer')}
+						class="lg:col-span-2"
+					/>
+					{#if screens.length > 0}
+						<Card class="flex flex-col gap-4">
+							<p class="text-fc-sm font-medium text-fc-fg">Screens</p>
+							<DonutChart data={screens} class="flex-1" />
+						</Card>
+					{/if}
+
+					{#if entryPages.length > 0}
+						<BarList
+							title="Entry pages"
+							items={entryPages}
+							showSeeAll={(overview.top_entry_pages?.length ?? 0) > 8}
+							onSeeAll={() => openDrawer('entry')}
+							onItemClick={setFilter('path')}
+						/>
+					{/if}
+					{#if exitPages.length > 0}
+						<BarList
+							title="Exit pages"
+							items={exitPages}
+							showSeeAll={(overview.top_exit_pages?.length ?? 0) > 8}
+							onSeeAll={() => openDrawer('exit')}
+							onItemClick={setFilter('path')}
+						/>
+					{/if}
+
+					<BarList
+						title="Browsers"
+						items={browsers}
+						showSeeAll={(overview.top_browsers?.length ?? 0) > 8}
+						onSeeAll={() => openDrawer('browsers')}
+						onItemClick={setFilter('browser')}
+					/>
+					<BarList
+						title="Operating systems"
+						items={operatingSystems}
+						showSeeAll={(overview.top_os?.length ?? 0) > 8}
+						onSeeAll={() => openDrawer('os')}
+						onItemClick={setFilter('os')}
+						class="lg:col-span-2"
+					/>
+				</div>
+			</section>
+
+			{#if utmSources.length > 0 || utmMediums.length > 0 || utmCampaigns.length > 0 || events.length > 0}
+				<section class="flex flex-col gap-4">
+					<h2 class="text-fc-lg font-semibold text-fc-fg">Campaigns and events</h2>
+					<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+						{#if utmSources.length > 0}
+							<BarList
+								title="UTM sources"
+								items={utmSources}
+								showSeeAll={(overview.top_utm_sources?.length ?? 0) > 8}
+								onSeeAll={() => openDrawer('utm_sources')}
 							/>
-							{item.label}
-						</a>
-					{/snippet}
-				</BarListCard>
+						{/if}
+						{#if utmMediums.length > 0}
+							<BarList
+								title="UTM mediums"
+								items={utmMediums}
+								showSeeAll={(overview.top_utm_mediums?.length ?? 0) > 8}
+								onSeeAll={() => openDrawer('utm_mediums')}
+							/>
+						{/if}
+						{#if utmCampaigns.length > 0}
+							<BarList
+								title="UTM campaigns"
+								items={utmCampaigns}
+								showSeeAll={(overview.top_utm_campaigns?.length ?? 0) > 8}
+								onSeeAll={() => openDrawer('utm_campaigns')}
+							/>
+						{/if}
+						{#if events.length > 0}
+							<BarList
+								title="Custom events"
+								items={events}
+								showSeeAll={(overview.top_events?.length ?? 0) > 8}
+								onSeeAll={() => openDrawer('events')}
+								class="md:col-span-2 lg:col-span-3"
+							>
+								{#snippet label(item)}
+									<span class="truncate font-fc-mono text-fc-xs text-fc-fg">{item.label}</span>
+								{/snippet}
+							</BarList>
+						{/if}
+					</div>
+				</section>
 			{/if}
-
-			{#if screensPieData.length > 0}
-				<PieLegendCard
-					title="Screens"
-					data={screensPieData}
-					configKey="screens"
-					configColor="var(--chart-2)"
-				/>
-			{/if}
-
-			{#if browsersData.length > 0}
-				<BarListCard
-					title="Browsers"
-					items={browsersData}
-					showSeeAll={(overview?.top_browsers?.length ?? 0) > 8}
-					onSeeAll={() => (activeDrawer = 'browsers')}
-					onItemClick={setFilter('browser')}
-				/>
-			{/if}
-
-			{#if osData.length > 0}
-				<BarListCard
-					title="Operating Systems"
-					items={osData}
-					showSeeAll={(overview?.top_os?.length ?? 0) > 8}
-					onSeeAll={() => (activeDrawer = 'os')}
-					onItemClick={setFilter('os')}
-					class="lg:col-span-2"
-				/>
-			{/if}
-		</div>
-
-		<StatsDrawer
-			open={activeDrawer !== null}
-			onclose={() => (activeDrawer = null)}
-			title={drawerConfig().title}
-			items={drawerConfig().items}
-			onFilter={drawerConfig().filterKey ? applyDrawerFilter : undefined}
-		/>
-	{/if}
+		{/if}
+	</div>
 {/if}
+
+<Drawer bind:open={filtersOpen} title="Filters" description="Narrow every number on this page." showClose>
+	<div class="flex flex-col gap-4">
+		{#each filterFields as f (f.key)}
+			<Field label={f.label}>
+				<Input
+					value={activeFilters[f.key] ?? ''}
+					placeholder={f.placeholder}
+					oninput={(e) => (activeFilters = { ...activeFilters, [f.key]: e.currentTarget.value })}
+				/>
+			</Field>
+		{/each}
+	</div>
+
+	{#snippet footer()}
+		<div class="flex gap-2">
+			<Button variant="ghost" size="lg" icon={icons.refresh} class="flex-1" onclick={clearFilters}>
+				Clear
+			</Button>
+			<Button size="lg" icon={icons.check} class="flex-1" onclick={() => (filtersOpen = false)}>
+				Done
+			</Button>
+		</div>
+	{/snippet}
+</Drawer>
+
+<Drawer bind:open={goalOpen} title="New goal" description="A goal turns a page or an event into a conversion rate." showClose>
+	<form id="goal-form" class="flex flex-col gap-4" onsubmit={saveGoal}>
+		<Field label="Name" helper="How it appears in the goals list.">
+			<Input bind:value={goalName} placeholder="Signup" required disabled={goalSaving} />
+		</Field>
+
+		<Field label="Type">
+			<Select bind:value={goalType} disabled={goalSaving}>
+				<option value="pageview">Pageview — someone reaches a page</option>
+				<option value="event">Custom event — the script reports one</option>
+			</Select>
+		</Field>
+
+		{#if goalType === 'pageview'}
+			<Field label="Path">
+				<Input bind:value={goalPagePath} placeholder="/pricing" disabled={goalSaving} />
+			</Field>
+			<Field label="Match">
+				<Select bind:value={goalMatchType} disabled={goalSaving}>
+					<option value="exact">Exactly this path</option>
+					<option value="starts_with">Starts with it</option>
+					<option value="contains">Contains it</option>
+				</Select>
+			</Field>
+		{:else}
+			<Field label="Event name" helper="The string your script passes to the tracker.">
+				<Input bind:value={goalEventName} placeholder="signup" disabled={goalSaving} class="font-fc-mono" />
+			</Field>
+		{/if}
+
+		{#if goalError}
+			<Alert tone="danger" title="Not saved">{goalError}</Alert>
+		{/if}
+	</form>
+
+	{#snippet footer()}
+		<div class="flex gap-2">
+			<Button variant="ghost" size="lg" class="flex-1" disabled={goalSaving} onclick={() => (goalOpen = false)}>
+				Cancel
+			</Button>
+			<Button
+				type="submit"
+				form="goal-form"
+				size="lg"
+				icon={icons.plus}
+				class="flex-1"
+				disabled={goalSaving ||
+					!goalName.trim() ||
+					(goalType === 'pageview' ? !goalPagePath.trim() : !goalEventName.trim())}
+			>
+				{goalSaving ? 'Saving…' : 'Add goal'}
+			</Button>
+		</div>
+	{/snippet}
+</Drawer>
+
+<StatsDrawer
+	bind:open={drawerOpen}
+	title={activeDrawer?.title ?? ''}
+	items={activeDrawer?.items() ?? []}
+	onFilter={activeDrawer?.filterKey ? setFilter(activeDrawer.filterKey) : undefined}
+/>
+
+<ConfirmModal
+	bind:open={goalDeleteOpen}
+	tone="danger"
+	title="Delete {goalDeleteTarget?.name ?? 'this goal'}?"
+	description="The goal stops being measured. Past conversions are not stored separately, so its history goes with it."
+	confirmLabel="Delete goal"
+	cancelLabel="Keep it"
+	onConfirm={deleteGoal}
+	onCancel={() => (goalDeleteTarget = null)}
+/>
+
+<ConfirmModal
+	bind:open={revokeShareOpen}
+	tone="danger"
+	title="Revoke the public link?"
+	description="Anyone holding it gets a 'not found' page from then on, and a new link will be a different URL. Nothing about the site's data changes."
+	confirmLabel="Revoke link"
+	cancelLabel="Keep it"
+	onConfirm={revokeShare}
+/>

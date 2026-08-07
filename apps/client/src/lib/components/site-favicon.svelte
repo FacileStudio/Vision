@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { twMerge } from '@facile/muse';
+
 	let {
 		domain,
 		name = '',
@@ -14,35 +16,34 @@
 
 	let initial = $derived((name || domain).charAt(0).toUpperCase());
 
-	function colorFromDomain(d: string): string {
-		let hash = 0;
-		for (let i = 0; i < d.length; i++) {
-			hash = d.charCodeAt(i) + ((hash << 5) - hash);
-		}
-		return `hsl(${Math.abs(hash % 360)} 45% 45%)`;
-	}
-
+	/*
+	 * A site's favicon is fetched from the site itself, so it fails often — a 404, a
+	 * captive portal, a domain that is not up yet. The initial underneath is not a
+	 * placeholder, it is what most rows actually render.
+	 */
 	function handleLoad(e: Event) {
 		const img = e.currentTarget as HTMLImageElement;
-		if (img.naturalWidth > 0) {
-			loaded = true;
-		} else {
-			errored = true;
-		}
+		if (img.naturalWidth > 0) loaded = true;
+		else errored = true;
 	}
 </script>
 
-<div class="relative shrink-0 rounded overflow-hidden {className}" style="background: {colorFromDomain(domain)}">
-	<span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white select-none">
-		{initial}
-	</span>
+<span
+	class={twMerge(
+		'relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-fc-xs bg-fc-surface text-fc-xs font-semibold text-fc-fg-muted',
+		className
+	)}
+>
+	<span aria-hidden="true">{initial}</span>
 	{#if !errored}
 		<img
 			src="https://{domain}/favicon.ico"
 			alt=""
-			class="absolute inset-0 h-full w-full object-cover bg-background transition-opacity duration-150 {loaded ? 'opacity-100' : 'opacity-0'}"
+			class="absolute inset-0 h-full w-full object-cover transition-opacity duration-150 {loaded
+				? 'opacity-100'
+				: 'opacity-0'}"
 			onload={handleLoad}
 			onerror={() => (errored = true)}
 		/>
 	{/if}
-</div>
+</span>

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Chart, GeoPath, Svg } from 'layerchart';
-	import { geoNaturalEarth1 } from 'd3-geo';
+	import { geoNaturalEarth1, geoPath } from 'd3-geo';
 	import { feature } from 'topojson-client';
 	import type { Topology } from 'topojson-specification';
 	import type { FeatureCollection, Geometry } from 'geojson';
+	import { ChartTooltip, IconButton, icons } from '@facile/muse';
 	import { getNumericCode, getAlpha2FromNumeric, getCountryName } from './country-codes';
 
 	import worldData from 'world-atlas/countries-110m.json';
@@ -14,13 +14,26 @@
 
 	let { countries }: Props = $props();
 
+	const WIDTH = 800;
+	const HEIGHT = 400;
+
+	/*
+	 * The projection is fitted once against a fixed viewBox and every path string is built
+	 * at module scope: the geometry never changes, only the fills do. The svg then scales
+	 * with CSS, which is the one place muse's "render at real pixel dimensions" rule does
+	 * not apply — a map is a picture, not an axis with type on it.
+	 */
 	const topology = worldData as unknown as Topology;
 	const geojson = feature(
 		topology,
 		topology.objects.countries
 	) as unknown as FeatureCollection<Geometry>;
 
-	let countsByNumeric = $derived(() => {
+	const projection = geoNaturalEarth1().fitSize([WIDTH, HEIGHT], geojson);
+	const path = geoPath(projection);
+	const shapes = geojson.features.map((f) => ({ id: String(f.id), d: path(f) ?? '' }));
+
+	let countsByNumeric = $derived.by(() => {
 		const map = new Map<string, number>();
 		for (const c of countries) {
 			const numeric = getNumericCode(c.country);
@@ -46,24 +59,29 @@
 	let panStartX = $state(0);
 	let panStartY = $state(0);
 
-	let hoveredName = $derived(() => {
+	let hoveredName = $derived.by(() => {
 		if (!hoveredId) return '';
 		const a2 = getAlpha2FromNumeric(hoveredId);
 		return a2 ? getCountryName(a2) : '';
 	});
 
-	let hoveredCount = $derived(() => {
-		if (!hoveredId) return 0;
-		return countsByNumeric().get(hoveredId) ?? 0;
-	});
+	let hoveredCount = $derived(hoveredId ? (countsByNumeric.get(hoveredId) ?? 0) : 0);
 
-	function getFill(featureId: string): string {
-		const isHovered = hoveredId === featureId;
-		const count = countsByNumeric().get(featureId);
-		if (!count) return isHovered ? 'oklch(0.88 0 0)' : 'oklch(0.95 0 0)';
-		const intensity = 0.15 + 0.85 * (count / maxCount);
-		const lightness = 0.85 - intensity * 0.65;
-		return `oklch(${isHovered ? Math.max(0.1, lightness - 0.1) : lightness} 0 0)`;
+	/*
+	 * A choropleth needs a sequential ramp and the chart tokens are categorical, so the
+	 * ramp is one token at varying opacity: `fc-accent` is the foreground ink, so it stays
+	 * the darkest thing on a light page and the lightest on a dark one without a second
+	 * set of values. Countries with no traffic are `fc-surface` — a fill, not a faint
+	 * accent, so "no data" never reads as "a little data".
+	 */
+	function fillFor(id: string) {
+		const count = countsByNumeric.get(id);
+		const hovered = hoveredId === id;
+		if (!count) {
+			return { fill: 'var(--color-fc-surface)', opacity: hovered ? 0.75 : 1 };
+		}
+		const share = count / maxCount;
+		return { fill: 'var(--color-fc-accent)', opacity: Math.min(1, 0.15 + 0.75 * share + (hovered ? 0.15 : 0)) };
 	}
 
 	function zoomAt(factor: number, cx: number, cy: number) {
@@ -77,10 +95,7 @@
 		e.preventDefault();
 		if (!containerEl) return;
 		const rect = containerEl.getBoundingClientRect();
-		const mx = e.clientX - rect.left;
-		const my = e.clientY - rect.top;
-		const factor = e.deltaY > 0 ? 0.9 : 1.1;
-		zoomAt(factor, mx, my);
+		zoomAt(e.deltaY > 0 ? 0.9 : 1.1, e.clientX - rect.left, e.clientY - rect.top);
 	}
 
 	function handleMouseDown(e: MouseEvent) {
@@ -92,14 +107,20 @@
 	}
 
 	function handleMouseMove(e: MouseEvent) {
-		if (dragging) {
-			panX = panStartX + (e.clientX - dragStartX) / scale;
-			panY = panStartY + (e.clientY - dragStartY) / scale;
-		}
+		if (!dragging) return;
+		panX = panStartX + (e.clientX - dragStartX) / scale;
+		panY = panStartY + (e.clientY - dragStartY) / scale;
 	}
 
 	function handleMouseUp() {
 		dragging = false;
+	}
+
+	function track(e: MouseEvent) {
+		if (!containerEl) return;
+		const rect = containerEl.getBoundingClientRect();
+		tooltipX = e.clientX - rect.left;
+		tooltipY = e.clientY - rect.top;
 	}
 
 	function resetView() {
@@ -119,76 +140,94 @@
 		const rect = containerEl.getBoundingClientRect();
 		zoomAt(0.7, rect.width / 2, rect.height / 2);
 	}
+
+	const ranked = $derived(
+		[...countries]
+			.sort((a, b) => b.count - a.count)
+			.slice(0, 20)
+			.map((c) => {
+				const a2 = getAlpha2FromNumeric(getNumericCode(c.country) ?? '');
+				return { name: a2 ? getCountryName(a2) : c.country, count: c.count };
+			})
+	);
 </script>
 
 <svelte:window onmouseup={handleMouseUp} onmousemove={handleMouseMove} />
 
 <div
 	bind:this={containerEl}
-	class="relative h-[300px] w-full overflow-hidden rounded-lg sm:h-[400px]"
+	class="relative h-[300px] w-full overflow-hidden rounded-fc-md sm:h-[400px]"
 	style="cursor: {dragging ? 'grabbing' : 'grab'}"
 >
-	<div
+	<!-- The svg is decoration; the ranked table below is the accessible representation,
+	     the same split every muse chart makes. -->
+	<svg
+		viewBox="0 0 {WIDTH} {HEIGHT}"
 		class="h-full w-full"
-		role="img"
+		aria-hidden="true"
 		onwheel={handleWheel}
 		onmousedown={handleMouseDown}
+		role="presentation"
 	>
-		<Chart geo={{ projection: geoNaturalEarth1, fitGeojson: geojson }}>
-			<Svg>
-				<g transform="translate({panX * scale}, {panY * scale}) scale({scale})">
-					{#each geojson.features as f}
-						<GeoPath
-							geojson={f}
-							fill={getFill(String(f.id))}
-							stroke="oklch(0.85 0 0)"
-							stroke-width={0.5 / scale}
-							style="transition: fill 0.15s ease"
-							onmouseenter={(e: MouseEvent) => {
-								hoveredId = String(f.id);
-								tooltipX = e.clientX;
-								tooltipY = e.clientY;
-								tooltipVisible = true;
-							}}
-							onmousemove={(e: MouseEvent) => {
-								tooltipX = e.clientX;
-								tooltipY = e.clientY;
-							}}
-							onmouseleave={() => {
-								hoveredId = null;
-								tooltipVisible = false;
-							}}
-						/>
-					{/each}
-				</g>
-			</Svg>
-		</Chart>
+		<g transform="translate({panX * scale}, {panY * scale}) scale({scale})">
+			{#each shapes as shape (shape.id)}
+				{@const paint = fillFor(shape.id)}
+				<path
+					role="presentation"
+					d={shape.d}
+					fill={paint.fill}
+					fill-opacity={paint.opacity}
+					stroke="var(--color-fc-border)"
+					stroke-width={0.5 / scale}
+					style="transition: fill-opacity 0.15s ease"
+					onmouseenter={(e) => {
+						hoveredId = shape.id;
+						track(e);
+						tooltipVisible = true;
+					}}
+					onmousemove={track}
+					onmouseleave={() => {
+						hoveredId = null;
+						tooltipVisible = false;
+					}}
+				/>
+			{/each}
+		</g>
+	</svg>
+
+	<div class="sr-only">
+		<table>
+			<caption>Visitors by country</caption>
+			<thead>
+				<tr><th scope="col">Country</th><th scope="col">Visitors</th></tr>
+			</thead>
+			<tbody>
+				{#each ranked as row (row.name)}
+					<tr><td>{row.name}</td><td>{row.count}</td></tr>
+				{/each}
+			</tbody>
+		</table>
 	</div>
 
 	<div class="absolute right-2 top-2 flex flex-col gap-1">
-		<button
-			onclick={zoomIn}
-			class="flex h-7 w-7 items-center justify-center rounded border bg-background text-sm hover:bg-muted"
-		>+</button>
-		<button
-			onclick={zoomOut}
-			class="flex h-7 w-7 items-center justify-center rounded border bg-background text-sm hover:bg-muted"
-		>-</button>
-		<button
-			onclick={resetView}
-			class="flex h-7 w-7 items-center justify-center rounded border bg-background text-xs hover:bg-muted"
-		>R</button>
+		<IconButton variant="ghost" aria-label="Zoom in" onclick={zoomIn} class="size-9 bg-fc-component">
+			<iconify-icon icon={icons.plus} width="16" height="16" class="block"></iconify-icon>
+		</IconButton>
+		<!-- `mdi:minus` is inlined because icons.ts has no `minus` key — reported rather
+		     than added, since this app does not own muse. -->
+		<IconButton variant="ghost" aria-label="Zoom out" onclick={zoomOut} class="size-9 bg-fc-component">
+			<iconify-icon icon="mdi:minus" width="16" height="16" class="block"></iconify-icon>
+		</IconButton>
+		<IconButton variant="ghost" aria-label="Reset view" onclick={resetView} class="size-9 bg-fc-component">
+			<iconify-icon icon={icons.refresh} width="16" height="16" class="block"></iconify-icon>
+		</IconButton>
 	</div>
 
-	{#if tooltipVisible && hoveredName()}
-		<div
-			class="pointer-events-none fixed z-50 rounded border bg-background px-2.5 py-1.5 text-sm shadow-sm"
-			style="left: {tooltipX + 12}px; top: {tooltipY - 10}px"
-		>
-			<span class="font-medium">{hoveredName()}</span>
-			{#if hoveredCount() > 0}
-				<span class="ml-2 text-muted-foreground">{hoveredCount()}</span>
-			{/if}
-		</div>
-	{/if}
+	<ChartTooltip
+		x={tooltipX}
+		y={tooltipY}
+		title={hoveredName}
+		rows={hoveredName ? [{ name: 'Visitors', value: String(hoveredCount) }] : []}
+		visible={tooltipVisible && hoveredName.length > 0}
+	/>
 </div>
