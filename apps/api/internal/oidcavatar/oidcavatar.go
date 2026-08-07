@@ -112,6 +112,19 @@ func RemoveFile(storageDir, relativePath string) {
 	os.Remove(filepath.Join(storageDir, relativePath))
 }
 
+// Missing reports whether an avatar the database still points at is absent from disk.
+// The row and the file have independent lifetimes — a container rebuilt over an unmounted
+// storage dir takes the files and leaves the rows — and without this check the refetch
+// condition reads "picture unchanged, path non-empty" and never repairs itself, so the
+// avatar 404s forever. An empty path counts as missing: there is nothing to serve.
+func Missing(storageDir, relativePath string) bool {
+	if relativePath == "" {
+		return true
+	}
+	_, err := os.Stat(filepath.Join(storageDir, relativePath))
+	return err != nil
+}
+
 func avatarExtension(ct string) (string, bool) {
 	ct = strings.ToLower(strings.TrimSpace(ct))
 	if idx := strings.Index(ct, ";"); idx != -1 {

@@ -21,6 +21,11 @@ services:
       dockerfile: apps/api/Dockerfile
     expose:
       - "4000"
+    # STORAGE_DIR lives in the image at /home/nonroot/data and holds the avatars the API
+    # downloads from Authentik. Without this volume every rebuild threw them away while
+    # leaving users.avatar_url pointing at them, so each deploy quietly 404'd the avatars.
+    volumes:
+      - api_data:/home/nonroot/data
     healthcheck:
       test: ["CMD", "/api", "healthcheck"]
       interval: 10s
@@ -62,3 +67,5 @@ services:
 volumes:
   db_data:
     name: vision_db_data
+  api_data:
+    name: vision_api_data
