@@ -47,7 +47,12 @@
 		className
 	)}
 >
-	<span aria-hidden="true">{initial}</span>
+	<!-- Removed once the favicon is up, not just covered by it. Most favicons have a
+	     transparent background, so a letter left underneath shows straight through the
+	     icon's own gaps and reads as a rendering fault. -->
+	{#if !loaded}
+		<span aria-hidden="true">{initial}</span>
+	{/if}
 	{#if !errored}
 		<!-- `hidden` until it has decoded, not just transparent: an <img> that failed still
 		     paints its broken glyph, and opacity-0 hides the pixels while leaving the box

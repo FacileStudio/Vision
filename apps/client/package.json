@@ -27,7 +27,7 @@
 		"vite": "^7.3.1"
 	},
 	"dependencies": {
-		"@facile/muse": "github:FacileStudio/muse#v0.3.2",
+		"@facile/muse": "github:FacileStudio/muse#v0.3.3",
 		"d3-geo": "^3.1.1",
 		"iconify-icon": "^3.0.2",
 		"topojson-client": "^3.1.0",
