@@ -105,12 +105,12 @@
 		<ProfileCard
 			name={profile.name || profile.email}
 			email={profile.email}
-			avatar={profile.avatar_url ? `/api${profile.avatar_url}` : undefined}
+			avatar={profile.avatar_url || undefined}
 			meta={[
 				{ label: 'Member since', value: new Date(profile.created_at).toLocaleDateString() },
 				{
 					label: 'Avatar',
-					value: profile.avatar_source === 'oidc' ? 'Synced from SSO' : 'Set locally'
+					value: profile.avatar_source === 'oidc' ? 'Managed in single sign-on' : 'Initials'
 				}
 			]}
 		/>

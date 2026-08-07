@@ -64,7 +64,7 @@
 
 	const user = $derived({
 		name: userStore.value?.name?.trim() || userStore.value?.email || 'Account',
-		avatar: userStore.value?.avatar_url ? `/api${userStore.value.avatar_url}` : undefined
+		avatar: userStore.value?.avatar_url || undefined
 	});
 
 	const spaces = $derived(workspaceStore.all.map((w) => ({ id: String(w.id), name: w.name })));

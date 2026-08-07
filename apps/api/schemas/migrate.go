@@ -10,7 +10,24 @@ func Migrate(db *gorm.DB) error {
 	); err != nil {
 		return err
 	}
+	if err := normalizeOIDCPictureURL(db); err != nil {
+		return err
+	}
 	return seedPersonalWorkspaces(db)
+}
+
+// normalizeOIDCPictureURL empties the rows that recorded a placeholder instead of a photo.
+//
+// The old sync stored the picture claim verbatim, and Authentik never omits it: a user with
+// no photo gets `data:image/svg+xml;base64,…`, its own drawing of their initials. The column
+// now means "there is a photo in Porte", so a leftover data: blob would render Authentik's
+// initials where the client draws its own. The next sync would fix it anyway — this makes
+// the first page load after the deploy correct too.
+func normalizeOIDCPictureURL(db *gorm.DB) error {
+	return db.Exec(
+		`UPDATE users SET oidc_picture_url = ''
+		 WHERE coalesce(oidc_picture_url, '') <> ''
+		   AND oidc_picture_url NOT LIKE 'https://%'`).Error
 }
 
 func seedPersonalWorkspaces(db *gorm.DB) error {

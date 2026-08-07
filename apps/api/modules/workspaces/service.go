@@ -151,7 +151,7 @@ func (s *Service) listMembers(ctx context.Context, userID string, wsID string) (
 	for i, m := range members {
 		out[i] = MemberResponse{
 			ID: m.ID, UserID: m.UserID,
-			Email: m.User.Email, Name: m.User.Name, AvatarURL: m.User.AvatarURL,
+			Email: m.User.Email, Name: m.User.Name, AvatarURL: m.User.Avatar(),
 			Role: m.Role, CreatedAt: m.CreatedAt,
 		}
 	}
@@ -184,7 +184,7 @@ func (s *Service) addMember(ctx context.Context, userID string, wsID string, ema
 
 	return &MemberResponse{
 		ID: member.ID, UserID: user.ID,
-		Email: user.Email, Name: user.Name, AvatarURL: user.AvatarURL,
+		Email: user.Email, Name: user.Name, AvatarURL: user.Avatar(),
 		Role: role, CreatedAt: member.CreatedAt,
 	}, nil
 }
