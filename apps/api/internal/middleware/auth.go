@@ -68,17 +68,23 @@ func RequireAuth(authService Authenticator) func(http.Handler) http.Handler {
 	}
 }
 
+// isAPIKey and extractAPIKey read the two transports the API reference
+// documents: `Authorization: Bearer vis_…` and `X-API-Key`.
+//
+// An `?api_key=` query parameter used to be accepted as a third. It was never
+// documented, the tracker does not use it, and nothing in the suite builds such
+// a URL — but an API key in a query string is copied into access logs, Referer
+// headers and browser history, and Vision's keys are long-lived. Removed
+// 2026-08-07.
+//
+// This is not the same as the `?token=` on GET /events/{siteId}/live, which
+// stays: EventSource cannot set headers, so that one is a real constraint of
+// the browser API rather than a convenience.
 func isAPIKey(authorization string, r *http.Request) bool {
 	if strings.HasPrefix(authorization, "Bearer vis_") {
 		return true
 	}
-	if r.Header.Get("X-API-Key") != "" {
-		return true
-	}
-	if r.URL.Query().Get("api_key") != "" {
-		return true
-	}
-	return false
+	return r.Header.Get("X-API-Key") != ""
 }
 
 func extractAPIKey(authorization string, r *http.Request) string {
@@ -87,9 +93,6 @@ func extractAPIKey(authorization string, r *http.Request) string {
 	}
 	if strings.HasPrefix(authorization, "Bearer vis_") {
 		return strings.TrimPrefix(authorization, "Bearer ")
-	}
-	if key := r.URL.Query().Get("api_key"); key != "" {
-		return key
 	}
 	return ""
 }

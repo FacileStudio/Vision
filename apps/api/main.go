@@ -39,11 +39,19 @@ func main() {
 		return
 	}
 
+	os.Exit(run())
+}
+
+// run returns the process exit code. Every failure below used to return from
+// main, which exits 0 — so a failed migration or an unreachable database looked
+// to Docker, Dokploy and any supervisor like a clean shutdown, and a broken
+// deploy reported success.
+func run() int {
 	appEnv, err := env.Load()
 	appLogger := logger.New(logger.Config{})
 	if err != nil {
 		appLogger.Error("failed to load config", slog.Any("error", err))
-		return
+		return 1
 	}
 	var journalClient *journal.Client
 	appLogger = logger.New(logger.Config{
@@ -63,17 +71,17 @@ func main() {
 	db, err := database.Open(appEnv.DatabaseURL)
 	if err != nil {
 		appLogger.Error("failed to open database", slog.Any("error", err))
-		return
+		return 1
 	}
 
 	if err := schemas.Migrate(db); err != nil {
 		appLogger.Error("failed to run migrations", slog.Any("error", err))
-		return
+		return 1
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
 		appLogger.Error("failed to access database handle", slog.Any("error", err))
-		return
+		return 1
 	}
 	defer func() {
 		if err := sqlDB.Close(); err != nil {
@@ -83,7 +91,7 @@ func main() {
 
 	if err := os.MkdirAll(filepath.Join(appEnv.StorageDir, "avatars"), 0o755); err != nil {
 		appLogger.Error("failed to create avatar directory", slog.Any("error", err))
-		return
+		return 1
 	}
 
 	authService := auth.NewService(db, appEnv.StorageDir, appLogger)
@@ -146,8 +154,12 @@ func main() {
 	appLogger.Info("server starting", slog.String("addr", addr))
 	select {
 	case err := <-serverErrCh:
+		// A port already bound, or a listener that dies under us, is a
+		// failure to start. Logging it and falling through returned 0,
+		// so a container that never served a request looked healthy.
 		if !errors.Is(err, http.ErrServerClosed) {
 			appLogger.Error("server stopped", slog.Any("error", err))
+			return 1
 		}
 	case <-shutdownSignal.Done():
 		appLogger.Info("server shutting down")
@@ -155,10 +167,12 @@ func main() {
 		defer cancel()
 		if err := server.Shutdown(shutdownContext); err != nil {
 			appLogger.Error("server shutdown failed", slog.Any("error", err))
-			return
+			return 1
 		}
 		appLogger.Info("server stopped")
 	}
+
+	return 0
 }
 
 // referenceConfig describes the API reference served at /docs. Registry paths
