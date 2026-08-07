@@ -228,10 +228,8 @@
 		<IconButton variant="ghost" aria-label="Zoom in" onclick={zoomIn} class="size-9 bg-fc-component">
 			<iconify-icon icon={icons.plus} width="16" height="16" class="block"></iconify-icon>
 		</IconButton>
-		<!-- `mdi:minus` is inlined because icons.ts has no `minus` key — reported rather
-		     than added, since this app does not own muse. -->
 		<IconButton variant="ghost" aria-label="Zoom out" onclick={zoomOut} class="size-9 bg-fc-component">
-			<iconify-icon icon="mdi:minus" width="16" height="16" class="block"></iconify-icon>
+			<iconify-icon icon={icons.minus} width="16" height="16" class="block"></iconify-icon>
 		</IconButton>
 		<IconButton variant="ghost" aria-label="Reset view" onclick={resetView} class="size-9 bg-fc-component">
 			<iconify-icon icon={icons.refresh} width="16" height="16" class="block"></iconify-icon>
