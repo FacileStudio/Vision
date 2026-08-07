@@ -182,7 +182,11 @@
 		role="presentation"
 	>
 		<g transform="translate({panX * scale}, {panY * scale}) scale({scale})">
-			{#each shapes as shape (shape.id)}
+			<!-- Keyed by position, not by shape.id: three features in world-atlas 110m carry no
+			     id at all, so they all stringify to "undefined" and Svelte kills the whole page
+			     with each_key_duplicate. `shapes` is built once at module scope and never
+			     reordered, so the index IS the stable identity here. -->
+			{#each shapes as shape, i (i)}
 				{@const paint = fillFor(shape.id)}
 				<path
 					role="presentation"
