@@ -21,6 +21,12 @@ services:
       dockerfile: apps/api/Dockerfile
     expose:
       - "4000"
+    healthcheck:
+      test: ["CMD", "/api", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     environment:
       DATABASE_URL: postgres://postgres:postgres@vision-db:5432/vision?sslmode=disable
       DOMAIN: ${DOMAIN:-http://localhost:3000}
