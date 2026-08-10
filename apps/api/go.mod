@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/FacileStudio/Journal/sdk/journal v0.0.0-20260708221941-db985ad2b1ba
-	github.com/FacileStudio/porte v0.2.9
+	github.com/FacileStudio/porte v0.2.10
 	github.com/FacileStudio/tronc v0.9.0
 	github.com/go-chi/chi/v5 v5.3.1
 	golang.org/x/crypto v0.54.0
