@@ -35,6 +35,7 @@ services:
       PORT: "4000"
       DATABASE_URL: postgres://postgres:postgres@vision-db:5432/vision?sslmode=disable
       DOMAIN: ${DOMAIN:-http://localhost:3000}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       OIDC_ISSUER: ${OIDC_ISSUER:-}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
