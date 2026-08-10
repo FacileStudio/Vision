@@ -56,8 +56,11 @@
 </script>
 
 <svelte:head>
-	<title>Vision — Web Analytics</title>
-	<meta name="description" content="Simple, privacy-friendly web analytics for your projects." />
+	<title>Vision — Privacy-friendly analytics</title>
+	<meta
+		name="description"
+		content="Self-hosted, cookie-free web analytics. Drop a 3.7 KB script on a site and watch pageviews, visitors, referrers and goals in a dashboard you own."
+	/>
 </svelte:head>
 
 {#if !redirecting}
