@@ -2,9 +2,20 @@ package schemas
 
 import "gorm.io/gorm"
 
+// Migrate brings the schema up to date and then hands authentication to
+// porte. AdoptPorte runs last because it repoints foreign keys at users(id)
+// and reads the columns AutoMigrate has just guaranteed exist.
 func Migrate(db *gorm.DB) error {
+	return MigrateWithIssuer(db, "")
+}
+
+// MigrateWithIssuer is Migrate with the OIDC issuer, which the identity
+// backfill needs: porte matches an account on (provider, subject) and the
+// provider is the issuer, so backfilling with a placeholder would leave every
+// existing SSO user unmatched and quietly fall through to the email path.
+func MigrateWithIssuer(db *gorm.DB, issuer string) error {
 	if err := db.AutoMigrate(
-		&User{}, &Session{}, &Workspace{}, &WorkspaceMember{},
+		&User{}, &Workspace{}, &WorkspaceMember{},
 		&Site{}, &Pageview{}, &Webhook{}, &VisitorSession{},
 		&CustomEvent{}, &Goal{}, &APIKey{},
 	); err != nil {
@@ -13,7 +24,10 @@ func Migrate(db *gorm.DB) error {
 	if err := normalizeOIDCPictureURL(db); err != nil {
 		return err
 	}
-	return seedPersonalWorkspaces(db)
+	if err := seedPersonalWorkspaces(db); err != nil {
+		return err
+	}
+	return AdoptPorte(db, issuer)
 }
 
 // normalizeOIDCPictureURL empties the rows that recorded a placeholder instead of a photo.
