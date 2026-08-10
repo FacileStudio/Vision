@@ -181,7 +181,12 @@ func run() int {
 		TrustedProxies: appEnv.TrustedProxies,
 		CDNProxies:     appEnv.CDNProxies,
 		CDNHeader:      appEnv.CDNHeader,
-		Logger:         appLogger,
+		// This API's routes sit at the root: the client container strips
+		// /api before proxying, so the server sees /auth/me. With the
+		// default prefix every request was classified as static and logged
+		// at the quiet level, which is why this app appeared to log nothing.
+		APIPrefix: httpx.RootAPI,
+		Logger:    appLogger,
 		CORS: troncmiddleware.CORSConfig{
 			AllowedOrigins: []string{appEnv.Domain},
 		},
