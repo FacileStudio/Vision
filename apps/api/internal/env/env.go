@@ -2,8 +2,10 @@ package env
 
 import (
 	"github.com/FacileStudio/porte"
+	troncenv "github.com/FacileStudio/tronc/env"
 
 	"fmt"
+	"net/netip"
 	"strconv"
 	"strings"
 )
@@ -17,6 +19,13 @@ type OIDCConfig struct {
 }
 
 type Config struct {
+	// TrustedProxies, CDNProxies and CDNHeader decide what RemoteAddr is by
+	// the time a rate limiter sees it. All three come from TRUSTED_PROXIES;
+	// see tronc's configuration docs.
+	TrustedProxies []netip.Prefix
+	CDNProxies     []netip.Prefix
+	CDNHeader      string
+
 	DatabaseURL  string
 	Port         string
 	Domain       string
@@ -28,11 +37,20 @@ type Config struct {
 }
 
 func Load() (Config, error) {
+	trustedProxies, err := troncenv.TrustedProxies()
+	if err != nil {
+		return Config{}, err
+	}
+	cdnProxies, cdnHeader := troncenv.CDN()
+
 	env := Config{
-		DatabaseURL: valueOrDefault("DATABASE_URL", "postgres://postgres:postgres@db:5432/vision?sslmode=disable"),
-		Port:        valueOrDefault("PORT", "4000"),
-		Domain:      valueOrDefault("DOMAIN", "http://localhost:5173"),
-		LogLevel:    valueOrDefault("LOG_LEVEL", "info"),
+		TrustedProxies: trustedProxies,
+		CDNProxies:     cdnProxies,
+		CDNHeader:      cdnHeader,
+		DatabaseURL:    valueOrDefault("DATABASE_URL", "postgres://postgres:postgres@db:5432/vision?sslmode=disable"),
+		Port:           valueOrDefault("PORT", "4000"),
+		Domain:         valueOrDefault("DOMAIN", "http://localhost:5173"),
+		LogLevel:       valueOrDefault("LOG_LEVEL", "info"),
 	}
 
 	port, err := strconv.Atoi(env.Port)
