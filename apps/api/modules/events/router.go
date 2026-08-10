@@ -186,24 +186,22 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, tracker *Acti
 
 	router.Route("/events", func(router chi.Router) {
 		router.Get("/{siteId}/live", func(w http.ResponseWriter, request *http.Request) {
-			authorization := request.Header.Get("Authorization")
-			if authorization == "" {
-				if t := request.URL.Query().Get("token"); t != "" {
-					authorization = "Bearer " + t
+			// EventSource cannot set request headers, so this one route
+			// accepts the credential as ?token= and hands it to porte as
+			// the bearer token it is. porte refuses a query-string
+			// credential itself, deliberately, so the exception is opted
+			// into here rather than relaxed for every route.
+			id, err := authService.AuthenticateRequest(w, request)
+			if err != nil {
+				if raw := request.URL.Query().Get("token"); raw != "" {
+					id, err = authService.AuthenticateToken(w, request, raw)
 				}
 			}
-
-			userID, rawData, err := authService.Authenticate(request.Context(), authorization)
 			if err != nil {
-				httpjson.WriteError(w, err)
-				return
-			}
-			data, ok := rawData.(interface{ GetEmail() string })
-			if !ok || data == nil {
 				httpjson.WriteError(w, errors.Unauthorized("missing auth"))
 				return
 			}
-			_ = data
+			userID := strconv.FormatInt(id, 10)
 
 			siteID, err := strconv.ParseInt(chi.URLParam(request, "siteId"), 10, 64)
 			if err != nil {

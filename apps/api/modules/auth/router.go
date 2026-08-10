@@ -1,8 +1,6 @@
 package auth
 
 import (
-	"context"
-	"log/slog"
 	"net/http"
 
 	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
@@ -14,21 +12,7 @@ import (
 )
 
 func RegisterRoutes(router chi.Router, service *Service, appEnv env.Config) {
-	oidcEnabled := appEnv.OIDC != nil
-
 	router.Route("/auth", func(router chi.Router) {
-		router.Get("/config", func(w http.ResponseWriter, r *http.Request) {
-			cfg := map[string]any{
-				"sso_only":     appEnv.SSOOnly,
-				"oidc_enabled": oidcEnabled,
-			}
-			if oidcEnabled {
-				cfg["oidc_redirect_url"] = appEnv.OIDC.RedirectURL
-				cfg["oidc_issuer"] = appEnv.OIDC.Issuer
-			}
-			httpjson.WriteJSON(w, http.StatusOK, cfg)
-		})
-
 		if !appEnv.SSOOnly {
 			router.Post("/register", func(w http.ResponseWriter, request *http.Request) {
 				var req RegisterRequest
@@ -36,7 +20,7 @@ func RegisterRoutes(router chi.Router, service *Service, appEnv env.Config) {
 					httpjson.WriteError(w, err)
 					return
 				}
-				resp, err := service.controller.register(request.Context(), &req)
+				resp, err := service.controller.register(w, request, &req)
 				if err != nil {
 					httpjson.WriteError(w, err)
 					return
@@ -50,7 +34,7 @@ func RegisterRoutes(router chi.Router, service *Service, appEnv env.Config) {
 					httpjson.WriteError(w, err)
 					return
 				}
-				resp, err := service.controller.login(request.Context(), &req)
+				resp, err := service.controller.login(w, request, &req)
 				if err != nil {
 					httpjson.WriteError(w, err)
 					return
@@ -102,18 +86,5 @@ func RegisterRoutes(router chi.Router, service *Service, appEnv env.Config) {
 			})
 		})
 
-		if oidcEnabled {
-			oidc, err := newOIDCHandler(context.Background(), appEnv.OIDC, service)
-			if err != nil {
-				slog.Error("failed to initialize OIDC provider", slog.Any("error", err))
-			} else {
-				router.Get("/oidc", oidc.login)
-				router.Get("/oidc/callback", oidc.callback)
-				router.Group(func(router chi.Router) {
-					router.Use(middleware.RequireAuth(service))
-					router.Post("/sync-profile", oidc.syncProfile)
-				})
-			}
-		}
 	})
 }

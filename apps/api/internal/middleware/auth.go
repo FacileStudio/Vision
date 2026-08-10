@@ -6,12 +6,22 @@ import (
 	"strings"
 
 	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
+	"github.com/FacileStudio/porte"
 	"github.com/FacileStudio/tronc/errors"
 	"github.com/FacileStudio/tronc/httpjson"
 )
 
+// Authenticator is the auth service: porte's session middleware, plus the
+// lookup that turns the user id porte resolved into the identity the rest of
+// Vision reads.
 type Authenticator interface {
-	Authenticate(context context.Context, authorization string) (string, any, error)
+	RequireAuth(http.Handler) http.Handler
+	IdentityForUser(ctx context.Context, userID int64) (id string, email string, err error)
+
+	// The two the live-events stream needs, because EventSource cannot set
+	// a header and its credential therefore arrives in the query string.
+	AuthenticateRequest(w http.ResponseWriter, r *http.Request) (int64, error)
+	AuthenticateToken(w http.ResponseWriter, r *http.Request, token string) (int64, error)
 }
 
 type APIKeyAuthenticator interface {
@@ -44,26 +54,28 @@ func RequireAuth(authService Authenticator) func(http.Handler) http.Handler {
 				return
 			}
 
-			userID, rawData, err := authService.Authenticate(request.Context(), authorization)
-			if err != nil {
-				httpjson.WriteError(w, err)
-				return
-			}
-			data, ok := rawData.(interface{ GetEmail() string })
-			if !ok {
-				httpjson.WriteError(w, errors.Unauthorized("missing auth"))
-				return
-			}
-			if data == nil {
-				httpjson.WriteError(w, errors.Unauthorized("missing auth"))
-				return
-			}
-
-			authContext := authcontext.WithIdentity(request.Context(), authcontext.Identity{
-				UserID: userID,
-				Email:  data.GetEmail(),
-			})
-			next.ServeHTTP(w, request.WithContext(authContext))
+			// Not an API key, so it is a session: porte verifies the
+			// credential and hands on a user id, and the profile the
+			// rest of Vision reads is looked up here. porte carries no
+			// email by design.
+			session := authService.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+				authenticated, ok := porte.From(request.Context())
+				if !ok {
+					httpjson.WriteError(w, errors.Unauthorized("missing auth"))
+					return
+				}
+				userID, email, err := authService.IdentityForUser(request.Context(), authenticated.UserID)
+				if err != nil {
+					httpjson.WriteError(w, err)
+					return
+				}
+				authContext := authcontext.WithIdentity(request.Context(), authcontext.Identity{
+					UserID: userID,
+					Email:  email,
+				})
+				next.ServeHTTP(w, request.WithContext(authContext))
+			}))
+			session.ServeHTTP(w, request)
 		})
 	}
 }
