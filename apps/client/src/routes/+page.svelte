@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
-	import { isAuthenticated, setToken } from '$lib';
+	import { currentUser } from '$lib';
 	import { Button, Card, Divider, icons } from '@facile/muse';
 
 	let redirecting = $state(true);
@@ -26,20 +25,13 @@
 		}
 	];
 
-	function readSsoToken(): string | null {
-		const fragment = location.hash.startsWith('#') ? location.hash.slice(1) : location.hash;
-		return new URLSearchParams(fragment).get('token');
-	}
-
+	/* This page is where OIDC_SUCCESS_URL lands, so it is the first thing an SSO
+	   user sees after the identity provider sends them back. It used to read a
+	   token out of the URL fragment; porte stopped putting one there in v0.2.4
+	   and issues a session cookie instead, which is why asking the API is now
+	   the only way to notice that the person standing here is signed in. */
 	onMount(async () => {
-		const token = readSsoToken();
-		if (token) {
-			setToken(token);
-			history.replaceState(null, '', page.url.pathname);
-			goto('/sites');
-			return;
-		}
-		if (isAuthenticated()) {
+		if (await currentUser().catch(() => null)) {
 			goto('/sites');
 			return;
 		}
