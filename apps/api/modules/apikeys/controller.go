@@ -7,6 +7,7 @@ import (
 	"github.com/FacileStudio/tronc/errors"
 )
 
+// Controller mediates API-key creation, listing and revocation.
 type Controller struct {
 	service *Service
 }

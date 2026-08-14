@@ -2,6 +2,7 @@ package schemas
 
 import "time"
 
+// Site is a tracked website owned by a workspace.
 type Site struct {
 	ID          int64     `gorm:"column:id;primaryKey"`
 	Name        string    `gorm:"column:name"`

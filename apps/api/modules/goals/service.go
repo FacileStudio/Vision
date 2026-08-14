@@ -21,11 +21,13 @@ func escapeLike(s string) string {
 	return s
 }
 
+// Service owns goal persistence and conversion queries.
 type Service struct {
 	orm        *gorm.DB
 	controller *Controller
 }
 
+// NewService returns a goals Service backed by the given connection.
 func NewService(orm *gorm.DB) *Service {
 	service := &Service{orm: orm}
 	service.controller = newController(service)

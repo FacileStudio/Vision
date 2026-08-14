@@ -11,6 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// RegisterRoutes mounts the auth routes. Local register and login are only
+// mounted when SSO is not enforced.
 func RegisterRoutes(router chi.Router, service *Service, appEnv env.Config) {
 	router.Route("/auth", func(router chi.Router) {
 		if !appEnv.SSOOnly {

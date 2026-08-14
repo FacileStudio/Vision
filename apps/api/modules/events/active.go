@@ -7,11 +7,14 @@ import (
 
 const activeWindow = 60 * time.Second
 
+// ActiveTracker tracks which visitors hit a site within the active window.
 type ActiveTracker struct {
 	mu       sync.RWMutex
 	visitors map[int64]map[string]time.Time
 }
 
+// NewActiveTracker returns an ActiveTracker and starts its background
+// expiration sweep.
 func NewActiveTracker() *ActiveTracker {
 	t := &ActiveTracker{
 		visitors: make(map[int64]map[string]time.Time),

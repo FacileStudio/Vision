@@ -7,6 +7,7 @@ import (
 	"github.com/FacileStudio/tronc/errors"
 )
 
+// Controller mediates workspace and membership operations.
 type Controller struct {
 	service *Service
 }

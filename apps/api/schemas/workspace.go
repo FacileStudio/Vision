@@ -2,6 +2,7 @@ package schemas
 
 import "time"
 
+// Workspace is a grouping of sites shared by a team.
 type Workspace struct {
 	ID        int64     `gorm:"column:id;primaryKey"`
 	Name      string    `gorm:"column:name"`
@@ -11,6 +12,7 @@ type Workspace struct {
 
 func (Workspace) TableName() string { return "workspaces" }
 
+// WorkspaceMember is a user's role within a workspace.
 type WorkspaceMember struct {
 	ID          int64     `gorm:"column:id;primaryKey"`
 	WorkspaceID int64     `gorm:"column:workspace_id;index;uniqueIndex:idx_ws_user"`

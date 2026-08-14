@@ -2,6 +2,7 @@ package schemas
 
 import "time"
 
+// VisitorSession aggregates a series of pageviews from one visitor.
 type VisitorSession struct {
 	ID            int64     `gorm:"column:id;primaryKey"`
 	SiteID        int64     `gorm:"column:site_id;index"`

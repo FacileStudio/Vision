@@ -7,6 +7,7 @@ import (
 	"github.com/FacileStudio/tronc/errors"
 )
 
+// Controller mediates site CRUD and share-token management.
 type Controller struct {
 	service *Service
 }

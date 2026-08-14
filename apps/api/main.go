@@ -53,6 +53,12 @@ import (
 // ConfigExtra keeps the two keys this app's client reads off /auth/config.
 // porte owns that route now and writes sso_only and oidc_enabled over whatever
 // the app returns, so an app cannot claim SSO is optional when it is mandatory.
+// buildAuth wires porte's local and OIDC kits to Vision's stores.
+//
+// The local password floor is eight characters, deliberately below porte's
+// default of twelve: Vision's floor has always been eight, and raising it here
+// would reject a password this app accepted yesterday — a product decision,
+// not a migration.
 func buildAuth(ctx context.Context, db *gorm.DB, appEnv env.Config, appLogger *slog.Logger) (*session.Manager, *local.Kit, *oidc.Kit, error) {
 	sqlDB, err := db.DB()
 	if err != nil {
@@ -85,9 +91,6 @@ func buildAuth(ctx context.Context, db *gorm.DB, appEnv env.Config, appLogger *s
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	// Vision's floor has always been eight characters. porte defaults to
-	// twelve, and raising it here would reject a password this app accepted
-	// yesterday — a product decision, not a migration.
 	passwords, err := local.New(local.Config{AllowRegistration: !appEnv.SSOOnly, MinPasswordLength: 8}, local.Deps{
 		Users:      users,
 		Identities: store.Identities(),
@@ -113,6 +116,20 @@ func main() {
 // main, which exits 0 — so a failed migration or an unreachable database looked
 // to Docker, Dokploy and any supervisor like a clean shutdown, and a broken
 // deploy reported success.
+//
+// Trusted proxies: behind Traefik and Cloudflare, RemoteAddr is only the
+// visitor if both are trusted. Traefik replaces the forwarded chain rather than
+// extending it, so the visitor survives in Cf-Connecting-Ip alone, and
+// TRUSTED_PROXIES=private,cloudflare fills all three.
+//
+// The API's routes sit at the root: the client container strips /api before
+// proxying, so the server sees /auth/me. With the default prefix every request
+// was classified as static and logged at the quiet level, which is why this app
+// appeared to log nothing.
+//
+// A port already bound, or a listener that dies under us, is a failure to
+// start. Logging it and falling through used to return 0, so a container that
+// never served a request looked healthy.
 func run() int {
 	appEnv, err := env.Load()
 	appLogger := logger.New(logger.Config{})
@@ -173,18 +190,9 @@ func run() int {
 	apiKeyService := apikeys.NewService(db)
 	middleware.SetAPIKeyAuthenticator(apiKeyService)
 	router := httpx.NewRouter(httpx.Config{
-		// Behind Traefik and Cloudflare, RemoteAddr is only the
-		// visitor if both are trusted: Traefik replaces the forwarded
-		// chain rather than extending it, so the visitor survives in
-		// Cf-Connecting-Ip alone. TRUSTED_PROXIES=private,cloudflare
-		// fills all three.
 		TrustedProxies: appEnv.TrustedProxies,
 		CDNProxies:     appEnv.CDNProxies,
 		CDNHeader:      appEnv.CDNHeader,
-		// This API's routes sit at the root: the client container strips
-		// /api before proxying, so the server sees /auth/me. With the
-		// default prefix every request was classified as static and logged
-		// at the quiet level, which is why this app appeared to log nothing.
 		APIPrefix: httpx.RootAPI,
 		Logger:    appLogger,
 		CORS: troncmiddleware.CORSConfig{
@@ -230,9 +238,6 @@ func run() int {
 	appLogger.Info("server starting", slog.String("addr", addr))
 	select {
 	case err := <-serverErrCh:
-		// A port already bound, or a listener that dies under us, is a
-		// failure to start. Logging it and falling through returned 0,
-		// so a container that never served a request looked healthy.
 		if !errors.Is(err, http.ErrServerClosed) {
 			appLogger.Error("server stopped", slog.Any("error", err))
 			return 1

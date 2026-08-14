@@ -11,11 +11,13 @@ import (
 	"gorm.io/gorm"
 )
 
+// Service owns workspace and membership persistence.
 type Service struct {
 	orm        *gorm.DB
 	controller *Controller
 }
 
+// NewService returns a workspaces Service backed by the given connection.
 func NewService(orm *gorm.DB) *Service {
 	s := &Service{orm: orm}
 	s.controller = newController(s)

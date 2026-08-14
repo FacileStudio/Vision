@@ -13,6 +13,7 @@ package oidcavatar
 
 import "strings"
 
+// Profile carries the identity claims Authentik returns at login.
 type Profile struct {
 	Name              string
 	PreferredUsername string

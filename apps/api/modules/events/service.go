@@ -15,11 +15,13 @@ import (
 	"gorm.io/gorm"
 )
 
+// Service persists pageviews, custom events and sessions.
 type Service struct {
 	orm *gorm.DB
 	hub *Hub
 }
 
+// NewService returns an events Service backed by the given connection.
 func NewService(orm *gorm.DB) *Service {
 	return &Service{orm: orm}
 }

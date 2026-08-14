@@ -6,6 +6,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// CanAccess reports whether the user belongs to the workspace that owns the
+// given site, regardless of role.
 func CanAccess(ctx context.Context, db *gorm.DB, userID int64, siteID int64) bool {
 	var count int64
 	db.WithContext(ctx).
@@ -16,6 +18,8 @@ func CanAccess(ctx context.Context, db *gorm.DB, userID int64, siteID int64) boo
 	return count > 0
 }
 
+// CanWrite reports whether the user's role in the site's workspace is owner,
+// admin or editor, i.e. able to modify the site.
 func CanWrite(ctx context.Context, db *gorm.DB, userID int64, siteID int64) bool {
 	var count int64
 	db.WithContext(ctx).

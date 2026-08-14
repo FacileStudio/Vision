@@ -2,6 +2,7 @@ package schemas
 
 import "time"
 
+// CustomEvent is a named event recorded by the tracker.
 type CustomEvent struct {
 	ID        int64     `gorm:"column:id;primaryKey"`
 	SiteID    int64     `gorm:"column:site_id;index:idx_event_site_created,priority:1"`

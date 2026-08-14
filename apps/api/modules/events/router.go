@@ -24,6 +24,12 @@ var pixel = []byte{
 	0x01, 0x00, 0x3b,
 }
 
+// RegisterRoutes mounts the event ingestion and live-stream routes.
+//
+// The live stream accepts the credential as ?token= instead of a header:
+// EventSource cannot set request headers. porte refuses a query-string
+// credential itself, deliberately, so the exception is opted into here rather
+// than relaxed for every route.
 func RegisterRoutes(router chi.Router, service *Service, hub *Hub, tracker *ActiveTracker, authService middleware.Authenticator, orm *gorm.DB) {
 	router.Route("/e", func(router chi.Router) {
 		router.Post("/p", func(w http.ResponseWriter, request *http.Request) {
@@ -186,11 +192,6 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, tracker *Acti
 
 	router.Route("/events", func(router chi.Router) {
 		router.Get("/{siteId}/live", func(w http.ResponseWriter, request *http.Request) {
-			// EventSource cannot set request headers, so this one route
-			// accepts the credential as ?token= and hands it to porte as
-			// the bearer token it is. porte refuses a query-string
-			// credential itself, deliberately, so the exception is opted
-			// into here rather than relaxed for every route.
 			id, err := authService.AuthenticateRequest(w, request)
 			if err != nil {
 				if raw := request.URL.Query().Get("token"); raw != "" {

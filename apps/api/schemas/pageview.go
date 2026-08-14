@@ -2,6 +2,7 @@ package schemas
 
 import "time"
 
+// Pageview is a recorded visit to a path.
 type Pageview struct {
 	ID           int64     `gorm:"column:id;primaryKey"`
 	SiteID       int64     `gorm:"column:site_id;index:idx_site_created,priority:1"`

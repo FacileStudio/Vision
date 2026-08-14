@@ -4,6 +4,7 @@ import (
 	"sync"
 )
 
+// PageviewEvent is a pageview broadcast to live subscribers.
 type PageviewEvent struct {
 	SiteID    int64  `json:"site_id"`
 	Path      string `json:"path"`
@@ -13,11 +14,13 @@ type PageviewEvent struct {
 	Timestamp string `json:"timestamp"`
 }
 
+// Hub fans pageviews out to per-site subscriber channels.
 type Hub struct {
 	mu          sync.RWMutex
 	subscribers map[int64]map[chan PageviewEvent]struct{}
 }
 
+// NewHub returns an empty Hub.
 func NewHub() *Hub {
 	return &Hub{
 		subscribers: make(map[int64]map[chan PageviewEvent]struct{}),

@@ -2,6 +2,7 @@ package webhooks
 
 import "fmt"
 
+// CreateWebhookRequest is the payload for creating a report webhook.
 type CreateWebhookRequest struct {
 	URL           string `json:"url"`
 	Secret        string `json:"secret"`
@@ -9,6 +10,7 @@ type CreateWebhookRequest struct {
 	WorkspaceID   *int64 `json:"workspace_id"`
 }
 
+// UpdateWebhookRequest is the payload for editing a webhook.
 type UpdateWebhookRequest struct {
 	URL           string `json:"url"`
 	Secret        string `json:"secret"`
@@ -16,6 +18,7 @@ type UpdateWebhookRequest struct {
 	Enabled       bool   `json:"enabled"`
 }
 
+// WebhookResponse is a webhook safe to return to a client.
 type WebhookResponse struct {
 	ID            int64   `json:"id"`
 	URL           string  `json:"url"`
@@ -28,6 +31,7 @@ type WebhookResponse struct {
 	UpdatedAt     string  `json:"updated_at"`
 }
 
+// ReportPayload is the JSON body sent to a webhook endpoint.
 type ReportPayload struct {
 	EventType    string        `json:"event_type"`
 	Site         ReportSite    `json:"site"`
@@ -40,18 +44,21 @@ type ReportPayload struct {
 	TopDevices   []TopItem     `json:"top_devices"`
 }
 
+// ReportSite identifies the site a report describes.
 type ReportSite struct {
 	ID     int64  `json:"id"`
 	Name   string `json:"name"`
 	Domain string `json:"domain"`
 }
 
+// ReportPeriod describes the interval a report covers.
 type ReportPeriod struct {
 	Type string `json:"type"`
 	From string `json:"from"`
 	To   string `json:"to"`
 }
 
+// ReportMetrics carries the headline numbers for a report.
 type ReportMetrics struct {
 	TotalPageviews     int64   `json:"total_pageviews"`
 	UniqueVisitors     int64   `json:"unique_visitors"`
@@ -62,6 +69,7 @@ type ReportMetrics struct {
 	VisitorsChangePct  float64 `json:"visitors_change_pct"`
 }
 
+// TopItem is a ranked name/count pair in a report.
 type TopItem struct {
 	Name  string `json:"name"`
 	Count int64  `json:"count"`

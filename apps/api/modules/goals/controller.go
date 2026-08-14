@@ -8,6 +8,7 @@ import (
 	"github.com/FacileStudio/tronc/errors"
 )
 
+// Controller mediates goal CRUD and conversion reporting.
 type Controller struct {
 	service *Service
 }

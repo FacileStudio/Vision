@@ -2,6 +2,7 @@ package schemas
 
 import "time"
 
+// User is an account that can sign in and own analytics data.
 type User struct {
 	ID               int64     `gorm:"column:id;primaryKey"`
 	Email            string    `gorm:"column:email;uniqueIndex"`

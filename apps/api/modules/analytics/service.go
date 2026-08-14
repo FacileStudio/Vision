@@ -9,10 +9,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// Service runs the analytical queries behind the dashboard.
 type Service struct {
 	orm *gorm.DB
 }
 
+// NewService returns an analytics Service backed by the given connection.
 func NewService(orm *gorm.DB) *Service {
 	return &Service{orm: orm}
 }

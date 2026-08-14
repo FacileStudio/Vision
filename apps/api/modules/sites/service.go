@@ -14,11 +14,13 @@ import (
 	"gorm.io/gorm"
 )
 
+// Service owns site persistence and access checks.
 type Service struct {
 	orm        *gorm.DB
 	controller *Controller
 }
 
+// NewService returns a sites Service backed by the given connection.
 func NewService(orm *gorm.DB) *Service {
 	service := &Service{orm: orm}
 	service.controller = newController(service)

@@ -18,11 +18,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// Service owns API-key persistence and the lookup that authenticates a
+// presented key.
 type Service struct {
 	orm        *gorm.DB
 	controller *Controller
 }
 
+// NewService returns an apikeys Service backed by the given connection.
 func NewService(orm *gorm.DB) *Service {
 	service := &Service{orm: orm}
 	service.controller = newController(service)
