@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { api, clearToken } from '$lib';
+	import { api, logout as logoutSession } from '$lib';
 	import type { UserProfile } from '$lib';
 	import { userStore } from '$lib/stores/user.svelte';
 	import {
@@ -90,8 +90,8 @@
 		}
 	}
 
-	function logout() {
-		clearToken();
+	async function logout() {
+		await logoutSession();
 		goto('/login');
 	}
 </script>

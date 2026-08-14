@@ -366,8 +366,13 @@
 
 	async function exportCSV() {
 		const { from, to } = rangeDates(selectedRange, customFrom, customTo);
+		/* An SSO session has no bearer token to send, only a cookie — hence the
+		   conditional header and credentials rather than an unconditional
+		   `Bearer null`. */
+		const token = getToken();
 		const res = await fetch(`/api/analytics/${siteId}/export?from=${from}&to=${to}&format=csv`, {
-			headers: { Authorization: `Bearer ${getToken()}` }
+			headers: token ? { Authorization: `Bearer ${token}` } : {},
+			credentials: 'same-origin'
 		});
 		if (!res.ok) {
 			toast.danger('The export failed. Nothing was downloaded.');

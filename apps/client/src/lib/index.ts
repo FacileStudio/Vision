@@ -1,4 +1,4 @@
-export { api, getToken, setToken, clearToken, isAuthenticated } from './backend.js';
+export { api, ApiError, getToken, setToken, clearToken, currentUser, logout } from './backend.js';
 export type {
 	UserProfile,
 	Site,
