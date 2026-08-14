@@ -193,8 +193,8 @@ func run() int {
 		TrustedProxies: appEnv.TrustedProxies,
 		CDNProxies:     appEnv.CDNProxies,
 		CDNHeader:      appEnv.CDNHeader,
-		APIPrefix: httpx.RootAPI,
-		Logger:    appLogger,
+		APIPrefix:      httpx.RootAPI,
+		Logger:         appLogger,
 		CORS: troncmiddleware.CORSConfig{
 			AllowedOrigins: []string{appEnv.Domain},
 		},
