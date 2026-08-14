@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// RegisterRoutes mounts the api-keys CRUD and listing routes behind auth.
 func RegisterRoutes(router chi.Router, service *Service, authService middleware.Authenticator) {
 	router.Route("/api-keys", func(router chi.Router) {
 		router.Use(middleware.RequireAuth(authService))

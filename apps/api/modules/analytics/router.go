@@ -19,6 +19,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// RegisterRoutes mounts the share, realtime, overview and export routes.
 func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveTracker, orm *gorm.DB, authService middleware.Authenticator) {
 	router.Get("/share/{token}", func(w http.ResponseWriter, request *http.Request) {
 		token := chi.URLParam(request, "token")

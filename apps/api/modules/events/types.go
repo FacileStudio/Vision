@@ -1,5 +1,6 @@
 package events
 
+// PerformanceData carries cumulative Web performance timings.
 type PerformanceData struct {
 	DNS      int `json:"dns"`
 	TCP      int `json:"tcp"`
@@ -8,6 +9,7 @@ type PerformanceData struct {
 	PageLoad int `json:"page_load"`
 }
 
+// PageviewRequest is the tracker payload for a single pageview.
 type PageviewRequest struct {
 	Hostname    string           `json:"hostname"`
 	Path        string           `json:"path"`
@@ -23,6 +25,7 @@ type PageviewRequest struct {
 	Performance *PerformanceData `json:"performance"`
 }
 
+// CustomEventRequest is the tracker payload for one custom event.
 type CustomEventRequest struct {
 	Hostname   string                 `json:"hostname"`
 	Path       string                 `json:"path"`

@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// RegisterRoutes mounts the webhooks CRUD and test routes behind auth.
 func RegisterRoutes(router chi.Router, service *Service, analyticsService *analytics.Service, authService middleware.Authenticator) {
 	router.Route("/webhooks", func(router chi.Router) {
 		router.Use(middleware.RequireAuth(authService))

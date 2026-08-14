@@ -15,25 +15,38 @@ import (
 // lookup that turns the user id porte resolved into the identity the rest of
 // Vision reads.
 type Authenticator interface {
+	// RequireAuth wraps a handler with porte's session middleware.
 	RequireAuth(http.Handler) http.Handler
+	// IdentityForUser resolves the user id porte authenticated into the
+	// identity the rest of Vision reads.
 	IdentityForUser(ctx context.Context, userID int64) (id string, email string, err error)
 
-	// The two the live-events stream needs, because EventSource cannot set
-	// a header and its credential therefore arrives in the query string.
+	// AuthenticateRequest authenticates the live-events stream. EventSource
+	// cannot set a request header.
 	AuthenticateRequest(w http.ResponseWriter, r *http.Request) (int64, error)
+	// AuthenticateToken authenticates a bearer token that arrived in the
+	// query string instead of the Authorization header.
 	AuthenticateToken(w http.ResponseWriter, r *http.Request, token string) (int64, error)
 }
 
+// APIKeyAuthenticator resolves a scoped API key to an identity, for
+// machine-to-machine access.
 type APIKeyAuthenticator interface {
+	// AuthenticateKey returns the identity carried by a scoped API key.
 	AuthenticateKey(ctx context.Context, rawKey string) (userID string, email string, err error)
 }
 
 var apiKeyAuth APIKeyAuthenticator
 
+// SetAPIKeyAuthenticator installs the API-key resolver used by RequireAuth.
 func SetAPIKeyAuthenticator(auth APIKeyAuthenticator) {
 	apiKeyAuth = auth
 }
 
+// RequireAuth gates a handler behind an authenticator. When the request is not
+// an API key it is a session: porte verifies the credential and hands on a user
+// id, and the profile the rest of Vision reads is looked up here — porte carries
+// no email by design.
 func RequireAuth(authService Authenticator) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
@@ -54,10 +67,6 @@ func RequireAuth(authService Authenticator) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Not an API key, so it is a session: porte verifies the
-			// credential and hands on a user id, and the profile the
-			// rest of Vision reads is looked up here. porte carries no
-			// email by design.
 			session := authService.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 				authenticated, ok := porte.From(request.Context())
 				if !ok {

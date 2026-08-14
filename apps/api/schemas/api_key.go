@@ -2,6 +2,7 @@ package schemas
 
 import "time"
 
+// APIKey is a scoped analytics credential issued to a user.
 type APIKey struct {
 	ID          int64      `gorm:"column:id;primaryKey"`
 	UserID      int64      `gorm:"column:user_id;index"`

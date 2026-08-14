@@ -11,10 +11,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// Service owns webhook persistence.
 type Service struct {
 	orm *gorm.DB
 }
 
+// NewService returns a webhooks Service backed by the given connection.
 func NewService(orm *gorm.DB) *Service {
 	return &Service{orm: orm}
 }

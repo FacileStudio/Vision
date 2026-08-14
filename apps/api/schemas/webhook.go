@@ -2,6 +2,7 @@ package schemas
 
 import "time"
 
+// Webhook delivers periodic analytics reports to a URL.
 type Webhook struct {
 	ID            int64      `gorm:"column:id;primaryKey"`
 	OwnerID       int64      `gorm:"column:owner_id;index"`

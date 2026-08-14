@@ -19,6 +19,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// StartScheduler launches the periodic webhook dispatcher in the background.
 func StartScheduler(orm *gorm.DB, analyticsService *analytics.Service) {
 	go func() {
 		ticker := time.NewTicker(1 * time.Minute)

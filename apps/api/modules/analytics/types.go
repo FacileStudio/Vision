@@ -1,5 +1,6 @@
 package analytics
 
+// Filters narrows an analytics query by dimension.
 type Filters struct {
 	Country  string
 	Browser  string
@@ -9,6 +10,7 @@ type Filters struct {
 	Referrer string
 }
 
+// PerformanceStats holds average Web performance timings.
 type PerformanceStats struct {
 	AvgDNS      float64 `json:"avg_dns"`
 	AvgTCP      float64 `json:"avg_tcp"`
@@ -18,11 +20,13 @@ type PerformanceStats struct {
 	SampleCount int64   `json:"sample_count"`
 }
 
+// EventStat counts a single custom event name.
 type EventStat struct {
 	Name  string `json:"name"`
 	Count int64  `json:"count"`
 }
 
+// OverviewResponse is the full dashboard payload for a site and period.
 type OverviewResponse struct {
 	TotalPageviews           int64             `json:"total_pageviews"`
 	UniqueVisitors           int64             `json:"unique_visitors"`
@@ -55,51 +59,61 @@ type OverviewResponse struct {
 	TopEvents                []EventStat       `json:"top_events"`
 }
 
+// PageStat counts pageviews for one path.
 type PageStat struct {
 	Path  string `json:"path"`
 	Count int64  `json:"count"`
 }
 
+// ReferrerStat counts pageviews from one referrer.
 type ReferrerStat struct {
 	Referrer string `json:"referrer"`
 	Count    int64  `json:"count"`
 }
 
+// CountryStat counts pageviews from one country.
 type CountryStat struct {
 	Country string `json:"country"`
 	Count   int64  `json:"count"`
 }
 
+// BrowserStat counts pageviews from one browser.
 type BrowserStat struct {
 	Browser string `json:"browser"`
 	Count   int64  `json:"count"`
 }
 
+// OSStat counts pageviews from one operating system.
 type OSStat struct {
 	OS    string `json:"os"`
 	Count int64  `json:"count"`
 }
 
+// DeviceStat counts pageviews by device type.
 type DeviceStat struct {
 	Device string `json:"device"`
 	Count  int64  `json:"count"`
 }
 
+// DayStat counts an event per day.
 type DayStat struct {
 	Date  string `json:"date"`
 	Count int64  `json:"count"`
 }
 
+// ScreenStat counts pageviews by screen-width class.
 type ScreenStat struct {
 	Screen string `json:"screen"`
 	Count  int64  `json:"count"`
 }
 
+// HourStat counts an event per hour of day.
 type HourStat struct {
 	Hour  int   `json:"hour"`
 	Count int64 `json:"count"`
 }
 
+// UTMStat counts pageviews by one UTM value.
 type UTMStat struct {
 	Value string `json:"value"`
 	Count int64  `json:"count"`

@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// OIDCConfig holds the settings needed to federate with the identity provider.
 type OIDCConfig struct {
 	Issuer       string
 	ClientID     string
@@ -18,6 +19,8 @@ type OIDCConfig struct {
 	SuccessURL   string
 }
 
+// Config is the application's runtime configuration, loaded from the
+// environment and defaults.
 type Config struct {
 	// TrustedProxies, CDNProxies and CDNHeader decide what RemoteAddr is by
 	// the time a rate limiter sees it. All three come from TRUSTED_PROXIES;
@@ -36,6 +39,8 @@ type Config struct {
 	JournalToken string
 }
 
+// Load reads the environment into a Config, validating the port, log level and
+// OIDC settings and erroring on a malformed value.
 func Load() (Config, error) {
 	trustedProxies, err := troncenv.TrustedProxies()
 	if err != nil {

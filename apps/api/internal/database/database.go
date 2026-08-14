@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+// Open opens a Postgres connection with silent logging and translated errors.
 func Open(databaseURL string) (*gorm.DB, error) {
 	return gorm.Open(postgres.Open(databaseURL), &gorm.Config{
 		Logger:         logger.Default.LogMode(logger.Silent),

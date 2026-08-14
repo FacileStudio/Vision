@@ -2,6 +2,7 @@ package schemas
 
 import "time"
 
+// Goal is a conversion target defined on a site.
 type Goal struct {
 	ID        int64     `gorm:"column:id;primaryKey"`
 	SiteID    int64     `gorm:"column:site_id;index"`
