@@ -65,8 +65,8 @@
 					<span class="text-fc-xl font-semibold tracking-tight">Vision</span>
 				</span>
 				<div class="flex items-center gap-2">
-					<Button href="/login" variant="outline">Log in</Button>
-					<Button href={startHref}>{ssoOnly ? 'Continue with SSO' : 'Get started'}</Button>
+					<Button href="/login" variant="outline" class="rounded-fc-md">Log in</Button>
+					<Button href={startHref} class="rounded-fc-md">{ssoOnly ? 'Sign in with Facile' : 'Get started'}</Button>
 				</div>
 			</div>
 		</header>
@@ -81,10 +81,10 @@
 					tag, zero config, full visibility.
 				</p>
 				<div class="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-					<Button href={startHref} size="lg">
-						{ssoOnly ? 'Continue with SSO' : 'Start tracking'}
+					<Button href={startHref} size="lg" class="rounded-fc-md">
+						{ssoOnly ? 'Sign in with Facile' : 'Start tracking'}
 					</Button>
-					<Button href="/login" size="lg" variant="outline">Log in</Button>
+					<Button href="/login" size="lg" variant="outline" class="rounded-fc-md">Log in</Button>
 				</div>
 			</section>
 
@@ -117,11 +117,11 @@
 				</h2>
 				<p class="mt-4 text-fc-sm text-fc-fg-muted">
 					{ssoOnly
-						? 'Use your organisation SSO to reach Vision.'
+						? 'Use your Facile SSO to reach Vision.'
 						: 'Free to use. Self-hosted. No credit card, no third party.'}
 				</p>
-				<Button href={startHref} size="lg" class="mt-8">
-					{ssoOnly ? 'Continue with SSO' : 'Create an account'}
+				<Button href={startHref} size="lg" class="mt-8 rounded-fc-md">
+					{ssoOnly ? 'Sign in with Facile' : 'Create an account'}
 				</Button>
 			</section>
 		</main>
