@@ -1,17 +1,34 @@
 package auth
 
-import documentation "github.com/FacileStudio/Vision/apps/api/internal/documentation"
+import (
+	documentation "github.com/FacileStudio/Vision/apps/api/internal/documentation"
+)
+
+type ConfigResponse struct {
+	SSOOnly     bool   `json:"sso_only"`
+	OIDCEnabled bool   `json:"oidc_enabled"`
+	OIDCIssuer  string `json:"oidc_issuer,omitempty"`
+}
+
+type ExchangeRequest struct {
+	Code string `json:"code" validate:"required"`
+}
+
+type SyncProfileResponse struct {
+	Success bool `json:"success"`
+}
 
 var Documentation = documentation.Module{
 	Name:        "auth",
 	Description: "Authentication routes.",
 	Routes: []documentation.Route{
 		{
-			Method:      "GET",
-			Path:        "/auth/config",
-			Summary:     "Describe the auth methods on offer",
-			Description: "Returns sso_only and oidc_enabled, plus this app's oidc_issuer and oidc_redirect_url. Served by porte.",
-			Auth:        "public",
+			Method:       "GET",
+			Path:         "/auth/config",
+			Summary:      "Describe the auth methods on offer",
+			Description:  "Returns sso_only and oidc_enabled, plus this app's oidc_issuer and oidc_redirect_url. Served by porte.",
+			Auth:         "public",
+			ResponseBody: ConfigResponse{},
 		},
 		{
 			Method:      "POST",
@@ -35,18 +52,21 @@ var Documentation = documentation.Module{
 			Auth:        "public",
 		},
 		{
-			Method:      "POST",
-			Path:        "/auth/oidc/exchange",
-			Summary:     "Exchange a CLI login code for a token",
-			Description: "Consumes the one-time code handed to a ?flow=cli login. Single use: a replay finds nothing.",
-			Auth:        "public",
+			Method:       "POST",
+			Path:         "/auth/oidc/exchange",
+			Summary:      "Exchange a CLI login code for a token",
+			Description:  "Consumes the one-time code handed to a ?flow=cli login. Single use: a replay finds nothing.",
+			Auth:         "public",
+			RequestBody:  ExchangeRequest{},
+			ResponseBody: AuthResponse{},
 		},
 		{
-			Method:      "POST",
-			Path:        "/auth/sync-profile",
-			Summary:     "Refresh the profile from the provider",
-			Description: "Calls UserInfo with the stored refresh token and updates the name and photo. Rate-limited server-side.",
-			Auth:        "bearer",
+			Method:       "POST",
+			Path:         "/auth/sync-profile",
+			Summary:      "Refresh the profile from the provider",
+			Description:  "Calls UserInfo with the stored refresh token and updates the name and photo. Rate-limited server-side.",
+			Auth:         "bearer",
+			ResponseBody: SyncProfileResponse{},
 		},
 		{
 			Method:      "POST",
@@ -61,8 +81,8 @@ var Documentation = documentation.Module{
 			Summary:      "Register a new user",
 			Description:  "Creates a user account and returns an auth token.",
 			Auth:         "public",
-			RequestBody:  "RegisterRequest",
-			ResponseBody: "AuthResponse",
+			RequestBody:  RegisterRequest{},
+			ResponseBody: AuthResponse{},
 		},
 		{
 			Method:       "POST",
@@ -70,8 +90,8 @@ var Documentation = documentation.Module{
 			Summary:      "Authenticate a user",
 			Description:  "Authenticates credentials and returns an auth token.",
 			Auth:         "public",
-			RequestBody:  "LoginRequest",
-			ResponseBody: "AuthResponse",
+			RequestBody:  LoginRequest{},
+			ResponseBody: AuthResponse{},
 		},
 		{
 			Method:       "GET",
@@ -79,7 +99,7 @@ var Documentation = documentation.Module{
 			Summary:      "Get current user profile",
 			Description:  "Returns the authenticated user's profile.",
 			Auth:         "bearer",
-			ResponseBody: "ProfileResponse",
+			ResponseBody: ProfileResponse{},
 		},
 		{
 			Method:       "PUT",
@@ -87,8 +107,8 @@ var Documentation = documentation.Module{
 			Summary:      "Update current user profile",
 			Description:  "Updates the authenticated user's name and email.",
 			Auth:         "bearer",
-			RequestBody:  "UpdateProfileRequest",
-			ResponseBody: "ProfileResponse",
+			RequestBody:  UpdateProfileRequest{},
+			ResponseBody: ProfileResponse{},
 		},
 		{
 			Method:       "PUT",
@@ -96,8 +116,8 @@ var Documentation = documentation.Module{
 			Summary:      "Set or change password",
 			Description:  "Replaces the password after verifying the current one, ending the account's other logins and returning the rotated token. Sending new_password alone gives a first password to an account that has none.",
 			Auth:         "bearer",
-			RequestBody:  "ChangePasswordRequest",
-			ResponseBody: "PasswordResponse",
+			RequestBody:  ChangePasswordRequest{},
+			ResponseBody: PasswordResponse{},
 		},
 	},
 }

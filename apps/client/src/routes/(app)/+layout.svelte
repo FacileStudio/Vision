@@ -100,7 +100,7 @@
 			{spaces}
 			{activeSpaceId}
 			onSpaceSelect={selectSpace}
-			personalSpaceLabel={null}
+			personalSpaceLabel={null as any}
 			manageSpacesHref="/team"
 			{user}
 			userHref="/settings"
@@ -125,7 +125,7 @@
 					{spaces}
 					activeId={activeSpaceId}
 					onSelect={selectSpace}
-					personalLabel={null}
+					personalLabel={null as any}
 					manageHref="/team"
 				/>
 			</div>

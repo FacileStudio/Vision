@@ -1,6 +1,10 @@
 package apikeys
 
-import documentation "github.com/FacileStudio/Vision/apps/api/internal/documentation"
+import (
+	"net/http"
+
+	documentation "github.com/FacileStudio/Vision/apps/api/internal/documentation"
+)
 
 var Documentation = documentation.Module{
 	Name:        "api-keys",
@@ -12,8 +16,9 @@ var Documentation = documentation.Module{
 			Summary:      "Create an API key",
 			Description:  "Generates a new API key. The full key is returned only once.",
 			Auth:         "bearer",
-			RequestBody:  "CreateRequest",
-			ResponseBody: "CreateResponse",
+			RequestBody:  CreateRequest{},
+			ResponseBody: CreateResponse{},
+			Status:       http.StatusCreated,
 		},
 		{
 			Method:       "GET",
@@ -21,7 +26,7 @@ var Documentation = documentation.Module{
 			Summary:      "List API keys",
 			Description:  "Returns all API keys for the authenticated user. Key values are not included.",
 			Auth:         "bearer",
-			ResponseBody: "[]APIKeyResponse",
+			ResponseBody: []APIKeyResponse{},
 		},
 		{
 			Method:      "DELETE",
@@ -30,6 +35,7 @@ var Documentation = documentation.Module{
 			Description: "Deactivates an API key immediately.",
 			Auth:        "bearer",
 			PathParams:  []documentation.Field{{Name: "id", Type: "int", Description: "API Key ID"}},
+			Status:      http.StatusNoContent,
 		},
 	},
 }

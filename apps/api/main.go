@@ -265,11 +265,13 @@ func referenceConfig() apiref.Config {
 		Servers:     []string{"/api"},
 		Registry: documentation.Response{Modules: []documentation.Module{
 			auth.Documentation,
+			workspaces.Documentation,
 			sites.Documentation,
 			events.Documentation,
 			analytics.Documentation,
 			goals.Documentation,
 			apikeys.Documentation,
+			webhooks.Documentation,
 		}},
 	}
 }
