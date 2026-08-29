@@ -80,6 +80,10 @@
 		workspaceStore.current ? String(workspaceStore.current.id) : null
 	);
 
+	/* Vision has no personal scope: sites.workspace_id is NOT NULL and the migration mints a
+	   real per-user workspace instead, so `null` is not a space this app can be in. Both
+	   switchers are therefore passed a null label, which removes the row rather than leaving
+	   one whose click this function silently drops. */
 	function selectSpace(id: string | null) {
 		const next = workspaceStore.all.find((w) => String(w.id) === id);
 		if (next) workspaceStore.switchTo(next);
@@ -96,6 +100,7 @@
 			{spaces}
 			{activeSpaceId}
 			onSpaceSelect={selectSpace}
+			personalSpaceLabel={null}
 			manageSpacesHref="/team"
 			{user}
 			userHref="/settings"
@@ -116,7 +121,13 @@
 		<Topbar class="md:hidden">
 			<span class="text-fc-md font-semibold text-fc-fg">Vision</span>
 			<div class="min-w-0 max-w-56 flex-1">
-				<SpaceSwitcher {spaces} activeId={activeSpaceId} onSelect={selectSpace} manageHref="/team" />
+				<SpaceSwitcher
+					{spaces}
+					activeId={activeSpaceId}
+					onSelect={selectSpace}
+					personalLabel={null}
+					manageHref="/team"
+				/>
 			</div>
 		</Topbar>
 
