@@ -113,9 +113,9 @@ func TestAdoptPorteKeepsEverybodySignedIn(t *testing.T) {
 // the login form answers "invalid credentials" to a correct password, with the
 // hash still sitting in the users table and no error anywhere.
 //
-// The identity is keyed on the lowercased address on purpose: porte/local
-// normalises before it looks one up, so an identity keyed on the mixed-case
-// address this user registered with would never be found.
+// The identity is keyed on the account id, which is what porte.LocalSubject
+// returns since v0.3.0. Keying it on the address instead is a row porte/local
+// never looks for, so the login answers 401 to a correct password.
 func TestAdoptPorteMovesThePasswords(t *testing.T) {
 	db := openTestDatabase(t)
 	seedPrePorte(t, db)
@@ -129,7 +129,7 @@ func TestAdoptPorteMovesThePasswords(t *testing.T) {
 		PasswordHash string
 	}
 	err := db.Raw(
-		`SELECT user_id, password_hash FROM porte_identities WHERE provider = 'local' AND subject = 'noah@facile.studio'`,
+		`SELECT user_id, password_hash FROM porte_identities WHERE provider = 'local' AND subject = '2'`,
 	).Scan(&identity).Error
 	if err != nil {
 		t.Fatalf("read the local identity: %v", err)
@@ -144,6 +144,61 @@ func TestAdoptPorteMovesThePasswords(t *testing.T) {
 	}
 	if withoutPassword != 0 {
 		t.Fatal("an account with no password gained a local identity, which is a login that cannot be used and an account that cannot be registered")
+	}
+}
+
+// A database that adopted porte at v0.2.x holds local identities keyed on the
+// address, and the re-key UPDATE is the only statement that reaches them.
+// Without it the version bump compiles, boots, and answers 401 to every correct
+// password.
+//
+// users.password_hash is blanked here rather than left alone, and that is the
+// whole point of the case. porte's CreateFromPassword never writes that column,
+// so every account registered since the v0.2 adoption sits outside
+// adoptExistingPasswords' filter and the INSERT cannot re-create its row. With
+// the hash still present the INSERT writes an id-keyed row of its own and the
+// test passes with the migration deleted — which is what it did before this
+// comment was written.
+//
+// The federated row is asserted untouched: the UPDATE is filtered on
+// provider = 'local', and sweeping an OIDC subject into an account id would
+// unlink every SSO user instead.
+func TestAdoptPorteRekeysIdentitiesLeftOnTheAddress(t *testing.T) {
+	db := openTestDatabase(t)
+	seedPrePorte(t, db)
+
+	if err := AdoptPorte(db, testIssuer); err != nil {
+		t.Fatalf("adopt: %v", err)
+	}
+	rollback := []string{
+		`UPDATE porte_identities SET subject = lower(btrim(u.email))
+		   FROM users u WHERE u.id = porte_identities.user_id AND provider = 'local'`,
+		`UPDATE users SET password_hash = '' WHERE id = 2`,
+	}
+	for _, statement := range rollback {
+		if err := db.Exec(statement).Error; err != nil {
+			t.Fatalf("rebuild the v0.2 shape: %v\n%s", err, statement)
+		}
+	}
+
+	if err := AdoptPorte(db, testIssuer); err != nil {
+		t.Fatalf("re-adopt: %v", err)
+	}
+
+	var subjects []string
+	if err := db.Raw(`SELECT subject FROM porte_identities WHERE provider = 'local' AND user_id = 2`).Scan(&subjects).Error; err != nil {
+		t.Fatalf("read the local identity: %v", err)
+	}
+	if len(subjects) != 1 || subjects[0] != "2" {
+		t.Fatalf("expected one local identity keyed on the account id, got %q", subjects)
+	}
+
+	var federated string
+	if err := db.Raw(`SELECT subject FROM porte_identities WHERE provider = ?`, testIssuer).Scan(&federated).Error; err != nil {
+		t.Fatalf("read the federated identity: %v", err)
+	}
+	if federated != "sub-1" {
+		t.Fatalf("the re-key swept a federated identity to %q", federated)
 	}
 }
 
