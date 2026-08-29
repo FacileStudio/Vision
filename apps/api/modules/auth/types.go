@@ -24,10 +24,25 @@ type UpdateProfileRequest struct {
 	Email string `json:"email"`
 }
 
-// ChangePasswordRequest carries the current and new passwords.
+// ChangePasswordRequest carries the new password and, when the account already
+// has one, the current password confirming it. An account with no password —
+// an SSO-only user adding one — sends new_password alone.
 type ChangePasswordRequest struct {
 	CurrentPassword string `json:"current_password"`
 	NewPassword     string `json:"new_password"`
+}
+
+// PasswordResponse carries the rotated session token.
+//
+// Replacing a password ends the account's other logins and rotates the
+// caller's own, and porte puts the new session in the cookie. Vision's client
+// authenticates with a bearer out of localStorage as well, so without the
+// token here the browser that changed the password would keep sending one
+// porte revoked mid-request. Setting a first password rotates nothing and
+// therefore omits it.
+type PasswordResponse struct {
+	Status string `json:"status"`
+	Token  string `json:"token,omitempty"`
 }
 
 // ProfileResponse is a user profile safe to return to a client.

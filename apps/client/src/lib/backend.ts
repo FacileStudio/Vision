@@ -116,11 +116,24 @@ export const api = {
 		me: () => request<UserProfile>('GET', '/auth/me'),
 		updateProfile: (name: string, email: string) =>
 			request<UserProfile>('PUT', '/auth/me', { name, email }),
-		changePassword: (currentPassword: string, newPassword: string) =>
-			request<{ status: string }>('PUT', '/auth/password', {
+		/**
+		 * Changing a password ends the account's other logins and rotates this
+		 * one, so the bearer in localStorage is dead by the time the response
+		 * arrives. The new token is stored here rather than at the call site:
+		 * every screen that changes a password has to do it, and the one that
+		 * forgets looks like a working form that signs you out on the next click.
+		 *
+		 * An account with no password sends no currentPassword and gets a first
+		 * one. Nothing is rotated there, so the body carries no token.
+		 */
+		changePassword: async (currentPassword: string, newPassword: string) => {
+			const result = await request<{ status: string; token?: string }>('PUT', '/auth/password', {
 				current_password: currentPassword,
 				new_password: newPassword
-			}),
+			});
+			if (result.token) setToken(result.token);
+			return result;
+		},
 		syncProfile: () => request<{ status: string }>('POST', '/auth/sync-profile')
 	},
 	workspaces: {

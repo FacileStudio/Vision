@@ -2,11 +2,13 @@ package auth
 
 import (
 	"context"
+	stderrors "errors"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/FacileStudio/porte"
 	"github.com/FacileStudio/tronc/errors"
 )
 
@@ -72,18 +74,43 @@ func (controller *Controller) updateMe(context context.Context, userID string, r
 	}, nil
 }
 
-func (controller *Controller) changePassword(context context.Context, userID string, req *ChangePasswordRequest) error {
-	if req.CurrentPassword == "" || req.NewPassword == "" {
-		return errors.Invalid("current and new password required")
-	}
-	if len(req.NewPassword) < 8 {
-		return errors.Invalid("new password must be at least 8 characters")
-	}
+func (controller *Controller) changePassword(w http.ResponseWriter, r *http.Request, userID string, req *ChangePasswordRequest) (*PasswordResponse, error) {
 	id, err := strconv.ParseInt(userID, 10, 64)
 	if err != nil {
-		return errors.Internal("failed to parse user id", err)
+		return nil, errors.Internal("failed to parse user id", err)
 	}
-	return controller.service.ChangePassword(context, id, req.CurrentPassword, req.NewPassword)
+	if req.CurrentPassword == "" {
+		if err := controller.service.SetPassword(r.Context(), id, req.NewPassword); err != nil {
+			return nil, passwordError(err)
+		}
+		return &PasswordResponse{Status: "ok"}, nil
+	}
+	token, _, err := controller.service.ChangePassword(w, r, id, req.CurrentPassword, req.NewPassword)
+	if err != nil {
+		return nil, passwordError(err)
+	}
+	return &PasswordResponse{Status: "ok", Token: token}, nil
+}
+
+// passwordError maps porte's sentinels onto the answers the suite agreed on.
+//
+// The length floor is porte's alone: it holds the argon2 parameters and the
+// MinPasswordLength this app configures, so a second check here is a number
+// that drifts. Only ErrPasswordSet is re-coded. porte answers 409 because from
+// inside the kit it is a race, but from here it is a caller that left
+// current_password out of the body, which is a 400 naming the field.
+func passwordError(err error) error {
+	switch {
+	case stderrors.Is(err, porte.ErrPasswordSet):
+		return errors.Invalid("current_password is required to replace an existing password")
+	case stderrors.Is(err, porte.ErrWrongPassword):
+		return errors.Unauthorized("current password is incorrect")
+	case stderrors.Is(err, porte.ErrNoPassword):
+		return errors.Invalid("this account has no password; omit current_password to set one")
+	case stderrors.Is(err, porte.ErrWeakPassword):
+		return errors.Invalid("new password must be at least 8 characters")
+	}
+	return err
 }
 
 func (controller *Controller) login(w http.ResponseWriter, r *http.Request, req *LoginRequest) (*AuthResponse, error) {
