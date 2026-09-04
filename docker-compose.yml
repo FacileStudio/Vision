@@ -7,42 +7,32 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-vision}
     volumes:
-    - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
     healthcheck:
-      test:
-      - CMD
-      - nc
-      - -z
-      - localhost
-      - '3000'
-      interval: 30s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
       timeout: 5s
-      retries: 3
-    deploy:
-      update_config:
-        order: start-first
-        parallelism: 1
-      restart_policy:
-        condition: any
+      retries: 10
+
   vision-api:
     restart: unless-stopped
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     expose:
-    - '4000'
+      - "4000"
     healthcheck:
-      test:
-      - CMD
-      - nc
-      - -z
-      - localhost
-      - '4000'
-      interval: 30s
+      test: ["CMD", "/api", "healthcheck"]
+      interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 10s
     environment:
-      PORT: '4000'
+      # Set explicitly because two defaults disagree: the app falls back to
+      # 4000 and tronc's `healthcheck` subcommand falls back to 8080, so with
+      # PORT unset the probe dialled a port nothing listened on and the
+      # container was permanently unhealthy while serving traffic normally.
+      PORT: "4000"
       DATABASE_URL: postgres://postgres:postgres@vision-db:5432/vision?sslmode=disable
       DOMAIN: ${DOMAIN:-http://localhost:3000}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
@@ -57,39 +47,19 @@ services:
     depends_on:
       vision-db:
         condition: service_healthy
-    deploy:
-      update_config:
-        order: start-first
-        parallelism: 1
-      restart_policy:
-        condition: any
+
   vision-client:
     restart: unless-stopped
     build:
       context: apps/client
       dockerfile: Dockerfile
     expose:
-    - '3000'
+      - "3000"
     environment:
       API_URL: http://vision-api:4000
     depends_on:
-    - vision-api
-    healthcheck:
-      test:
-      - CMD
-      - nc
-      - -z
-      - localhost
-      - '3000'
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    deploy:
-      update_config:
-        order: start-first
-        parallelism: 1
-      restart_policy:
-        condition: any
+      - vision-api
+
 volumes:
   db_data:
     name: vision_db_data
