@@ -58,7 +58,7 @@
 			</p>
 		</div>
 		{#if registreSpaces}
-			<Button icon={icons.usersGroup} href={registreSpaces}>Manage in Registre</Button>
+			<Button icon={icons.space} href={registreSpaces}>Manage in Registre</Button>
 		{:else if !loading}
 			<Button icon={icons.plus} onclick={() => goto('/team/new')}>New space</Button>
 		{/if}
@@ -75,7 +75,7 @@
 			{/each}
 		{:else if filtered.length === 0}
 			<EmptyState
-				icon={icons.usersGroup}
+				icon={icons.space}
 				title={search ? `No space matches “${search}”` : 'No spaces yet'}
 				description={search
 					? 'Try another name, or clear the search.'

@@ -60,7 +60,7 @@
 	 */
 	const links = [
 		{ href: '/sites', label: 'Sites', icon: icons.globe },
-		{ href: '/team', label: 'Teams', icon: icons.usersGroup }
+		{ href: '/team', label: 'Teams', icon: icons.space }
 	];
 
 	function isActive(href: string) {

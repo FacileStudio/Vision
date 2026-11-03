@@ -235,7 +235,7 @@
 		>
 			{#if registreSpaces}
 				<SettingsRow label="Manage this space" description="Invite people, change roles or leave in Registre.">
-					<Button variant="outline" icon={icons.usersGroup} href={manageURL}>Manage in Registre</Button>
+					<Button variant="outline" icon={icons.space} href={manageURL}>Manage in Registre</Button>
 				</SettingsRow>
 			{/if}
 			{#each members as member (member.id)}
