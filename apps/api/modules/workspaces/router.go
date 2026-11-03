@@ -2,9 +2,11 @@ package workspaces
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
 	"github.com/FacileStudio/Vision/apps/api/internal/middleware"
+	"github.com/FacileStudio/porte/directory"
 	"github.com/FacileStudio/tronc/httpjson"
 
 	"github.com/go-chi/chi/v5"
@@ -131,4 +133,11 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			w.WriteHeader(http.StatusNoContent)
 		})
 	})
+}
+
+// RegisterDirectory mounts Registre's nudge outside every auth middleware, since the
+// nudge is anonymous and only schedules an authenticated pull. The client proxy strips
+// /api, so the API serves directory.SyncPath without it and the public URL keeps it.
+func RegisterDirectory(router chi.Router, d *Directory) {
+	router.Method(http.MethodPost, strings.TrimPrefix(directory.SyncPath, "/api"), d.Handler())
 }

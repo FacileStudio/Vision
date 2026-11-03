@@ -28,6 +28,7 @@ import (
 
 	"github.com/FacileStudio/Vision/apps/api/modules/workspaces"
 	"github.com/FacileStudio/Vision/apps/api/schemas"
+	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 
 	"github.com/FacileStudio/Journal/sdk/journal"
@@ -179,7 +180,7 @@ func run() int {
 		return 1
 	}
 	authService := auth.NewService(db, sessions, passwords, appLogger)
-	workspaceService := workspaces.NewService(db)
+	workspaceService := workspaces.NewService(db, appEnv.IssuerForMigration())
 	siteService := sites.NewService(db)
 	eventHub := events.NewHub()
 	activeTracker := events.NewActiveTracker()
@@ -207,6 +208,8 @@ func run() int {
 	kit.Mount(router)
 	auth.RegisterRoutes(router, authService, appEnv)
 	workspaces.RegisterRoutes(router, workspaceService, authService)
+	stopDirectory := startDirectory(router, db, appEnv, appLogger)
+	defer stopDirectory()
 	sites.RegisterRoutes(router, siteService, authService)
 	events.RegisterRoutes(router, eventService, eventHub, activeTracker, authService, db)
 	analytics.RegisterRoutes(router, analyticsService, activeTracker, db, authService)
@@ -254,6 +257,21 @@ func run() int {
 	}
 
 	return 0
+}
+
+// startDirectory mounts Registre's nudge and starts syncing shared workspaces in the
+// background, when Vision signs in through Registre. The returned func stops the sync.
+// Registre being down or not serving the directory yet never fails the boot: the sync
+// retries on its own while Vision keeps serving the workspaces it has.
+func startDirectory(router chi.Router, db *gorm.DB, appEnv env.Config, appLogger *slog.Logger) func() {
+	if appEnv.OIDC == nil {
+		return func() {}
+	}
+	registre := workspaces.NewDirectory(db, appEnv.OIDC.Issuer, appEnv.OIDC.ClientID, appEnv.OIDC.ClientSecret, appLogger)
+	workspaces.RegisterDirectory(router, registre)
+	ctx, cancel := context.WithCancel(context.Background())
+	go registre.Run(ctx)
+	return cancel
 }
 
 // referenceConfig describes the API reference served at /docs. Registry paths

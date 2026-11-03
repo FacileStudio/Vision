@@ -87,6 +87,7 @@ Vision/
 - The API has a self-documenting `/docs` endpoint built from per-module `Documentation` structs.
 - Tracker script lives in two places: `apps/api/tracker/tracker.js` (source) and `apps/client/static/s.js` (served to browsers). The path is intentionally short/renamed to resist ad blockers.
 - Real-time active visitors use in-memory heartbeat tracking (30s pings, 60s expiry window).
+- With OIDC on, Registre owns shared workspaces (`modules/workspaces/directory.go`, `apply.go`, porte/directory). At boot Vision imports every unlinked workspace with more than one member once, retrying with backoff while Registre answers 404, then applies Registre's snapshot at boot, every 5 minutes and after a nudge on `POST /api/registre/sync`. `workspaces.registre_space_id` links a workspace to its space. Registre `member` is Vision `editor`. `viewer` is Vision-only: never imported, never removed or changed by a sync unless Registre lists that person. Single-member workspaces are personal: never imported, never linked by name. Membership writes answer 409 for every workspace, and renaming or deleting answers 409 for linked ones. A user in no workspace gets a personal one on their first list.
 
 ## Conventions
 

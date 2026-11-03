@@ -8,7 +8,7 @@ import (
 
 var Documentation = documentation.Module{
 	Name:        "workspaces",
-	Description: "Workspace organization and team membership.",
+	Description: "Workspaces and their members. With SSO on, shared workspaces mirror Registre spaces: member writes, and renaming or deleting a linked workspace, answer 409.",
 	Routes: []documentation.Route{
 		{
 			Method:       "POST",

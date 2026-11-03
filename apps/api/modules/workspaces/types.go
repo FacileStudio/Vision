@@ -23,13 +23,15 @@ type UpdateMemberRequest struct {
 	Role string `json:"role"`
 }
 
-// WorkspaceResponse is a workspace safe to return to a client.
+// WorkspaceResponse is a workspace safe to return to a client. ManageURL is the Registre
+// page that manages a linked workspace, and empty for one Vision manages itself.
 type WorkspaceResponse struct {
 	ID          int64     `json:"id"`
 	Name        string    `json:"name"`
 	Role        string    `json:"role"`
 	MemberCount int64     `json:"member_count"`
 	SiteCount   int64     `json:"site_count"`
+	ManageURL   string    `json:"manage_url"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
