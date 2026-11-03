@@ -225,10 +225,16 @@
 			description="Owners cannot be removed, and nobody can change their own role."
 		>
 			{#each members as member (member.id)}
-				<SettingsRow
-					label={member.name || member.email}
-					description={member.name ? member.email : undefined}
-				>
+				<SettingsRow class="*:flex-1 *:flex-wrap">
+					<div class="flex min-w-0 flex-1 items-center gap-3">
+						<Avatar src={member.avatar_url || undefined} name={member.name || member.email} size="sm" />
+						<div class="flex min-w-0 flex-col gap-1">
+							<span class="truncate text-fc-sm font-medium text-fc-fg">{member.name || member.email}</span>
+							{#if member.name}
+								<p class="truncate text-fc-xs text-fc-fg-muted">{member.email}</p>
+							{/if}
+						</div>
+					</div>
 					{#if member.user_id === myUserId}
 						<span class="text-fc-xs text-fc-fg-muted">you</span>
 					{/if}
