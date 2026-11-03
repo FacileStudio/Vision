@@ -256,6 +256,7 @@ export interface Workspace {
 	role: string;
 	member_count: number;
 	site_count: number;
+	manage_url: string;
 	created_at: string;
 	updated_at: string;
 }

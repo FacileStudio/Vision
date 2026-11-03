@@ -46,11 +46,16 @@
 
 	let leaveOpen = $state(false);
 
+	let registreSpaces = $state('');
+
 	const wsId = $derived(Number(page.params.id));
 	const myUserId = $derived(Number(userStore.value?.id));
 	const myRole = $derived(workspace?.role ?? 'viewer');
 	const isOwnerOrAdmin = $derived(myRole === 'owner' || myRole === 'admin');
 	const isOwner = $derived(myRole === 'owner');
+	const canEditMembers = $derived(isOwnerOrAdmin && !registreSpaces);
+	const canEditSpace = $derived(!workspace?.manage_url);
+	const manageURL = $derived(workspace?.manage_url || registreSpaces);
 
 	const roleLabels: Record<string, string> = {
 		owner: 'Owner',
@@ -68,12 +73,14 @@
 	async function load() {
 		loading = true;
 		try {
-			const [ws, m] = await Promise.all([
+			const [ws, m, cfg] = await Promise.all([
 				api.workspaces.get(wsId),
-				api.workspaces.members(wsId)
+				api.workspaces.members(wsId),
+				fetch('/api/auth/config').then((r) => r.json())
 			]);
 			workspace = ws;
 			members = m;
+			registreSpaces = cfg.oidc_enabled && cfg.oidc_issuer ? `${cfg.oidc_issuer.replace(/\/$/, '')}/spaces` : '';
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Could not load this space.';
 		} finally {
@@ -195,7 +202,7 @@
 				{:else}
 					<div class="flex min-w-0 items-center gap-2">
 						<h1 class="truncate text-fc-2xl font-semibold text-fc-fg">{workspace.name}</h1>
-						{#if isOwnerOrAdmin}
+						{#if isOwnerOrAdmin && canEditSpace}
 							<IconButton
 								variant="ghost"
 								aria-label="Rename space"
@@ -222,8 +229,15 @@
 
 		<SettingsSection
 			title="Members"
-			description="Owners cannot be removed, and nobody can change their own role."
+			description={registreSpaces
+				? 'Members and their roles are managed in Registre, for every Facile app at once.'
+				: 'Owners cannot be removed, and nobody can change their own role.'}
 		>
+			{#if registreSpaces}
+				<SettingsRow label="Manage this space" description="Invite people, change roles or leave in Registre.">
+					<Button variant="outline" icon={icons.usersGroup} href={manageURL}>Manage in Registre</Button>
+				</SettingsRow>
+			{/if}
 			{#each members as member (member.id)}
 				<SettingsRow class="*:flex-1 *:flex-wrap">
 					<div class="flex min-w-0 flex-1 items-center gap-3">
@@ -238,7 +252,7 @@
 					{#if member.user_id === myUserId}
 						<span class="text-fc-xs text-fc-fg-muted">you</span>
 					{/if}
-					{#if isOwnerOrAdmin && member.role !== 'owner' && member.user_id !== myUserId}
+					{#if canEditMembers && member.role !== 'owner' && member.user_id !== myUserId}
 						<Select
 							value={member.role}
 							aria-label="Role for {member.name || member.email}"
@@ -267,7 +281,7 @@
 			{/each}
 		</SettingsSection>
 
-		{#if isOwnerOrAdmin}
+		{#if canEditMembers}
 			<SettingsSection
 				title="Add someone"
 				description="They need a Vision account already — adding grants access immediately."
@@ -296,27 +310,29 @@
 			</SettingsSection>
 		{/if}
 
-		<SettingsSection title="Danger zone" description="Irreversible, and nobody can undo it for you.">
-			{#if isOwner}
-				<SettingsRow
-					label="Delete this space"
-					description="Every site must be removed first. Members lose access the moment it goes."
-				>
-					<Button variant="danger" icon={icons.remove} onclick={() => (deleteOpen = true)}>
-						Delete space
-					</Button>
-				</SettingsRow>
-			{:else}
-				<SettingsRow
-					label="Leave this space"
-					description="You lose access to every site in it. An owner can add you back."
-				>
-					<Button variant="danger" icon={icons.logout} onclick={() => (leaveOpen = true)}>
-						Leave space
-					</Button>
-				</SettingsRow>
-			{/if}
-		</SettingsSection>
+		{#if canEditSpace && (isOwner || !registreSpaces)}
+			<SettingsSection title="Danger zone" description="Irreversible, and nobody can undo it for you.">
+				{#if isOwner}
+					<SettingsRow
+						label="Delete this space"
+						description="Every site must be removed first. Members lose access the moment it goes."
+					>
+						<Button variant="danger" icon={icons.remove} onclick={() => (deleteOpen = true)}>
+							Delete space
+						</Button>
+					</SettingsRow>
+				{:else}
+					<SettingsRow
+						label="Leave this space"
+						description="You lose access to every site in it. An owner can add you back."
+					>
+						<Button variant="danger" icon={icons.logout} onclick={() => (leaveOpen = true)}>
+							Leave space
+						</Button>
+					</SettingsRow>
+				{/if}
+			</SettingsSection>
+		{/if}
 	{/if}
 </div>
 

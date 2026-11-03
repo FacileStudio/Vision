@@ -8,6 +8,7 @@
 	let workspaces = $state<Workspace[]>([]);
 	let loading = $state(true);
 	let search = $state('');
+	let registreSpaces = $state('');
 
 	const filtered = $derived(
 		search.trim()
@@ -17,7 +18,12 @@
 
 	onMount(async () => {
 		try {
-			workspaces = await api.workspaces.list();
+			const [list, cfg] = await Promise.all([
+				api.workspaces.list(),
+				fetch('/api/auth/config').then((r) => r.json())
+			]);
+			workspaces = list;
+			registreSpaces = cfg.oidc_enabled && cfg.oidc_issuer ? `${cfg.oidc_issuer.replace(/\/$/, '')}/spaces` : '';
 		} catch (e) {
 			toast.danger(e instanceof Error ? e.message : 'Could not load your spaces.');
 		} finally {
@@ -51,7 +57,11 @@
 				Spaces you belong to. Everyone in a space sees its sites and their stats.
 			</p>
 		</div>
-		<Button icon={icons.plus} onclick={() => goto('/team/new')}>New space</Button>
+		{#if registreSpaces}
+			<Button icon={icons.usersGroup} href={registreSpaces}>Manage in Registre</Button>
+		{:else if !loading}
+			<Button icon={icons.plus} onclick={() => goto('/team/new')}>New space</Button>
+		{/if}
 	</div>
 
 	<section class="flex flex-col gap-4">
