@@ -5,8 +5,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/FacileStudio/tronc/errors"
 )
 
 // Controller mediates the profile routes.
@@ -35,13 +33,9 @@ func (controller *Controller) getMe(context context.Context, userID string) (*Pr
 }
 
 func (controller *Controller) updateMe(context context.Context, userID string, req *UpdateProfileRequest) (*ProfileResponse, error) {
-	email := strings.TrimSpace(strings.ToLower(req.Email))
-	if email == "" || !strings.Contains(email, "@") {
-		return nil, errors.Invalid("invalid email")
-	}
 	name := strings.TrimSpace(req.Name)
 
-	user, err := controller.service.updateProfileByString(context, userID, name, email)
+	user, err := controller.service.updateProfileByString(context, userID, name)
 	if err != nil {
 		return nil, err
 	}

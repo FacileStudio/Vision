@@ -87,7 +87,7 @@ var Documentation = documentation.Module{
 			Method:       "PUT",
 			Path:         "/auth/me",
 			Summary:      "Update current user profile",
-			Description:  "Updates the authenticated user's name and email.",
+			Description:  "Updates the authenticated user's name. The email field is ignored: the address comes from Registre.",
 			Auth:         "bearer",
 			RequestBody:  UpdateProfileRequest{},
 			ResponseBody: ProfileResponse{},

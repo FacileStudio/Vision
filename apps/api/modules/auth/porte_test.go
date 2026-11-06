@@ -3,6 +3,7 @@ package auth
 import (
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/FacileStudio/Vision/apps/api/schemas"
@@ -109,5 +110,28 @@ func TestPasswordRoutesAreGone(t *testing.T) {
 		if recorder.Code != http.StatusNotFound && recorder.Code != http.StatusMethodNotAllowed {
 			t.Errorf("%s %s answered %d, want 404", route.method, route.path, recorder.Code)
 		}
+	}
+}
+
+func TestProfileUpdateCannotChangeTheEmail(t *testing.T) {
+	_, db := openStore(t)
+	user := schemas.User{Email: "mallory@example.com", Name: "Mallory"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatal(err)
+	}
+	service := NewService(db, nil, nil)
+
+	got, err := service.controller.updateMe(t.Context(), strconv.FormatInt(user.ID, 10),
+		&UpdateProfileRequest{Name: " Mal ", Email: "victim@facile.studio"})
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if got.Email != "mallory@example.com" || got.Name != "Mal" {
+		t.Fatalf("email %q name %q, want the email untouched and the name saved", got.Email, got.Name)
+	}
+	var stored schemas.User
+	db.First(&stored, user.ID)
+	if stored.Email != "mallory@example.com" {
+		t.Fatalf("the stored email became %q", stored.Email)
 	}
 }
