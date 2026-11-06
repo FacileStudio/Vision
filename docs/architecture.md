@@ -43,7 +43,6 @@ paths get special treatment:
 | `internal/env` | Vision's own config loader — see the note below |
 | `internal/middleware` | `RequireAuth`, which accepts both session tokens and API keys |
 | `internal/siteaccess` | `CanAccess` and `CanWrite`, the workspace-aware permission check |
-| `internal/authcrypto` | argon2id passwords, random session tokens |
 | `internal/oidcavatar` | Downloads and stores the OIDC `picture` claim |
 | `modules/events` | Ingestion, the SSE hub, and the in-memory active-visitor tracker |
 | `modules/analytics` | Dashboard aggregation queries, export, public share views |
@@ -128,10 +127,11 @@ prevented by application code only.
 
 ## Authentication
 
-Three credentials reach the same middleware.
+Sign-in goes through Registre only: Vision has no register, login or password route. Three
+credentials reach the same middleware.
 
-1. **Session token.** Email and password, argon2id hashed; login mints a random token stored
-   in `sessions` and sent as `Authorization: Bearer`.
+1. **Session.** The OIDC callback issues a porte session, sent as an HttpOnly cookie or as
+   `Authorization: Bearer` (older sessions and CLI tokens).
 2. **API key.** `Authorization: Bearer vis_…` or an `X-API-Key` header. Keys are prefixed
    `vis_ro` (read) or `vis_rw` (read and write), stored only as a SHA-256 hash plus a
    four-character hint, and returned in full exactly once at creation.
@@ -142,8 +142,17 @@ The OIDC flow is the suite's standard one: `GET /auth/oidc` redirects to the pro
 `OIDC_SUCCESS_URL` with the session token in the **URL fragment** (`#token=…`), which the SPA
 reads and discards. `POST /auth/sync-profile` re-reads userinfo for the current user.
 
-`GET /auth/config` reports `sso_only` and `oidc_enabled` so the login page knows what to
-render. With `SSO_ONLY=true`, `/auth/register` and `/auth/login` are never registered.
+`GET /auth/config` reports `sso_only` and `oidc_enabled`. porte mounts no password route
+while `OIDC_ISSUER` is set.
+
+An existing account links to a Facile sign-in by verified email only, and only when it holds
+no other subject of the same issuer (`modules/auth/porte.go`). The person's Registre locale is
+stored in `users.locale`.
+
+When Registre erases a person, `modules/workspaces/erase.go` deletes their account and their
+personal workspaces, and hands the sites and goals they authored in shared workspaces to the
+next member. It runs from the deletion poll or from Registre's signed push, and a second call
+changes nothing.
 
 ## Cross-app integration
 

@@ -6,6 +6,27 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The whole interface in French, English, Spanish and German (es and de need native review), with dates, numbers and country names formatted for the session locale
+- `GET /version`, set from the `APP_VERSION` build argument
+- GDPR deletion: when Registre erases a person, Vision deletes their account and their personal workspaces, and hands the sites and goals they authored in shared workspaces to the next member (`POST /api/registre/deletions` for Registre's signed push, plus a poll)
+- `users.locale`, stored from the Registre `locale` claim and returned by `GET /auth/me`
+- `.github/workflows/ci.yml`: gofmt, vet, build and race tests against Postgres, client check, tests and build, filet
+
+### Changed
+
+- `porte` v0.5.2 to v0.12.0, `porte/directory` v0.1.0 to v0.3.0, `tronc` v0.16.0 to v0.17.1, `@facile/muse` v0.11.0 to v0.12.1
+- The login page is muse `AuthScreen`, the landing page uses `LandingHeader` and `LandingFooter`, and every sign-in button is `SignInWithFacile`
+- An existing account links to a Facile sign-in only by a verified email, and is refused when it already holds another subject of the same issuer
+- `porte_login_codes` gains `provider` and `subject`, and the boot DDL creates `porte_magic_links` and `directory_deletion_state` (all idempotent)
+
+### Removed
+
+- Local sign-up and password sign-in: `POST /auth/register`, `POST /auth/login`, `PUT /auth/password`, the register tab, the password form and the password settings
+- The `SSO_ONLY` setting, `internal/authcrypto`, and the English country-name table
+- The semantic colour aliases in `app.css`, which only the old login markup used
+
 ## [0.1.1] - 2026-11-06
 
 ### Added

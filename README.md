@@ -26,9 +26,9 @@ Live at [vision.facile.studio](https://vision.facile.studio).
 
 | Layer | Tech |
 |---|---|
-| API | Go 1.24, Chi v5, GORM, PostgreSQL 16, [tronc](https://github.com/FacileStudio/tronc) v0.3.0 |
+| API | Go 1.26, Chi v5, GORM, PostgreSQL 16, [tronc](https://github.com/FacileStudio/tronc) v0.3.0 |
 | Client | SvelteKit 2 (Svelte 5 runes), Tailwind CSS 4, shadcn-svelte, LayerChart, TopoJSON world map |
-| Auth | Bearer session tokens, argon2id passwords, optional OIDC, `vis_*` API keys |
+| Auth | Sign-in through Registre (OIDC) and porte sessions, `vis_*` API keys |
 | Deploy | Docker Compose, three containers: database, API, SvelteKit server |
 
 ## Quick start
@@ -70,7 +70,7 @@ hostname needs no configuration. `window.vision.track(name, props)` sends a cust
 | `STORAGE_DIR` | Where uploaded avatars live |
 | `API_URL` | Client container only: where the SvelteKit proxy forwards `/api/*` |
 | `OIDC_ISSUER` | Set it to turn on SSO; three more `OIDC_*` variables become required |
-| `SSO_ONLY` | Disables local email/password auth |
+| `APP_VERSION` | Build argument, served at `GET /version` |
 
 Full reference: [docs/configuration.md](docs/configuration.md).
 

@@ -27,7 +27,7 @@ Self-hosted analytics. Go + SvelteKit.
 - [x] Clean neutral light theme (Sablier-style, solid opaque cards)
 - [x] Favicon next to referrer URLs and site logos on dashboard/sites list/stats header
 - [x] Copy tracking script snippet
-- [x] Profile page (name, email, change password)
+- [x] Profile page (name, email)
 - [x] Settings page (system-wide webhook configuration)
 - [x] Sidebar user card with initials and profile link (reactive on update)
 - [x] Page titles via svelte:head on all routes

@@ -4,7 +4,7 @@ Self-hosted web analytics platform. Go API + SvelteKit dashboard + PostgreSQL.
 
 ## Tech Stack
 
-- **API**: Go 1.24, Chi router, GORM (Postgres driver), OIDC auth support
+- **API**: Go 1.26, Chi router, GORM (Postgres driver), OIDC auth support
 - **Client**: SvelteKit (Svelte 5 runes), TypeScript, Tailwind CSS v4, shadcn-svelte (nova style), Vite
 - **Database**: PostgreSQL 16 (auto-migrated via GORM)
 - **Runtime**: Bun (client build + runtime), Go (API)
@@ -45,7 +45,7 @@ Key variables:
 - `DOMAIN` -- Frontend origin for CORS (default: `http://localhost:5173`)
 - `API_URL` -- Client-side env, where the SvelteKit server proxies API requests (default: `http://localhost:4000`)
 - `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URL` -- optional OIDC/SSO config
-- `SSO_ONLY` -- disable local auth when set to `true`
+- `APP_VERSION` -- API image build argument, served at `GET /version`
 
 ## Project Structure
 

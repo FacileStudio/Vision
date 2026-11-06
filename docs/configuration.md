@@ -16,7 +16,7 @@ Vision starts happily and fails later against a database that is not there.
 | `DOMAIN` | no | `http://localhost:5173` | The dashboard origin, and the sole entry in the API's CORS allow-list. Also the default OIDC success redirect |
 | `LOG_LEVEL` | no | `info` | One of `debug`, `info`, `warn`, `error`. Anything else fails startup |
 | `STORAGE_DIR` | no | `./data` | Root for stored avatars. `STORAGE_DIR/avatars` is created at startup and served from `GET /files/*` |
-| `SSO_ONLY` | no | `false` | Compared against the literal string `true`, case-insensitively. Any other value is false |
+| `APP_VERSION` | no | `dev` | Build argument of the API image, served at `GET /version`. Set it in the deploy environment at release |
 | `JOURNAL_URL` | no | — | Journal ingest URL. Shipping needs both this and the token |
 | `JOURNAL_TOKEN` | no | — | Per-app Journal key |
 

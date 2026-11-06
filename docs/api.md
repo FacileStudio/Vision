@@ -73,11 +73,10 @@ unknown hostname is rejected. `CF-IPCountry` supplies the country; no IP is stor
 | Method | Path | Auth | Notes |
 |---|---|---|---|
 | GET | `/auth/config` | no | `{ sso_only, oidc_enabled }` |
-| POST | `/auth/register` | no | `{ email, password }` → `{ user_id, token }`. Absent when `SSO_ONLY` |
-| POST | `/auth/login` | no | `{ email, password }` → `{ user_id, token }`. Absent when `SSO_ONLY` |
-| GET | `/auth/me` | yes | `{ id, email, name, avatar_url, avatar_source, created_at }` |
+| GET | `/auth/me` | yes | `{ id, email, name, avatar_url, avatar_source, locale, created_at }` |
 | PUT | `/auth/me` | yes | `{ name, email }` |
-| PUT | `/auth/password` | yes | `{ current_password, new_password }` |
+| GET | `/version` | no | `{ version }`, the `APP_VERSION` build argument or `dev` |
+| POST | `/registre/deletions` | signed | Registre's signed `user.deleted` notice (public path `/api/registre/deletions`) |
 | GET | `/auth/oidc` | no | Redirects to the provider |
 | GET | `/auth/oidc/callback` | no | Redirects to `OIDC_SUCCESS_URL#token=…` |
 | POST | `/auth/sync-profile` | yes | Re-reads userinfo for the current user |
