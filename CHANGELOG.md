@@ -6,6 +6,8 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-06
+
 ### Added
 
 - The whole interface in French, English, Spanish and German (es and de need native review), with dates, numbers and country names formatted for the session locale
