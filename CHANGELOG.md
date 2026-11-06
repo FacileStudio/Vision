@@ -6,6 +6,14 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Landing page: a "Pricing" section showing the live plans from the public catalog (muse `PricingPlans`, hidden while the catalog is empty)
+
+### Changed
+
+- `@facile/muse` v0.7.4 to v0.11.0
+
 ## [0.1.0] - 2026-11-03
 
 First tagged release of the Facile Suite's cookie-free web analytics.

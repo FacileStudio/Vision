@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { currentUser } from '$lib';
-	import { Button, Card, Divider, icons } from '@facile/muse';
+	import { Button, Card, Divider, PricingPlans, icons } from '@facile/muse';
 
 	let redirecting = $state(true);
 	let ssoOnly = $state(false);
@@ -108,6 +108,12 @@
 					{/each}
 				</div>
 			</section>
+
+			<PricingPlans
+				highlight={[]}
+				title="Pricing"
+				class="mx-auto max-w-fc-xl px-6 py-20"
+			/>
 
 			<Divider class="my-0" />
 
