@@ -25,6 +25,7 @@
 		icons,
 		toast
 	} from '@facile/muse';
+	import type { AppKey } from '$lib/i18n/messages';
 	import WorldMap from '$lib/components/map/world-map.svelte';
 	import StatsDrawer from '$lib/components/stats-drawer.svelte';
 	import SiteFavicon from '$lib/components/site-favicon.svelte';
@@ -32,17 +33,18 @@
 	import {
 		type RangeKey,
 		type Granularity,
-		ranges,
+		rangeKeys,
 		rangeDates,
-		formatDateRange,
 		trendPercent,
-		fmt,
+		decimal,
 		classifyReferrer,
 		allowedGranularities,
 		defaultGranularity,
 		formatChartDate,
 		mergeByLabel
 	} from '$lib/utils/analytics';
+	import { country, dateRange, fmt, hourLabel } from '$lib/i18n/format';
+	import { locale, t } from '$lib/i18n/index.svelte';
 
 	let site = $state<Site | null>(null);
 	let overview = $state<AnalyticsOverview | null>(null);
@@ -83,20 +85,21 @@
 	const shareUrl = $derived(site?.share_token ? `${page.url.origin}/share/${site.share_token}` : '');
 	const trackingSnippet = $derived(`<script defer src="${page.url.origin}/s.js"></` + 'script>');
 
-	const filterFields = [
-		{ key: 'country', label: 'Country', placeholder: 'US' },
-		{ key: 'browser', label: 'Browser', placeholder: 'Chrome' },
-		{ key: 'os', label: 'OS', placeholder: 'macOS' },
-		{ key: 'device', label: 'Device', placeholder: 'Desktop' },
-		{ key: 'path', label: 'Path', placeholder: '/blog' },
-		{ key: 'referrer', label: 'Referrer', placeholder: 'google.com' }
-	];
+	const filterFields = $derived([
+		{ key: 'country', label: t('filters.country'), placeholder: 'US' },
+		{ key: 'browser', label: t('filters.browser'), placeholder: 'Chrome' },
+		{ key: 'os', label: t('filters.os'), placeholder: 'macOS' },
+		{ key: 'device', label: t('filters.device'), placeholder: 'Desktop' },
+		{ key: 'path', label: t('filters.path'), placeholder: '/blog' },
+		{ key: 'referrer', label: t('filters.referrer'), placeholder: 'google.com' }
+	]);
+	const rangeTabs = $derived(rangeKeys.map((key) => ({ id: key, label: t(`range.${key}`) })));
 
 	const activeFilterCount = $derived(Object.values(activeFilters).filter(Boolean).length);
 	const visibleGranularities = $derived(allowedGranularities(selectedRange));
 	const dateRangeLabel = $derived.by(() => {
 		const { from, to } = rangeDates(selectedRange, customFrom, customTo);
-		return formatDateRange(from, to);
+		return dateRange(from, to);
 	});
 
 	function selectRange(key: string) {
@@ -126,18 +129,20 @@
 	);
 
 	const pageviewsTrend = $derived(
-		trendPercent(overview?.total_pageviews ?? 0, overview?.prev_total_pageviews ?? 0)
+		trendPercent(overview?.total_pageviews ?? 0, overview?.prev_total_pageviews ?? 0, locale())
 	);
 	const visitorsTrend = $derived(
-		trendPercent(overview?.unique_visitors ?? 0, overview?.prev_unique_visitors ?? 0)
+		trendPercent(overview?.unique_visitors ?? 0, overview?.prev_unique_visitors ?? 0, locale())
 	);
-	const vpvTrend = $derived(trendPercent(viewsPerVisitor, prevViewsPerVisitor));
+	const vpvTrend = $derived(trendPercent(viewsPerVisitor, prevViewsPerVisitor, locale()));
 	const bounceTrend = $derived(
-		trendPercent(overview?.bounce_rate ?? 0, overview?.prev_bounce_rate ?? 0)
+		trendPercent(overview?.bounce_rate ?? 0, overview?.prev_bounce_rate ?? 0, locale())
 	);
 
 	const chartLabels = $derived(
-		(overview?.pageviews_per_day ?? []).map((d) => formatChartDate(d.date, selectedGranularity))
+		(overview?.pageviews_per_day ?? []).map((d) =>
+			formatChartDate(d.date, selectedGranularity, locale())
+		)
 	);
 
 	/*
@@ -147,9 +152,9 @@
 	 * could read the axis against.
 	 */
 	const trafficSeries = $derived([
-		{ name: 'Pageviews', data: (overview?.pageviews_per_day ?? []).map((d) => d.count) },
+		{ name: t('stat.pageviews'), data: (overview?.pageviews_per_day ?? []).map((d) => d.count) },
 		{
-			name: 'Visitors',
+			name: t('stat.visitors'),
 			data: (overview?.pageviews_per_day ?? []).map(
 				(d) => overview?.unique_visitors_per_day?.find((v) => v.date === d.date)?.count ?? 0
 			)
@@ -157,10 +162,10 @@
 	]);
 
 	const hourlySeries = $derived([
-		{ name: 'Pageviews', data: (overview?.hourly_distribution ?? []).map((h) => h.count) }
+		{ name: t('stat.pageviews'), data: (overview?.hourly_distribution ?? []).map((h) => h.count) }
 	]);
 	const hourlyLabels = $derived(
-		(overview?.hourly_distribution ?? []).map((h) => (h.hour % 3 === 0 ? `${h.hour}h` : ''))
+		(overview?.hourly_distribution ?? []).map((h) => (h.hour % 3 === 0 ? hourLabel(h.hour) : ''))
 	);
 
 	const trafficSources = $derived.by(() => {
@@ -180,10 +185,10 @@
 
 		const direct = Math.max(0, overview.total_pageviews - refTotal);
 		return [
-			{ label: 'Direct', value: direct },
-			{ label: 'Search', value: search },
-			{ label: 'Social', value: social },
-			{ label: 'Other', value: other }
+			{ label: t('source.direct'), value: direct },
+			{ label: t('source.search'), value: search },
+			{ label: t('source.social'), value: social },
+			{ label: t('source.other'), value: other }
 		].filter((d) => d.value > 0);
 	});
 
@@ -221,60 +226,60 @@
 	const utmCampaigns = $derived(top(overview?.top_utm_campaigns, (d) => d.value));
 	const events = $derived(top(overview?.top_events, (d) => d.name));
 
-	const drawers: Record<string, { title: string; items: () => { label: string; count: number }[]; filterKey: string }> =
+	const drawers: Record<string, { title: AppKey; items: () => { label: string; count: number }[]; filterKey: string }> =
 		{
 			pages: {
-				title: 'Top pages',
+				title: 'block.pages',
 				items: () => all(overview?.top_pages, (d) => d.path),
 				filterKey: 'path'
 			},
 			referrers: {
-				title: 'Top referrers',
+				title: 'block.referrers',
 				items: () => all(overview?.top_referrers, (d) => d.referrer),
 				filterKey: 'referrer'
 			},
 			browsers: {
-				title: 'Browsers',
+				title: 'block.browsers',
 				items: () => all(overview?.top_browsers, (d) => d.browser),
 				filterKey: 'browser'
 			},
 			os: {
-				title: 'Operating systems',
+				title: 'block.os',
 				items: () => all(overview?.top_os, (d) => d.os),
 				filterKey: 'os'
 			},
 			entry: {
-				title: 'Entry pages',
+				title: 'block.entry',
 				items: () => all(overview?.top_entry_pages, (d) => d.path),
 				filterKey: 'path'
 			},
 			exit: {
-				title: 'Exit pages',
+				title: 'block.exit',
 				items: () => all(overview?.top_exit_pages, (d) => d.path),
 				filterKey: 'path'
 			},
 			countries: {
-				title: 'Countries',
+				title: 'block.countries',
 				items: () => all(overview?.top_countries, (d) => d.country),
 				filterKey: 'country'
 			},
 			utm_sources: {
-				title: 'UTM sources',
+				title: 'block.utmSources',
 				items: () => all(overview?.top_utm_sources, (d) => d.value),
 				filterKey: ''
 			},
 			utm_mediums: {
-				title: 'UTM mediums',
+				title: 'block.utmMediums',
 				items: () => all(overview?.top_utm_mediums, (d) => d.value),
 				filterKey: ''
 			},
 			utm_campaigns: {
-				title: 'UTM campaigns',
+				title: 'block.utmCampaigns',
 				items: () => all(overview?.top_utm_campaigns, (d) => d.value),
 				filterKey: ''
 			},
 			events: {
-				title: 'Custom events',
+				title: 'block.events',
 				items: () => all(overview?.top_events, (d) => d.name),
 				filterKey: ''
 			}
@@ -327,7 +332,7 @@
 			try {
 				site = await api.sites.get(siteId);
 			} catch (e) {
-				toast.danger(e instanceof Error ? e.message : 'Could not load this site.');
+				toast.danger(e instanceof Error ? e.message : t('site.loadFailed'));
 				return;
 			}
 			await Promise.all([refresh(), fetchRealtime(), loadGoals(), refreshGoalConversions()]);
@@ -355,13 +360,13 @@
 
 	async function generateShare() {
 		site = await api.sites.share(siteId);
-		toast.success('Public link created.');
+		toast.success(t('share.created'));
 	}
 
 	async function revokeShare() {
 		await api.sites.revokeShare(siteId);
 		site = await api.sites.get(siteId);
-		toast.neutral('Public link revoked.');
+		toast.neutral(t('share.revoked'));
 	}
 
 	async function exportCSV() {
@@ -375,7 +380,7 @@
 			credentials: 'same-origin'
 		});
 		if (!res.ok) {
-			toast.danger('The export failed. Nothing was downloaded.');
+			toast.danger(t('site.exportFailed'));
 			return;
 		}
 		const url = URL.createObjectURL(await res.blob());
@@ -410,10 +415,10 @@
 				match_type: goalType === 'pageview' ? goalMatchType : undefined
 			});
 			goalOpen = false;
-			toast.success('Goal added.');
+			toast.success(t('goals.added'));
 			await Promise.all([loadGoals(), refreshGoalConversions()]);
 		} catch (e) {
-			goalError = e instanceof Error ? e.message : 'Could not save the goal.';
+			goalError = e instanceof Error ? e.message : t('goals.saveFailed');
 		} finally {
 			goalSaving = false;
 		}
@@ -424,7 +429,7 @@
 		if (!target) return;
 		await api.goals.delete(target.id);
 		goalDeleteTarget = null;
-		toast.neutral('Goal deleted.');
+		toast.neutral(t('goals.deleted'));
 		await Promise.all([loadGoals(), refreshGoalConversions()]);
 	}
 
@@ -451,46 +456,41 @@
 			<div class="flex flex-wrap items-center gap-3">
 				<StatusDot
 					tone={live ? 'success' : 'warning'}
-					label={live ? 'Live' : 'Reconnecting…'}
+					label={live ? t('site.live') : t('site.reconnecting')}
 					pulse={!live}
 				/>
-				<Button variant="ghost" icon={icons.download} onclick={exportCSV}>Export</Button>
+				<Button variant="ghost" icon={icons.download} onclick={exportCSV}>{t('site.export')}</Button>
 			</div>
 		</div>
 
 		<section class="flex flex-col gap-4">
 			<div class="flex flex-col gap-1">
-				<h2 class="text-fc-lg font-semibold text-fc-fg">Tracking</h2>
-				<p class="text-fc-sm text-fc-fg-muted">
-					Paste this in the site's <code class="font-fc-mono">&lt;head&gt;</code>. Nothing else to
-					configure.
-				</p>
+				<h2 class="text-fc-lg font-semibold text-fc-fg">{t('tracking.title')}</h2>
+				<p class="text-fc-sm text-fc-fg-muted">{t('tracking.text')}</p>
 			</div>
 			<Card class="flex flex-col gap-4">
-				<SecretField value={trackingSnippet} sensitive={false} label="Script tag" />
+				<SecretField value={trackingSnippet} sensitive={false} label={t('tracking.script')} />
 
 				<SettingsRow
-					label="Public dashboard"
-					description={site.share_token
-						? 'Anyone with the link can read these numbers — and only these.'
-						: 'Create a read-only link you can hand to a client without an account.'}
+					label={t('share.title')}
+					description={site.share_token ? t('share.descriptionOn') : t('share.descriptionOff')}
 					stacked={Boolean(site.share_token)}
 				>
 					{#if site.share_token}
 						<div class="flex w-full flex-col gap-2">
-							<SecretField value={shareUrl} sensitive={false} label="Share link" class="w-full" />
+							<SecretField value={shareUrl} sensitive={false} label={t('share.link')} class="w-full" />
 							<Button
 								variant="ghost-danger"
 								icon={icons.remove}
 								class="self-start"
 								onclick={() => (revokeShareOpen = true)}
 							>
-								Revoke link
+								{t('share.revoke')}
 							</Button>
 						</div>
 					{:else}
 						<Button variant="outline" icon={icons.globe} onclick={generateShare}>
-							Create public link
+							{t('share.create')}
 						</Button>
 					{/if}
 				</SettingsRow>
@@ -504,10 +504,10 @@
 				<div class="flex flex-wrap items-center gap-3">
 					<div class="min-w-0 flex-1">
 						<Tabs
-							items={ranges.map((r) => ({ id: r.key, label: r.label }))}
+							items={rangeTabs}
 							value={selectedRange}
 							onChange={selectRange}
-							label="Date range"
+							label={t('range.label')}
 						/>
 					</div>
 					<Button
@@ -515,16 +515,18 @@
 						icon={icons.filter}
 						onclick={() => (filtersOpen = true)}
 					>
-						Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+						{activeFilterCount > 0
+							? t('filters.buttonCount', { count: activeFilterCount })
+							: t('filters.title')}
 					</Button>
 				</div>
 
 				{#if selectedRange === 'custom'}
 					<div class="flex flex-wrap items-end gap-3">
-						<Field label="From">
+						<Field label={t('range.from')}>
 							<Input bind:value={customFrom} type="date" />
 						</Field>
-						<Field label="To">
+						<Field label={t('range.to')}>
 							<Input bind:value={customTo} type="date" />
 						</Field>
 					</div>
@@ -539,26 +541,26 @@
 					{/each}
 					{#if activeFilterCount > 0}
 						<Button variant="ghost" size="sm" icon={icons.refresh} onclick={clearFilters}>
-							Clear filters
+							{t('filters.clear')}
 						</Button>
 					{/if}
 				</div>
 
 				<div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-					<StatCard label="Pageviews" value={fmt(overview.total_pageviews)}>
+					<StatCard label={t('stat.pageviews')} value={fmt(overview.total_pageviews)}>
 						<span class="text-fc-xs {pageviewsTrend.color}">{pageviewsTrend.text}</span>
 					</StatCard>
-					<StatCard label="Visitors" value={fmt(overview.unique_visitors)}>
+					<StatCard label={t('stat.visitors')} value={fmt(overview.unique_visitors)}>
 						<span class="text-fc-xs {visitorsTrend.color}">{visitorsTrend.text}</span>
 					</StatCard>
-					<StatCard label="Views / visitor" value={viewsPerVisitor.toFixed(1)}>
+					<StatCard label={t('stat.viewsPerVisitor')} value={decimal(viewsPerVisitor, locale())}>
 						<span class="text-fc-xs {vpvTrend.color}">{vpvTrend.text}</span>
 					</StatCard>
-					<StatCard label="Bounce rate" value="{overview.bounce_rate.toFixed(1)}%">
+					<StatCard label={t('stat.bounceRate')} value="{decimal(overview.bounce_rate, locale())}%">
 						<span class="text-fc-xs {bounceTrend.color}">{bounceTrend.text}</span>
 					</StatCard>
-					<StatCard label="Active now" value={fmt(realtimeCount)}>
-						<StatusDot tone="success" label="right now" pulse class="text-fc-xs" />
+					<StatCard label={t('stat.activeNow')} value={fmt(realtimeCount)}>
+						<StatusDot tone="success" label={t('stat.rightNow')} pulse class="text-fc-xs" />
 					</StatCard>
 				</div>
 			</section>
@@ -566,17 +568,17 @@
 			<section class="flex flex-col gap-4">
 				<div class="flex flex-wrap items-end justify-between gap-3">
 					<div class="flex flex-col gap-1">
-						<h2 class="text-fc-lg font-semibold text-fc-fg">Traffic over time</h2>
-						<p class="text-fc-sm text-fc-fg-muted">Pageviews and unique visitors.</p>
+						<h2 class="text-fc-lg font-semibold text-fc-fg">{t('traffic.title')}</h2>
+						<p class="text-fc-sm text-fc-fg-muted">{t('traffic.text')}</p>
 					</div>
 					<Select
 						value={selectedGranularity}
-						aria-label="Granularity"
+						aria-label={t('granularity.label')}
 						class="w-40"
 						onchange={(e) => (selectedGranularity = e.currentTarget.value as Granularity)}
 					>
-						{#each visibleGranularities as g (g.key)}
-							<option value={g.key}>{g.label}</option>
+						{#each visibleGranularities as key (key)}
+							<option value={key}>{t(`granularity.${key}`)}</option>
 						{/each}
 					</Select>
 				</div>
@@ -588,10 +590,10 @@
 				<div class="grid gap-4 lg:grid-cols-2">
 					{#if trafficSources.length > 0}
 						<Card class="flex flex-col gap-4">
-							<p class="text-fc-sm font-medium text-fc-fg">Traffic sources</p>
+							<p class="text-fc-sm font-medium text-fc-fg">{t('traffic.sources')}</p>
 							<DonutChart
 								data={trafficSources}
-								centerLabel="pageviews"
+								centerLabel={t('traffic.centerLabel')}
 								centerValue={fmt(overview.total_pageviews)}
 								class="flex-1"
 							/>
@@ -600,7 +602,7 @@
 
 					{#if hourlySeries[0].data.length > 0}
 						<Card class="flex flex-col gap-4">
-							<p class="text-fc-sm font-medium text-fc-fg">By hour of day</p>
+							<p class="text-fc-sm font-medium text-fc-fg">{t('traffic.byHour')}</p>
 							<BarChart series={hourlySeries} labels={hourlyLabels} height={220} />
 						</Card>
 					{/if}
@@ -610,14 +612,14 @@
 			<section class="flex flex-col gap-4">
 				<div class="flex flex-wrap items-start justify-between gap-3">
 					<div class="flex flex-col gap-1">
-						<h2 class="text-fc-lg font-semibold text-fc-fg">Goals</h2>
+						<h2 class="text-fc-lg font-semibold text-fc-fg">{t('goals.title')}</h2>
 						<p class="text-fc-sm text-fc-fg-muted">
 							{goalConversions
-								? `Measured against ${fmt(goalConversions.total_visitors)} unique visitors.`
-								: 'Conversion rates for the pages and events that matter.'}
+								? t('goals.measured', { count: goalConversions.total_visitors })
+								: t('goals.hint')}
 						</p>
 					</div>
-					<Button icon={icons.plus} onclick={openGoal}>Add goal</Button>
+					<Button icon={icons.plus} onclick={openGoal}>{t('goals.add')}</Button>
 				</div>
 
 				{#if hasConversions}
@@ -627,33 +629,32 @@
 						{#each goalConversions?.goals ?? [] as goal (goal.id)}
 							<SettingsRow
 								label={goal.name}
-								description="{goal.conversions} conversions · {goal.conversion_rate.toFixed(
-									1
-								)}% of visitors"
+								description={t('goals.row', {
+									count: goal.conversions,
+									rate: `${decimal(goal.conversion_rate, locale())}%`
+								})}
 							>
 								<Badge tone={goal.goal_type === 'event' ? 'accent' : 'neutral'}>
-									{goal.goal_type === 'event' ? 'event' : 'pageview'}
+									{goal.goal_type === 'event' ? t('goals.typeEvent') : t('goals.typePageview')}
 								</Badge>
 								<Button
 									variant="ghost-danger"
 									icon={icons.remove}
-									aria-label="Delete {goal.name}"
+									aria-label={t('goals.deleteAria', { name: goal.name })}
 									onclick={() => {
 										goalDeleteTarget = { id: goal.id, name: goal.name };
 										goalDeleteOpen = true;
 									}}
 								>
-									Delete
+									{t('common.delete')}
 								</Button>
 							</SettingsRow>
 						{/each}
 					</Card>
 				{:else if siteGoals.length > 0}
-					<Alert tone="info">No conversions in this period yet.</Alert>
+					<Alert tone="info">{t('goals.noConversions')}</Alert>
 				{:else}
-					<Alert tone="neutral">
-						No goals yet. A goal is a page or a custom event you want a conversion rate for.
-					</Alert>
+					<Alert tone="neutral">{t('goals.empty')}</Alert>
 				{/if}
 			</section>
 
@@ -661,16 +662,14 @@
 				{@const perf = overview.performance}
 				<section class="flex flex-col gap-4">
 					<div class="flex flex-col gap-1">
-						<h2 class="text-fc-lg font-semibold text-fc-fg">Page load</h2>
-						<p class="text-fc-sm text-fc-fg-muted">
-							Averaged over {fmt(perf.sample_count)} samples, in milliseconds.
-						</p>
+						<h2 class="text-fc-lg font-semibold text-fc-fg">{t('perf.title')}</h2>
+						<p class="text-fc-sm text-fc-fg-muted">{t('perf.text', { count: perf.sample_count })}</p>
 					</div>
 					<Card class="flex flex-col gap-4">
 						<BarChart
 							series={[
 								{
-									name: 'Milliseconds',
+									name: t('perf.series'),
 									data: [
 										perf.avg_dns,
 										perf.avg_tcp,
@@ -682,7 +681,7 @@
 							]}
 							labels={['DNS', 'TCP', 'TTFB', 'DOM', 'Load']}
 							height={200}
-							yFormat={(n) => `${n} ms`}
+							yFormat={(n) => t('perf.unit', { value: n })}
 						/>
 					</Card>
 				</section>
@@ -692,12 +691,12 @@
 				<section class="flex flex-col gap-4">
 					<div class="flex flex-wrap items-start justify-between gap-3">
 						<div class="flex flex-col gap-1">
-							<h2 class="text-fc-lg font-semibold text-fc-fg">Where they are</h2>
-							<p class="text-fc-sm text-fc-fg-muted">Visitors by country.</p>
+							<h2 class="text-fc-lg font-semibold text-fc-fg">{t('map.title')}</h2>
+							<p class="text-fc-sm text-fc-fg-muted">{t('map.text')}</p>
 						</div>
 						{#if (overview.top_countries?.length ?? 0) > 8}
 							<Button variant="ghost" iconRight={icons.arrow} onclick={() => openDrawer('countries')}>
-								See all
+								{t('common.seeAll')}
 							</Button>
 						{/if}
 					</div>
@@ -708,10 +707,10 @@
 			{/if}
 
 			<section class="flex flex-col gap-4">
-				<h2 class="text-fc-lg font-semibold text-fc-fg">Content</h2>
+				<h2 class="text-fc-lg font-semibold text-fc-fg">{t('content.title')}</h2>
 				<div class="grid gap-4 lg:grid-cols-3">
 					<BarList
-						title="Top pages"
+						title={t('block.pages')}
 						items={topPages}
 						showSeeAll={(overview.top_pages?.length ?? 0) > 8}
 						onSeeAll={() => openDrawer('pages')}
@@ -720,13 +719,13 @@
 					/>
 					{#if devices.length > 0}
 						<Card class="flex flex-col gap-4">
-							<p class="text-fc-sm font-medium text-fc-fg">Devices</p>
+							<p class="text-fc-sm font-medium text-fc-fg">{t('block.devices')}</p>
 							<DonutChart data={devices} class="flex-1" />
 						</Card>
 					{/if}
 
 					<BarList
-						title="Top referrers"
+						title={t('block.referrers')}
 						items={topReferrers}
 						showSeeAll={(overview.top_referrers?.length ?? 0) > 8}
 						onSeeAll={() => openDrawer('referrers')}
@@ -735,14 +734,14 @@
 					/>
 					{#if screens.length > 0}
 						<Card class="flex flex-col gap-4">
-							<p class="text-fc-sm font-medium text-fc-fg">Screens</p>
+							<p class="text-fc-sm font-medium text-fc-fg">{t('block.screens')}</p>
 							<DonutChart data={screens} class="flex-1" />
 						</Card>
 					{/if}
 
 					{#if entryPages.length > 0}
 						<BarList
-							title="Entry pages"
+							title={t('block.entry')}
 							items={entryPages}
 							showSeeAll={(overview.top_entry_pages?.length ?? 0) > 8}
 							onSeeAll={() => openDrawer('entry')}
@@ -751,7 +750,7 @@
 					{/if}
 					{#if exitPages.length > 0}
 						<BarList
-							title="Exit pages"
+							title={t('block.exit')}
 							items={exitPages}
 							showSeeAll={(overview.top_exit_pages?.length ?? 0) > 8}
 							onSeeAll={() => openDrawer('exit')}
@@ -760,14 +759,14 @@
 					{/if}
 
 					<BarList
-						title="Browsers"
+						title={t('block.browsers')}
 						items={browsers}
 						showSeeAll={(overview.top_browsers?.length ?? 0) > 8}
 						onSeeAll={() => openDrawer('browsers')}
 						onItemClick={setFilter('browser')}
 					/>
 					<BarList
-						title="Operating systems"
+						title={t('block.os')}
 						items={operatingSystems}
 						showSeeAll={(overview.top_os?.length ?? 0) > 8}
 						onSeeAll={() => openDrawer('os')}
@@ -779,11 +778,11 @@
 
 			{#if utmSources.length > 0 || utmMediums.length > 0 || utmCampaigns.length > 0 || events.length > 0}
 				<section class="flex flex-col gap-4">
-					<h2 class="text-fc-lg font-semibold text-fc-fg">Campaigns and events</h2>
+					<h2 class="text-fc-lg font-semibold text-fc-fg">{t('campaigns.title')}</h2>
 					<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 						{#if utmSources.length > 0}
 							<BarList
-								title="UTM sources"
+								title={t('block.utmSources')}
 								items={utmSources}
 								showSeeAll={(overview.top_utm_sources?.length ?? 0) > 8}
 								onSeeAll={() => openDrawer('utm_sources')}
@@ -791,7 +790,7 @@
 						{/if}
 						{#if utmMediums.length > 0}
 							<BarList
-								title="UTM mediums"
+								title={t('block.utmMediums')}
 								items={utmMediums}
 								showSeeAll={(overview.top_utm_mediums?.length ?? 0) > 8}
 								onSeeAll={() => openDrawer('utm_mediums')}
@@ -799,7 +798,7 @@
 						{/if}
 						{#if utmCampaigns.length > 0}
 							<BarList
-								title="UTM campaigns"
+								title={t('block.utmCampaigns')}
 								items={utmCampaigns}
 								showSeeAll={(overview.top_utm_campaigns?.length ?? 0) > 8}
 								onSeeAll={() => openDrawer('utm_campaigns')}
@@ -807,7 +806,7 @@
 						{/if}
 						{#if events.length > 0}
 							<BarList
-								title="Custom events"
+								title={t('block.events')}
 								items={events}
 								showSeeAll={(overview.top_events?.length ?? 0) > 8}
 								onSeeAll={() => openDrawer('events')}
@@ -825,7 +824,7 @@
 	</div>
 {/if}
 
-<Drawer bind:open={filtersOpen} title="Filters" description="Narrow every number on this page." showClose>
+<Drawer bind:open={filtersOpen} title={t('filters.title')} description={t('filters.description')} showClose>
 	<div class="flex flex-col gap-4">
 		{#each filterFields as f (f.key)}
 			<Field label={f.label}>
@@ -841,54 +840,54 @@
 	{#snippet footer()}
 		<div class="flex gap-2">
 			<Button variant="ghost" size="lg" icon={icons.refresh} class="flex-1" onclick={clearFilters}>
-				Clear
+				{t('common.clear')}
 			</Button>
 			<Button size="lg" icon={icons.check} class="flex-1" onclick={() => (filtersOpen = false)}>
-				Done
+				{t('common.done')}
 			</Button>
 		</div>
 	{/snippet}
 </Drawer>
 
-<Drawer bind:open={goalOpen} title="New goal" description="A goal turns a page or an event into a conversion rate." showClose>
+<Drawer bind:open={goalOpen} title={t('goals.newTitle')} description={t('goals.newDescription')} showClose>
 	<form id="goal-form" class="flex flex-col gap-4" onsubmit={saveGoal}>
-		<Field label="Name" helper="How it appears in the goals list.">
-			<Input bind:value={goalName} placeholder="Signup" required disabled={goalSaving} />
+		<Field label={t('common.name')} helper={t('goals.nameHelper')}>
+			<Input bind:value={goalName} placeholder={t('goals.namePlaceholder')} required disabled={goalSaving} />
 		</Field>
 
-		<Field label="Type">
+		<Field label={t('goals.type')}>
 			<Select bind:value={goalType} disabled={goalSaving}>
-				<option value="pageview">Pageview — someone reaches a page</option>
-				<option value="event">Custom event — the script reports one</option>
+				<option value="pageview">{t('goals.typePageviewOption')}</option>
+				<option value="event">{t('goals.typeEventOption')}</option>
 			</Select>
 		</Field>
 
 		{#if goalType === 'pageview'}
-			<Field label="Path">
+			<Field label={t('goals.path')}>
 				<Input bind:value={goalPagePath} placeholder="/pricing" disabled={goalSaving} />
 			</Field>
-			<Field label="Match">
+			<Field label={t('goals.match')}>
 				<Select bind:value={goalMatchType} disabled={goalSaving}>
-					<option value="exact">Exactly this path</option>
-					<option value="starts_with">Starts with it</option>
-					<option value="contains">Contains it</option>
+					<option value="exact">{t('goals.matchExact')}</option>
+					<option value="starts_with">{t('goals.matchStarts')}</option>
+					<option value="contains">{t('goals.matchContains')}</option>
 				</Select>
 			</Field>
 		{:else}
-			<Field label="Event name" helper="The string your script passes to the tracker.">
+			<Field label={t('goals.eventName')} helper={t('goals.eventHelper')}>
 				<Input bind:value={goalEventName} placeholder="signup" disabled={goalSaving} class="font-fc-mono" />
 			</Field>
 		{/if}
 
 		{#if goalError}
-			<Alert tone="danger" title="Not saved">{goalError}</Alert>
+			<Alert tone="danger" title={t('goals.notSaved')}>{goalError}</Alert>
 		{/if}
 	</form>
 
 	{#snippet footer()}
 		<div class="flex gap-2">
 			<Button variant="ghost" size="lg" class="flex-1" disabled={goalSaving} onclick={() => (goalOpen = false)}>
-				Cancel
+				{t('common.cancel')}
 			</Button>
 			<Button
 				type="submit"
@@ -900,7 +899,7 @@
 					!goalName.trim() ||
 					(goalType === 'pageview' ? !goalPagePath.trim() : !goalEventName.trim())}
 			>
-				{goalSaving ? 'Saving…' : 'Add goal'}
+				{goalSaving ? t('common.saving') : t('goals.add')}
 			</Button>
 		</div>
 	{/snippet}
@@ -908,7 +907,7 @@
 
 <StatsDrawer
 	bind:open={drawerOpen}
-	title={activeDrawer?.title ?? ''}
+	title={activeDrawer ? t(activeDrawer.title) : ''}
 	items={activeDrawer?.items() ?? []}
 	onFilter={activeDrawer?.filterKey ? setFilter(activeDrawer.filterKey) : undefined}
 />
@@ -916,10 +915,10 @@
 <ConfirmModal
 	bind:open={goalDeleteOpen}
 	tone="danger"
-	title="Delete {goalDeleteTarget?.name ?? 'this goal'}?"
-	description="The goal stops being measured. Past conversions are not stored separately, so its history goes with it."
-	confirmLabel="Delete goal"
-	cancelLabel="Keep it"
+	title={t('goals.deleteTitle', { name: goalDeleteTarget?.name ?? t('goals.thisGoal') })}
+	description={t('goals.deleteBody')}
+	confirmLabel={t('goals.deleteConfirm')}
+	cancelLabel={t('common.keepIt')}
 	onConfirm={deleteGoal}
 	onCancel={() => (goalDeleteTarget = null)}
 />
@@ -927,9 +926,9 @@
 <ConfirmModal
 	bind:open={revokeShareOpen}
 	tone="danger"
-	title="Revoke the public link?"
-	description="Anyone holding it gets a 'not found' page from then on, and a new link will be a different URL. Nothing about the site's data changes."
-	confirmLabel="Revoke link"
-	cancelLabel="Keep it"
+	title={t('share.revokeTitle')}
+	description={t('share.revokeBody')}
+	confirmLabel={t('share.revoke')}
+	cancelLabel={t('common.keepIt')}
 	onConfirm={revokeShare}
 />

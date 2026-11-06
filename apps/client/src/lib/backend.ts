@@ -12,10 +12,6 @@ export function getToken(): string | null {
 	return legacy;
 }
 
-export function setToken(token: string) {
-	localStorage.setItem(TOKEN_KEY, token);
-}
-
 export function clearToken() {
 	localStorage.removeItem(TOKEN_KEY);
 	localStorage.removeItem(LEGACY_TOKEN_KEY);
@@ -77,8 +73,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
  * currentUser asks the API who the caller is, and is the only honest answer to
  * "am I signed in".
  *
- * A local password login leaves a bearer token in localStorage, but an SSO
- * login does not: since porte v0.2.4 the OIDC callback issues an HttpOnly
+ * A session from before sign-in moved to Registre may still hold a bearer token in
+ * localStorage, but an SSO login does not: since porte v0.2.4 the OIDC callback issues an HttpOnly
  * session cookie and redirects, with nothing in the URL for the client to
  * store. Gating on localStorage therefore bounced every SSO user straight back
  * to the login page while they held a perfectly valid session.
@@ -109,31 +105,9 @@ export async function logout() {
 
 export const api = {
 	auth: {
-		register: (email: string, password: string) =>
-			request<{ user_id: string; token: string }>('POST', '/auth/register', { email, password }),
-		login: (email: string, password: string) =>
-			request<{ user_id: string; token: string }>('POST', '/auth/login', { email, password }),
 		me: () => request<UserProfile>('GET', '/auth/me'),
 		updateProfile: (name: string, email: string) =>
 			request<UserProfile>('PUT', '/auth/me', { name, email }),
-		/**
-		 * Changing a password ends the account's other logins and rotates this
-		 * one, so the bearer in localStorage is dead by the time the response
-		 * arrives. The new token is stored here rather than at the call site:
-		 * every screen that changes a password has to do it, and the one that
-		 * forgets looks like a working form that signs you out on the next click.
-		 *
-		 * An account with no password sends no currentPassword and gets a first
-		 * one. Nothing is rotated there, so the body carries no token.
-		 */
-		changePassword: async (currentPassword: string, newPassword: string) => {
-			const result = await request<{ status: string; token?: string }>('PUT', '/auth/password', {
-				current_password: currentPassword,
-				new_password: newPassword
-			});
-			if (result.token) setToken(result.token);
-			return result;
-		},
 		syncProfile: () => request<{ status: string }>('POST', '/auth/sync-profile')
 	},
 	workspaces: {
@@ -236,6 +210,7 @@ export interface UserProfile {
 	name: string;
 	avatar_url: string;
 	avatar_source: string;
+	locale: string;
 	created_at: string;
 }
 

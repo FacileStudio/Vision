@@ -4,7 +4,9 @@
 	import type { Topology } from 'topojson-specification';
 	import type { FeatureCollection, Geometry } from 'geojson';
 	import { ChartTooltip, IconButton, icons } from '@facile/muse';
-	import { getNumericCode, getAlpha2FromNumeric, getCountryName } from './country-codes';
+	import { getNumericCode, getAlpha2FromNumeric } from './country-codes';
+	import { country, fmt } from '$lib/i18n/format';
+	import { t } from '$lib/i18n/index.svelte';
 
 	import worldData from 'world-atlas/countries-110m.json';
 
@@ -62,7 +64,7 @@
 	let hoveredName = $derived.by(() => {
 		if (!hoveredId) return '';
 		const a2 = getAlpha2FromNumeric(hoveredId);
-		return a2 ? getCountryName(a2) : '';
+		return a2 ? country(a2) : '';
 	});
 
 	let hoveredCount = $derived(hoveredId ? (countsByNumeric.get(hoveredId) ?? 0) : 0);
@@ -155,7 +157,7 @@
 		const byName = new Map<string, { name: string; count: number }>();
 		for (const c of countries) {
 			const a2 = getAlpha2FromNumeric(getNumericCode(c.country) ?? '');
-			const name = (a2 ? getCountryName(a2) : c.country) || 'Unknown';
+			const name = (a2 ? country(a2) : c.country) || t('map.unknown');
 			const found = byName.get(name);
 			if (found) found.count += c.count;
 			else byName.set(name, { name, count: c.count });
@@ -213,29 +215,29 @@
 
 	<div class="sr-only">
 		<table>
-			<caption>Visitors by country</caption>
+			<caption>{t('map.text')}</caption>
 			<thead>
-				<tr><th scope="col">Country</th><th scope="col">Visitors</th></tr>
+				<tr><th scope="col">{t('map.country')}</th><th scope="col">{t('stat.visitors')}</th></tr>
 			</thead>
 			<tbody>
 				<!-- Keyed by position: this is a ranked table, and a name is a rendering of the
 					     data, not an identity for it. `ranked` merges by name so the two agree —
 					     but the index is what stays correct if that merge ever stops. -->
 					{#each ranked as row, i (i)}
-					<tr><td>{row.name}</td><td>{row.count}</td></tr>
+					<tr><td>{row.name}</td><td>{fmt(row.count)}</td></tr>
 				{/each}
 			</tbody>
 		</table>
 	</div>
 
 	<div class="absolute right-2 top-2 flex flex-col gap-1">
-		<IconButton variant="ghost" aria-label="Zoom in" onclick={zoomIn} class="size-9 bg-fc-component">
+		<IconButton variant="ghost" aria-label={t('map.zoomIn')} onclick={zoomIn} class="size-9 bg-fc-component">
 			<iconify-icon icon={icons.plus} width="16" height="16" class="block"></iconify-icon>
 		</IconButton>
-		<IconButton variant="ghost" aria-label="Zoom out" onclick={zoomOut} class="size-9 bg-fc-component">
+		<IconButton variant="ghost" aria-label={t('map.zoomOut')} onclick={zoomOut} class="size-9 bg-fc-component">
 			<iconify-icon icon={icons.minus} width="16" height="16" class="block"></iconify-icon>
 		</IconButton>
-		<IconButton variant="ghost" aria-label="Reset view" onclick={resetView} class="size-9 bg-fc-component">
+		<IconButton variant="ghost" aria-label={t('map.reset')} onclick={resetView} class="size-9 bg-fc-component">
 			<iconify-icon icon={icons.refresh} width="16" height="16" class="block"></iconify-icon>
 		</IconButton>
 	</div>
@@ -244,7 +246,7 @@
 		x={tooltipX}
 		y={tooltipY}
 		title={hoveredName}
-		rows={hoveredName ? [{ name: 'Visitors', value: String(hoveredCount) }] : []}
+		rows={hoveredName ? [{ name: t('stat.visitors'), value: fmt(hoveredCount) }] : []}
 		visible={tooltipVisible && hoveredName.length > 0}
 	/>
 </div>

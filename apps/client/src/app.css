@@ -5,29 +5,3 @@
  */
 @import '@facile/muse/styles';
 @source '../node_modules/@facile/muse/src';
-
-/*
- * The suite's semantic names, aliased onto muse tokens. The login screen is deliberately
- * raw markup shared byte-for-byte across all 15 Facile repos (see the auth-screen
- * convention), so it speaks `bg-background` / `text-muted-foreground` / `border-input`
- * rather than `fc-*`. Aliasing rather than forking means those class strings keep
- * rendering, in muse's palette, without a second set of values to keep in sync.
- */
-@theme inline {
-	--color-background: var(--color-fc-page);
-	--color-foreground: var(--color-fc-fg);
-	--color-muted: var(--color-fc-surface);
-	--color-muted-foreground: var(--color-fc-fg-muted);
-	--color-border: var(--color-fc-border);
-	--color-input: var(--color-fc-border);
-	--color-ring: var(--color-fc-ring);
-	--color-primary: var(--color-fc-accent);
-	--color-primary-foreground: var(--color-fc-accent-fg);
-	--color-secondary: var(--color-fc-surface);
-	--color-secondary-foreground: var(--color-fc-fg);
-	--color-accent: var(--color-fc-surface);
-	--color-accent-foreground: var(--color-fc-fg);
-	--color-destructive: var(--color-fc-danger);
-	--color-destructive-foreground: var(--color-fc-danger-fg);
-	--font-heading: var(--font-fc-title);
-}

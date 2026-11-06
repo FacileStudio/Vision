@@ -18,16 +18,17 @@
 	import BarList from '$lib/components/bar-list.svelte';
 	import {
 		type RangeKey,
-		ranges as allRanges,
+		rangeKeys,
 		rangeDates,
-		formatDateRange,
 		trendPercent,
-		fmt,
+		decimal,
 		classifyReferrer,
 		defaultGranularity,
 		formatChartDate,
 		mergeByLabel
 	} from '$lib/utils/analytics';
+	import { dateRange, fmt, hourLabel } from '$lib/i18n/format';
+	import { locale, t } from '$lib/i18n/index.svelte';
 
 	let siteName = $state('');
 	let siteDomain = $state('');
@@ -40,13 +41,15 @@
 
 	let selectedRange = $state<RangeKey>('30d');
 	/* No custom range on a public dashboard: it is a report, not a query tool. */
-	const ranges = allRanges.filter((r) => r.key !== 'custom');
+	const ranges = $derived(
+		rangeKeys.filter((key) => key !== 'custom').map((key) => ({ id: key, label: t(`range.${key}`) }))
+	);
 
 	const token = $derived((page.params as Record<string, string>).token);
 	const granularity = $derived(defaultGranularity(selectedRange));
 	const dateRangeLabel = $derived.by(() => {
 		const { from, to } = rangeDates(selectedRange);
-		return formatDateRange(from, to);
+		return dateRange(from, to);
 	});
 
 	const viewsPerVisitor = $derived(
@@ -61,23 +64,23 @@
 	);
 
 	const pageviewsTrend = $derived(
-		trendPercent(overview?.total_pageviews ?? 0, overview?.prev_total_pageviews ?? 0)
+		trendPercent(overview?.total_pageviews ?? 0, overview?.prev_total_pageviews ?? 0, locale())
 	);
 	const visitorsTrend = $derived(
-		trendPercent(overview?.unique_visitors ?? 0, overview?.prev_unique_visitors ?? 0)
+		trendPercent(overview?.unique_visitors ?? 0, overview?.prev_unique_visitors ?? 0, locale())
 	);
-	const vpvTrend = $derived(trendPercent(viewsPerVisitor, prevViewsPerVisitor));
+	const vpvTrend = $derived(trendPercent(viewsPerVisitor, prevViewsPerVisitor, locale()));
 	const bounceTrend = $derived(
-		trendPercent(overview?.bounce_rate ?? 0, overview?.prev_bounce_rate ?? 0)
+		trendPercent(overview?.bounce_rate ?? 0, overview?.prev_bounce_rate ?? 0, locale())
 	);
 
 	const chartLabels = $derived(
-		(overview?.pageviews_per_day ?? []).map((d) => formatChartDate(d.date, granularity))
+		(overview?.pageviews_per_day ?? []).map((d) => formatChartDate(d.date, granularity, locale()))
 	);
 	const trafficSeries = $derived([
-		{ name: 'Pageviews', data: (overview?.pageviews_per_day ?? []).map((d) => d.count) },
+		{ name: t('stat.pageviews'), data: (overview?.pageviews_per_day ?? []).map((d) => d.count) },
 		{
-			name: 'Visitors',
+			name: t('stat.visitors'),
 			data: (overview?.pageviews_per_day ?? []).map(
 				(d) => overview?.unique_visitors_per_day?.find((v) => v.date === d.date)?.count ?? 0
 			)
@@ -85,10 +88,10 @@
 	]);
 
 	const hourlySeries = $derived([
-		{ name: 'Pageviews', data: (overview?.hourly_distribution ?? []).map((h) => h.count) }
+		{ name: t('stat.pageviews'), data: (overview?.hourly_distribution ?? []).map((h) => h.count) }
 	]);
 	const hourlyLabels = $derived(
-		(overview?.hourly_distribution ?? []).map((h) => (h.hour % 3 === 0 ? `${h.hour}h` : ''))
+		(overview?.hourly_distribution ?? []).map((h) => (h.hour % 3 === 0 ? hourLabel(h.hour) : ''))
 	);
 
 	const trafficSources = $derived.by(() => {
@@ -108,10 +111,10 @@
 
 		const direct = Math.max(0, overview.total_pageviews - refTotal);
 		return [
-			{ label: 'Direct', value: direct },
-			{ label: 'Search', value: search },
-			{ label: 'Social', value: social },
-			{ label: 'Other', value: other }
+			{ label: t('source.direct'), value: direct },
+			{ label: t('source.search'), value: search },
+			{ label: t('source.social'), value: social },
+			{ label: t('source.other'), value: other }
 		].filter((d) => d.value > 0);
 	});
 
@@ -186,10 +189,8 @@
 			<div class="flex min-h-[60dvh] flex-col items-center justify-center gap-3 text-center">
 				<iconify-icon icon={icons.eyeClosed} width="40" height="40" class="block text-fc-fg-muted"
 				></iconify-icon>
-				<h1 class="text-fc-xl font-semibold text-fc-fg">Dashboard not found</h1>
-				<p class="max-w-sm text-fc-sm text-fc-fg-muted">
-					This link has been revoked, or it never existed. Ask whoever shared it for a new one.
-				</p>
+				<h1 class="text-fc-xl font-semibold text-fc-fg">{t('public.notFoundTitle')}</h1>
+				<p class="max-w-sm text-fc-sm text-fc-fg-muted">{t('public.notFoundText')}</p>
 			</div>
 		{:else if overview}
 			<div class="flex flex-wrap items-start justify-between gap-4">
@@ -197,45 +198,45 @@
 					<h1 class="truncate text-fc-2xl font-semibold text-fc-fg">{siteName}</h1>
 					<p class="truncate text-fc-sm text-fc-fg-muted">{siteDomain}</p>
 				</div>
-				<StatusDot tone="success" label="Live" pulse />
+				<StatusDot tone="success" label={t('site.live')} pulse />
 			</div>
 
 			<section class="flex flex-col gap-4">
 				<div class="flex flex-wrap items-center gap-3">
 					<div class="min-w-0 flex-1">
 						<Tabs
-							items={ranges.map((r) => ({ id: r.key, label: r.label }))}
+							items={ranges}
 							value={selectedRange}
 							onChange={(id) => (selectedRange = id as RangeKey)}
-							label="Date range"
+							label={t('range.label')}
 						/>
 					</div>
 					<span class="text-fc-xs text-fc-fg-muted">{dateRangeLabel}</span>
 				</div>
 
 				<div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-					<StatCard label="Pageviews" value={fmt(overview.total_pageviews)}>
+					<StatCard label={t('stat.pageviews')} value={fmt(overview.total_pageviews)}>
 						<span class="text-fc-xs {pageviewsTrend.color}">{pageviewsTrend.text}</span>
 					</StatCard>
-					<StatCard label="Visitors" value={fmt(overview.unique_visitors)}>
+					<StatCard label={t('stat.visitors')} value={fmt(overview.unique_visitors)}>
 						<span class="text-fc-xs {visitorsTrend.color}">{visitorsTrend.text}</span>
 					</StatCard>
-					<StatCard label="Views / visitor" value={viewsPerVisitor.toFixed(1)}>
+					<StatCard label={t('stat.viewsPerVisitor')} value={decimal(viewsPerVisitor, locale())}>
 						<span class="text-fc-xs {vpvTrend.color}">{vpvTrend.text}</span>
 					</StatCard>
-					<StatCard label="Bounce rate" value="{overview.bounce_rate.toFixed(1)}%">
+					<StatCard label={t('stat.bounceRate')} value="{decimal(overview.bounce_rate, locale())}%">
 						<span class="text-fc-xs {bounceTrend.color}">{bounceTrend.text}</span>
 					</StatCard>
-					<StatCard label="Active now" value={fmt(realtimeCount)}>
-						<StatusDot tone="success" label="right now" pulse class="text-fc-xs" />
+					<StatCard label={t('stat.activeNow')} value={fmt(realtimeCount)}>
+						<StatusDot tone="success" label={t('stat.rightNow')} pulse class="text-fc-xs" />
 					</StatCard>
 				</div>
 			</section>
 
 			<section class="flex flex-col gap-4">
 				<div class="flex flex-col gap-1">
-					<h2 class="text-fc-lg font-semibold text-fc-fg">Traffic over time</h2>
-					<p class="text-fc-sm text-fc-fg-muted">Pageviews and unique visitors.</p>
+					<h2 class="text-fc-lg font-semibold text-fc-fg">{t('traffic.title')}</h2>
+					<p class="text-fc-sm text-fc-fg-muted">{t('traffic.text')}</p>
 				</div>
 				<Card class="flex flex-col gap-4">
 					<LineChart series={trafficSeries} labels={chartLabels} area height={280} />
@@ -244,10 +245,10 @@
 				<div class="grid gap-4 lg:grid-cols-2">
 					{#if trafficSources.length > 0}
 						<Card class="flex flex-col gap-4">
-							<p class="text-fc-sm font-medium text-fc-fg">Traffic sources</p>
+							<p class="text-fc-sm font-medium text-fc-fg">{t('traffic.sources')}</p>
 							<DonutChart
 								data={trafficSources}
-								centerLabel="pageviews"
+								centerLabel={t('traffic.centerLabel')}
 								centerValue={fmt(overview.total_pageviews)}
 								class="flex-1"
 							/>
@@ -255,7 +256,7 @@
 					{/if}
 					{#if hourlySeries[0].data.length > 0}
 						<Card class="flex flex-col gap-4">
-							<p class="text-fc-sm font-medium text-fc-fg">By hour of day</p>
+							<p class="text-fc-sm font-medium text-fc-fg">{t('traffic.byHour')}</p>
 							<BarChart series={hourlySeries} labels={hourlyLabels} height={220} />
 						</Card>
 					{/if}
@@ -264,7 +265,7 @@
 
 			{#if (overview.top_countries?.length ?? 0) > 0}
 				<section class="flex flex-col gap-4">
-					<h2 class="text-fc-lg font-semibold text-fc-fg">Where they are</h2>
+					<h2 class="text-fc-lg font-semibold text-fc-fg">{t('map.title')}</h2>
 					<Card>
 						<WorldMap countries={overview.top_countries} />
 					</Card>
@@ -272,32 +273,32 @@
 			{/if}
 
 			<section class="flex flex-col gap-4">
-				<h2 class="text-fc-lg font-semibold text-fc-fg">Content</h2>
+				<h2 class="text-fc-lg font-semibold text-fc-fg">{t('content.title')}</h2>
 				<div class="grid gap-4 lg:grid-cols-3">
-					<BarList title="Top pages" items={topPages} class="lg:col-span-2" />
+					<BarList title={t('block.pages')} items={topPages} class="lg:col-span-2" />
 					{#if devices.length > 0}
 						<Card class="flex flex-col gap-4">
-							<p class="text-fc-sm font-medium text-fc-fg">Devices</p>
+							<p class="text-fc-sm font-medium text-fc-fg">{t('block.devices')}</p>
 							<DonutChart data={devices} class="flex-1" />
 						</Card>
 					{/if}
 
-					<BarList title="Top referrers" items={topReferrers} class="lg:col-span-2" />
+					<BarList title={t('block.referrers')} items={topReferrers} class="lg:col-span-2" />
 					{#if screens.length > 0}
 						<Card class="flex flex-col gap-4">
-							<p class="text-fc-sm font-medium text-fc-fg">Screens</p>
+							<p class="text-fc-sm font-medium text-fc-fg">{t('block.screens')}</p>
 							<DonutChart data={screens} class="flex-1" />
 						</Card>
 					{/if}
 
-					<BarList title="Browsers" items={browsers} />
-					<BarList title="Operating systems" items={operatingSystems} class="lg:col-span-2" />
+					<BarList title={t('block.browsers')} items={browsers} />
+					<BarList title={t('block.os')} items={operatingSystems} class="lg:col-span-2" />
 				</div>
 			</section>
 
 			<p class="flex items-center justify-center gap-1.5 py-6 text-fc-xs text-fc-fg-muted">
 				<iconify-icon icon={icons.dashboard} width="14" height="14" class="block"></iconify-icon>
-				Powered by Vision
+				{t('public.powered')}
 			</p>
 		{/if}
 	</div>

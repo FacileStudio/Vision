@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { api } from '$lib';
 	import { Alert, Button, Card, Field, Input, Spinner, icons, toast } from '@facile/muse';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let name = $state('');
 	let creating = $state(false);
@@ -13,24 +14,24 @@
 		e.preventDefault();
 		const trimmed = name.trim();
 		if (trimmed.length < 2) {
-			error = 'A space name needs at least two characters.';
+			error = t('newSpace.tooShortLong');
 			return;
 		}
 		creating = true;
 		error = '';
 		try {
 			const ws = await api.workspaces.create(trimmed);
-			toast.success(`${ws.name} is ready.`);
+			toast.success(t('newSpace.ready', { name: ws.name }));
 			goto(`/team/${ws.id}`);
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Could not create the space.';
+			error = e instanceof Error ? e.message : t('newSpace.failed');
 		} finally {
 			creating = false;
 		}
 	}
 </script>
 
-<svelte:head><title>New space — Vision</title></svelte:head>
+<svelte:head><title>{t('newSpace.pageTitle')}</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-fc-sm flex-col gap-8">
 	<a
@@ -38,28 +39,26 @@
 		class="inline-flex items-center gap-1.5 self-start rounded-fc-sm text-fc-sm text-fc-fg-muted transition-colors hover:text-fc-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
 	>
 		<iconify-icon icon={icons.chevronLeft} width="16" height="16" class="block"></iconify-icon>
-		Back to teams
+		{t('newSpace.back')}
 	</a>
 
 	<div class="flex flex-col gap-2">
-		<h1 class="text-fc-2xl font-semibold text-fc-fg">New space</h1>
-		<p class="text-fc-sm text-fc-fg-muted">
-			A space groups sites and the people who can read them. You will be its owner.
-		</p>
+		<h1 class="text-fc-2xl font-semibold text-fc-fg">{t('newSpace.heading')}</h1>
+		<p class="text-fc-sm text-fc-fg-muted">{t('newSpace.text')}</p>
 	</div>
 
 	<Card>
 		<form class="flex flex-col gap-4" onsubmit={create}>
 			<Field
-				label="Name"
-				error={tooShort ? 'At least two characters.' : undefined}
-				helper="Usually a client, a team or a product."
+				label={t('common.name')}
+				error={tooShort ? t('newSpace.tooShort') : undefined}
+				helper={t('newSpace.nameHelper')}
 			>
-				<Input bind:value={name} placeholder="Acme Studio" disabled={creating} />
+				<Input bind:value={name} placeholder={t('newSpace.namePlaceholder')} disabled={creating} />
 			</Field>
 
 			{#if error}
-				<Alert tone="danger" title="Not created">{error}</Alert>
+				<Alert tone="danger" title={t('newSpace.errorTitle')}>{error}</Alert>
 			{/if}
 
 			<Button
@@ -70,7 +69,7 @@
 				disabled={creating || name.trim().length < 2}
 			>
 				{#if creating}<Spinner size="sm" />{/if}
-				{creating ? 'Creating…' : 'Create space'}
+				{creating ? t('common.creating') : t('newSpace.submit')}
 			</Button>
 		</form>
 	</Card>

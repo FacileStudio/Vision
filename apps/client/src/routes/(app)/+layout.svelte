@@ -13,6 +13,7 @@
 	} from '@facile/muse';
 	import { userStore } from '$lib/stores/user.svelte';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
+	import { setSessionLocale, t } from '$lib/i18n/index.svelte';
 
 	let { children } = $props();
 
@@ -35,6 +36,7 @@
 			return;
 		}
 		userStore.value = me;
+		setSessionLocale(me.locale);
 		try {
 			workspaceStore.hydrate(await api.workspaces.list());
 		} catch {}
@@ -43,6 +45,7 @@
 			.then(async () => {
 				try {
 					userStore.value = await api.auth.me();
+					setSessionLocale(userStore.value.locale);
 				} catch {}
 			})
 			.catch(() => {});
@@ -58,10 +61,10 @@
 	 * No Settings row here, by design — the user card at the bottom of the rail is the only
 	 * way in, and the avatar on MobileNav is its phone counterpart. See CHARTE §14.
 	 */
-	const links = [
-		{ href: '/sites', label: 'Sites', icon: icons.globe },
-		{ href: '/team', label: 'Teams', icon: icons.space }
-	];
+	const links = $derived([
+		{ href: '/sites', label: t('nav.sites'), icon: icons.globe },
+		{ href: '/team', label: t('nav.teams'), icon: icons.space }
+	]);
 
 	function isActive(href: string) {
 		return page.url.pathname === href || page.url.pathname.startsWith(href + '/');
@@ -71,7 +74,7 @@
 	const onSettings = $derived(isActive('/settings'));
 
 	const user = $derived({
-		name: userStore.value?.name?.trim() || userStore.value?.email || 'Account',
+		name: userStore.value?.name?.trim() || userStore.value?.email || t('nav.account'),
 		avatar: userStore.value?.avatar_url || undefined
 	});
 

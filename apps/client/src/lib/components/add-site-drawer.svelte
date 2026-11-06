@@ -3,6 +3,7 @@
 	import type { Site } from '$lib';
 	import { Alert, Button, Drawer, Field, Input, Select, Spinner, icons } from '@facile/muse';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let {
 		open = $bindable(false),
@@ -34,7 +35,7 @@
 		error = '';
 		const id = Number(workspaceId);
 		if (!id) {
-			error = 'No space available — create one first.';
+			error = t('addSite.noSpace');
 			return;
 		}
 		submitting = true;
@@ -43,17 +44,17 @@
 			open = false;
 			onCreated(site);
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Could not add the site.';
+			error = e instanceof Error ? e.message : t('addSite.failed');
 		} finally {
 			submitting = false;
 		}
 	}
 </script>
 
-<Drawer bind:open title="Add a site" description="Vision starts counting as soon as the script is on the page." showClose>
+<Drawer bind:open title={t('addSite.title')} description={t('addSite.description')} showClose>
 	<form id="add-site" class="flex flex-col gap-4" onsubmit={addSite}>
 		{#if workspaceStore.all.length > 1}
-			<Field label="Space" helper="Everyone in the space can read this site's stats.">
+			<Field label={t('addSite.space')} helper={t('addSite.spaceHelper')}>
 				<Select bind:value={workspaceId} disabled={submitting}>
 					{#each workspaceStore.all as ws (ws.id)}
 						<option value={String(ws.id)}>{ws.name}</option>
@@ -62,23 +63,23 @@
 			</Field>
 		{/if}
 
-		<Field label="Name" helper="How it appears in your site list.">
-			<Input bind:value={name} placeholder="My website" required disabled={submitting} />
+		<Field label={t('common.name')} helper={t('addSite.nameHelper')}>
+			<Input bind:value={name} placeholder={t('addSite.namePlaceholder')} required disabled={submitting} />
 		</Field>
 
-		<Field label="Domain" helper="Events are verified against this domain — no subdomain, no scheme.">
+		<Field label={t('addSite.domain')} helper={t('addSite.domainHelper')}>
 			<Input bind:value={domain} placeholder="example.com" required disabled={submitting} />
 		</Field>
 
 		{#if error}
-			<Alert tone="danger" title="Not added">{error}</Alert>
+			<Alert tone="danger" title={t('addSite.errorTitle')}>{error}</Alert>
 		{/if}
 	</form>
 
 	{#snippet footer()}
 		<div class="flex gap-2">
 			<Button variant="ghost" size="lg" class="flex-1" disabled={submitting} onclick={() => (open = false)}>
-				Cancel
+				{t('common.cancel')}
 			</Button>
 			<Button
 				type="submit"
@@ -89,7 +90,7 @@
 				disabled={submitting || !name.trim() || !domain.trim()}
 			>
 				{#if submitting}<Spinner size="sm" />{/if}
-				{submitting ? 'Adding…' : 'Add site'}
+				{submitting ? t('common.adding') : t('sites.add')}
 			</Button>
 		</div>
 	{/snippet}

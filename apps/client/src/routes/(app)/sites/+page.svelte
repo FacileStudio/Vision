@@ -5,6 +5,7 @@
 	import AddSiteDrawer from '$lib/components/add-site-drawer.svelte';
 	import SiteFavicon from '$lib/components/site-favicon.svelte';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let sites = $state<Site[]>([]);
 	let loading = $state(true);
@@ -18,7 +19,7 @@
 		try {
 			sites = await api.sites.list(workspaceStore.current?.id);
 		} catch (e) {
-			toast.danger(e instanceof Error ? e.message : 'Could not load your sites.');
+			toast.danger(e instanceof Error ? e.message : t('sites.loadFailed'));
 		} finally {
 			loading = false;
 		}
@@ -35,29 +36,29 @@
 		await api.sites.delete(site.id);
 		sites = sites.filter((s) => s.id !== site.id);
 		pendingDelete = null;
-		toast.neutral(`Deleted ${site.name}.`);
+		toast.neutral(t('sites.deleted', { name: site.name }));
 	}
 </script>
 
-<svelte:head><title>Sites — Vision</title></svelte:head>
+<svelte:head><title>{t('sites.pageTitle')}</title></svelte:head>
 
 <AddSiteDrawer
 	bind:open={drawerOpen}
 	onCreated={(site) => {
 		sites = [site, ...sites];
-		toast.success(`${site.name} is now being tracked.`);
+		toast.success(t('sites.tracked', { name: site.name }));
 	}}
 />
 
 <div class="flex flex-col gap-10">
 	<div class="flex flex-wrap items-start justify-between gap-4">
 		<div class="flex min-w-0 flex-col gap-2">
-			<h1 class="text-fc-2xl font-semibold text-fc-fg">Sites</h1>
+			<h1 class="text-fc-2xl font-semibold text-fc-fg">{t('sites.heading')}</h1>
 			<p class="text-fc-sm text-fc-fg-muted">
-				Everything {workspaceStore.current?.name ?? 'this space'} is tracking.
+				{t('sites.subtitle', { space: workspaceStore.current?.name ?? t('sites.thisSpace') })}
 			</p>
 		</div>
-		<Button icon={icons.plus} onclick={() => (drawerOpen = true)}>Add site</Button>
+		<Button icon={icons.plus} onclick={() => (drawerOpen = true)}>{t('sites.add')}</Button>
 	</div>
 
 	<section class="flex flex-col gap-4">
@@ -68,10 +69,10 @@
 		{:else if sites.length === 0}
 			<EmptyState
 				icon={icons.globe}
-				title="No sites yet"
-				description="Add a domain and drop one script tag on it. Numbers start arriving on the next pageview."
+				title={t('sites.empty.title')}
+				description={t('sites.empty.text')}
 			>
-				<Button size="lg" icon={icons.plus} onclick={() => (drawerOpen = true)}>Add site</Button>
+				<Button size="lg" icon={icons.plus} onclick={() => (drawerOpen = true)}>{t('sites.add')}</Button>
 			</EmptyState>
 		{:else}
 			{#each sites as site (site.id)}
@@ -89,13 +90,13 @@
 					<Button
 						variant="ghost-danger"
 						icon={icons.remove}
-						aria-label="Delete {site.name}"
+						aria-label={t('sites.deleteAria', { name: site.name })}
 						onclick={() => {
 							pendingDelete = site;
 							confirmOpen = true;
 						}}
 					>
-						Delete
+						{t('common.delete')}
 					</Button>
 				</Card>
 			{/each}
@@ -106,11 +107,10 @@
 <ConfirmModal
 	bind:open={confirmOpen}
 	tone="danger"
-	title="Delete {pendingDelete?.name ?? 'this site'}?"
-	description="Every pageview, session and goal recorded for {pendingDelete?.domain ??
-		'this domain'} goes with it, and the script on the site stops being accepted. This cannot be undone."
-	confirmLabel="Delete site"
-	cancelLabel="Keep it"
+	title={t('sites.deleteTitle', { name: pendingDelete?.name ?? t('sites.thisSite') })}
+	description={t('sites.deleteBody', { domain: pendingDelete?.domain ?? t('sites.thisDomain') })}
+	confirmLabel={t('sites.deleteConfirm')}
+	cancelLabel={t('common.keepIt')}
 	onConfirm={deleteSite}
 	onCancel={() => (pendingDelete = null)}
 />

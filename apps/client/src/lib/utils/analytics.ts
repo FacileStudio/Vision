@@ -2,21 +2,9 @@ export type RangeKey = 'today' | '7d' | '30d' | '90d' | 'this_year' | 'custom';
 
 export type Granularity = 'hour' | 'day' | 'week' | 'month';
 
-export const ranges: { key: RangeKey; label: string }[] = [
-	{ key: 'today', label: 'Today' },
-	{ key: '7d', label: '7d' },
-	{ key: '30d', label: '30d' },
-	{ key: '90d', label: '90d' },
-	{ key: 'this_year', label: 'Year' },
-	{ key: 'custom', label: 'Custom' }
-];
+export const rangeKeys: RangeKey[] = ['today', '7d', '30d', '90d', 'this_year', 'custom'];
 
-export const granularities: { key: Granularity; label: string }[] = [
-	{ key: 'hour', label: 'Hourly' },
-	{ key: 'day', label: 'Daily' },
-	{ key: 'week', label: 'Weekly' },
-	{ key: 'month', label: 'Monthly' }
-];
+export const granularityKeys: Granularity[] = ['hour', 'day', 'week', 'month'];
 
 export function rangeDates(
 	key: RangeKey,
@@ -36,24 +24,45 @@ export function rangeDates(
 	return { from: from.toISOString().slice(0, 10), to: toStr };
 }
 
-export function formatDateRange(from: string, to: string): string {
-	const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+export function formatDateRange(from: string, to: string, locale: string): string {
+	const withYear = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' });
+	const withoutYear = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' });
 	const f = new Date(from + 'T00:00:00');
 	const t = new Date(to + 'T00:00:00');
-	if (from === to) return f.toLocaleDateString('en-US', opts);
-	return `${f.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${t.toLocaleDateString('en-US', opts)}`;
+	if (from === to) return withYear.format(f);
+	return `${withoutYear.format(f)} – ${withYear.format(t)}`;
 }
 
-export function trendPercent(current: number, prev: number): { text: string; color: string } {
+export function trendPercent(current: number, prev: number, locale: string): { text: string; color: string } {
 	if (prev === 0) return { text: '—', color: 'text-fc-fg-muted' };
 	const pct = ((current - prev) / prev) * 100;
-	if (pct > 0) return { text: `↑ ${pct.toFixed(1)}%`, color: 'text-fc-success' };
-	if (pct < 0) return { text: `↓ ${Math.abs(pct).toFixed(1)}%`, color: 'text-fc-danger' };
+	const one = new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+	if (pct > 0) return { text: `↑ ${one.format(pct)}%`, color: 'text-fc-success' };
+	if (pct < 0) return { text: `↓ ${one.format(Math.abs(pct))}%`, color: 'text-fc-danger' };
 	return { text: '—', color: 'text-fc-fg-muted' };
 }
 
-export function fmt(n: number): string {
-	return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+export function fmt(n: number, locale: string): string {
+	return new Intl.NumberFormat(locale).format(n);
+}
+
+/** One decimal place, in the locale's own separators. */
+export function decimal(n: number, locale: string): string {
+	return new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
+}
+
+/** An hour of the day, 0 to 23, written the way the locale writes a clock hour. */
+export function formatHour(hour: number, locale: string): string {
+	return new Intl.DateTimeFormat(locale, { hour: 'numeric' }).format(new Date(2000, 0, 1, hour));
+}
+
+/** A region code as a country name, falling back to the code itself. */
+export function countryName(code: string, locale: string): string {
+	try {
+		return new Intl.DisplayNames([locale], { type: 'region' }).of(code.toUpperCase()) ?? code.toUpperCase();
+	} catch {
+		return code.toUpperCase();
+	}
 }
 
 const SEARCH_ENGINES = ['google', 'bing', 'duckduckgo', 'yahoo', 'baidu', 'yandex'];
@@ -102,29 +111,31 @@ const DEFAULT_GRANULARITY: Record<RangeKey, Granularity> = {
 	custom: 'day'
 };
 
-export function allowedGranularities(range: RangeKey) {
+export function allowedGranularities(range: RangeKey): Granularity[] {
 	const allowed = ALLOWED_GRANULARITIES[range];
-	return granularities.filter((g) => allowed.includes(g.key));
+	return granularityKeys.filter((key) => allowed.includes(key));
 }
 
 export function defaultGranularity(range: RangeKey): Granularity {
 	return DEFAULT_GRANULARITY[range];
 }
 
-export function formatChartDate(d: string, granularity: Granularity): string {
+const WEEK_PREFIX: Record<string, string> = { fr: 'S', es: 'S', de: 'KW' };
+
+export function formatChartDate(d: string, granularity: Granularity, locale: string): string {
 	if (granularity === 'hour') {
 		const parts = d.split(' ');
 		return parts[1] ?? d;
 	}
 	if (granularity === 'week') {
-		return `W${d.split('-').pop()}`;
+		return `${WEEK_PREFIX[locale] ?? 'W'}${d.split('-').pop()}`;
 	}
 	if (granularity === 'month') {
 		const date = new Date(d + '-01T00:00:00');
-		return date.toLocaleDateString('en-US', { month: 'short' });
+		return new Intl.DateTimeFormat(locale, { month: 'short' }).format(date);
 	}
 	const date = new Date(d + 'T00:00:00');
-	return `${date.getMonth() + 1}/${date.getDate()}`;
+	return new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric' }).format(date);
 }
 
 /*
