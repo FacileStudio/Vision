@@ -6,6 +6,8 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-06
+
 ### Added
 
 - Landing page: a "Pricing" section showing the live plans from the public catalog (muse `PricingPlans`, hidden while the catalog is empty)
@@ -38,5 +40,6 @@ First tagged release of the Facile Suite's cookie-free web analytics.
 
 - Spaces use the share-circle icon (muse v0.7.4)
 
-[Unreleased]: https://github.com/FacileStudio/Vision/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/FacileStudio/Vision/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/FacileStudio/Vision/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/FacileStudio/Vision/releases/tag/v0.1.0
