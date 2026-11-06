@@ -4,12 +4,11 @@ go 1.26
 
 require (
 	github.com/FacileStudio/Journal/sdk/journal v0.0.0-20260708221941-db985ad2b1ba
-	github.com/FacileStudio/porte v0.5.2
-	github.com/FacileStudio/porte/directory v0.1.0
-	github.com/FacileStudio/tronc v0.16.0
+	github.com/FacileStudio/porte v0.12.0
+	github.com/FacileStudio/porte/directory v0.3.0
+	github.com/FacileStudio/tronc v0.17.1
 	github.com/FacileStudio/tronc/testdb v0.1.1
 	github.com/go-chi/chi/v5 v5.3.1
-	golang.org/x/crypto v0.54.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
 )
@@ -25,6 +24,5 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
 )

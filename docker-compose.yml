@@ -19,6 +19,8 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
     expose:
       - "4000"
     healthcheck:
@@ -41,7 +43,6 @@ services:
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
       OIDC_REDIRECT_URL: ${OIDC_REDIRECT_URL:-}
       OIDC_SUCCESS_URL: ${OIDC_SUCCESS_URL:-}
-      SSO_ONLY: ${SSO_ONLY:-false}
       JOURNAL_URL: ${JOURNAL_URL:-}
       JOURNAL_TOKEN: ${JOURNAL_TOKEN:-}
     depends_on:

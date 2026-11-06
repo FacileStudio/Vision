@@ -21,7 +21,7 @@ import (
 	"github.com/FacileStudio/Vision/apps/api/modules/goals"
 	"github.com/FacileStudio/Vision/apps/api/modules/sites"
 	"github.com/FacileStudio/Vision/apps/api/modules/webhooks"
-	"github.com/FacileStudio/porte/local"
+	"github.com/FacileStudio/porte/directory"
 	"github.com/FacileStudio/porte/oidc"
 	portepg "github.com/FacileStudio/porte/pg"
 	"github.com/FacileStudio/porte/session"
@@ -40,30 +40,20 @@ import (
 	troncmiddleware "github.com/FacileStudio/tronc/middleware"
 )
 
-// buildAuth constructs porte: one session manager, shared by the OIDC kit and
-// the local login, over the identity tables.
+// buildAuth constructs porte: one session manager and the OIDC kit over the identity
+// tables.
 //
-// One manager and not two: they would each keep their own idea of the clock
-// and of whether the cookie is Secure, and porte refuses a kit whose config
-// disagrees with its manager's for exactly that reason. Discovery runs here,
-// so an unreachable or half-configured issuer fails at boot rather than on
-// somebody's first login — a change from what this app did, where a discovery
-// failure at route-registration time logged an error and left SSO 404ing until
-// the next restart.
+// Sign-in goes through Registre only. porte mounts no password route while an issuer is
+// configured, so Vision builds no local kit and keeps no register or login route.
+// Discovery runs here, so an unreachable or half-configured issuer fails at boot rather
+// than on somebody's first login.
 //
 // ConfigExtra keeps the two keys this app's client reads off /auth/config.
-// porte owns that route now and writes sso_only and oidc_enabled over whatever
-// the app returns, so an app cannot claim SSO is optional when it is mandatory.
-// buildAuth wires porte's local and OIDC kits to Vision's stores.
-//
-// The local password floor is eight characters, deliberately below porte's
-// default of twelve: Vision's floor has always been eight, and raising it here
-// would reject a password this app accepted yesterday — a product decision,
-// not a migration.
-func buildAuth(ctx context.Context, db *gorm.DB, appEnv env.Config, appLogger *slog.Logger) (*session.Manager, *local.Kit, *oidc.Kit, error) {
+// porte owns that route and writes sso_only and oidc_enabled itself.
+func buildAuth(ctx context.Context, db *gorm.DB, appEnv env.Config, appLogger *slog.Logger) (*session.Manager, *oidc.Kit, error) {
 	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	store := portepg.New(sqlDB)
 	users := auth.NewUserStore(db)
@@ -71,7 +61,7 @@ func buildAuth(ctx context.Context, db *gorm.DB, appEnv env.Config, appLogger *s
 
 	sessions, err := session.New(cfg, session.Deps{Sessions: store.Sessions(), Logger: appLogger})
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	kit, err := oidc.New(ctx, cfg, oidc.Deps{
 		Users:      users,
@@ -90,19 +80,9 @@ func buildAuth(ctx context.Context, db *gorm.DB, appEnv env.Config, appLogger *s
 		},
 	})
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	passwords, err := local.New(local.Config{AllowRegistration: !appEnv.SSOOnly, MinPasswordLength: 8}, local.Deps{
-		Users:      users,
-		Identities: store.Identities(),
-		Sessions:   sessions,
-		Logger:     appLogger,
-		Count:      users.CountUsers,
-	})
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	return sessions, passwords, kit, nil
+	return sessions, kit, nil
 }
 
 func main() {
@@ -174,12 +154,12 @@ func run() int {
 		}
 	}()
 
-	sessions, passwords, kit, err := buildAuth(context.Background(), db, appEnv, appLogger)
+	sessions, kit, err := buildAuth(context.Background(), db, appEnv, appLogger)
 	if err != nil {
 		appLogger.Error("failed to build authentication", slog.Any("error", err))
 		return 1
 	}
-	authService := auth.NewService(db, sessions, passwords, appLogger)
+	authService := auth.NewService(db, sessions, appLogger)
 	workspaceService := workspaces.NewService(db, appEnv.IssuerForMigration())
 	siteService := sites.NewService(db)
 	eventHub := events.NewHub()
@@ -202,11 +182,12 @@ func run() int {
 	})
 
 	health.Mount(router, health.DB(sqlDB))
+	router.Get("/version", versionHandler)
 	apiref.Mount(router, referenceConfig())
 
 	sessions.Mount(router)
 	kit.Mount(router)
-	auth.RegisterRoutes(router, authService, appEnv)
+	auth.RegisterRoutes(router, authService)
 	workspaces.RegisterRoutes(router, workspaceService, authService)
 	stopDirectory := startDirectory(router, db, appEnv, appLogger)
 	defer stopDirectory()
@@ -259,18 +240,31 @@ func run() int {
 	return 0
 }
 
-// startDirectory mounts Registre's nudge and starts syncing shared workspaces in the
-// background, when Vision signs in through Registre. The returned func stops the sync.
-// Registre being down or not serving the directory yet never fails the boot: the sync
-// retries on its own while Vision keeps serving the workspaces it has.
+// startDirectory mounts Registre's nudge and its deletion push, and starts syncing shared
+// workspaces and erasing deleted people in the background, when Vision signs in through
+// Registre. The returned func stops both. Registre being down or not serving the
+// directory yet never fails the boot: each loop retries on its own while Vision keeps
+// serving what it has. Vision runs one replica, so this is the one deletion poller.
 func startDirectory(router chi.Router, db *gorm.DB, appEnv env.Config, appLogger *slog.Logger) func() {
 	if appEnv.OIDC == nil {
 		return func() {}
 	}
-	registre := workspaces.NewDirectory(db, appEnv.OIDC.Issuer, appEnv.OIDC.ClientID, appEnv.OIDC.ClientSecret, appLogger)
+	oidcEnv := appEnv.OIDC
+	registre := workspaces.NewDirectory(db, oidcEnv.Issuer, oidcEnv.ClientID, oidcEnv.ClientSecret, appLogger)
 	workspaces.RegisterDirectory(router, registre)
+
+	client := directory.Client{Issuer: oidcEnv.Issuer, ClientID: oidcEnv.ClientID, ClientSecret: oidcEnv.ClientSecret}
+	sqlDB, err := db.DB()
+	if err != nil {
+		appLogger.Error("deletion receiver not started", slog.Any("error", err))
+		return func() {}
+	}
+	deletions := workspaces.NewDeletions(db, client, portepg.New(sqlDB).EraseIdentity, appLogger)
+	workspaces.RegisterDeletions(router, deletions)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	go registre.Run(ctx)
+	go deletions.Run(ctx)
 	return cancel
 }
 

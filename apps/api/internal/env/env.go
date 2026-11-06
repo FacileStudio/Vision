@@ -34,7 +34,6 @@ type Config struct {
 	Domain       string
 	LogLevel     string
 	OIDC         *OIDCConfig
-	SSOOnly      bool
 	JournalURL   string
 	JournalToken string
 }
@@ -66,7 +65,6 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
-	env.SSOOnly = strings.ToLower(envGet("SSO_ONLY")) == "true"
 	env.JournalURL = envGet("JOURNAL_URL")
 	env.JournalToken = envGet("JOURNAL_TOKEN")
 
@@ -118,7 +116,7 @@ func validateLogLevel(level string) error {
 // it costs nothing when no such cookie exists, and porte now sets one, so the
 // setting describes the transport rather than the migration.
 func (c Config) Porte() porte.Config {
-	cfg := porte.Config{SSOOnly: c.SSOOnly, AcceptLegacyCookie: true}
+	cfg := porte.Config{AcceptLegacyCookie: true}
 	if c.OIDC == nil {
 		return cfg
 	}

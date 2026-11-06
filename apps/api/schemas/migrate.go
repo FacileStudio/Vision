@@ -21,6 +21,9 @@ func MigrateWithIssuer(db *gorm.DB, issuer string) error {
 	); err != nil {
 		return err
 	}
+	if err := db.Exec(deletionStateTable).Error; err != nil {
+		return err
+	}
 	if err := normalizeOIDCPictureURL(db); err != nil {
 		return err
 	}
@@ -81,3 +84,13 @@ func seedPersonalWorkspaces(db *gorm.DB) error {
 	}
 	return nil
 }
+
+// deletionStateTable holds the GDPR deletion receiver's cursor and the people it already
+// erased, as one row the directory package reads and writes whole.
+const deletionStateTable = `
+CREATE TABLE IF NOT EXISTS directory_deletion_state (
+	id         smallint PRIMARY KEY CHECK (id = 1),
+	state      bytea NOT NULL,
+	updated_at timestamptz NOT NULL DEFAULT now()
+);
+`
