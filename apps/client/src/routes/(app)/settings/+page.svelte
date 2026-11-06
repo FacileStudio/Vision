@@ -27,8 +27,6 @@
 	let email = $state('');
 	let savingProfile = $state(false);
 
-	let ssoOnly = $state(false);
-
 	onMount(async () => {
 		try {
 			profile = await api.auth.me();
@@ -37,10 +35,6 @@
 		} catch (e) {
 			loadError = e instanceof Error ? e.message : t('profile.loadFailed');
 		}
-		try {
-			const cfg = await fetch('/api/auth/config').then((r) => r.json());
-			ssoOnly = cfg.sso_only ?? false;
-		} catch {}
 	});
 
 	async function updateProfile(e: Event) {
@@ -98,9 +92,9 @@
 					</Field>
 					<Field
 						label={t('common.email')}
-						helper={ssoOnly ? t('profile.emailManaged') : t('profile.emailHelper')}
+						helper={t('profile.emailManaged')}
 					>
-						<Input bind:value={email} type="email" required disabled={savingProfile || ssoOnly} />
+						<Input bind:value={email} type="email" required disabled />
 					</Field>
 				</div>
 

@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	stderrors "errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -94,23 +93,16 @@ func (service *Service) AuthenticateToken(w http.ResponseWriter, r *http.Request
 	return service.AuthenticateRequest(w, bearer)
 }
 
-// UpdateProfile changes the name and address.
-//
-// Since porte v0.3.0 a password identity is keyed on the account id, so an
-// address change touches this row and nothing else. The hand-written
-// re-key that used to follow it here is gone: the address is looked up on the
-// way to the credential now rather than being the key to it.
-func (service *Service) UpdateProfile(ctx context.Context, userID int64, name, email string) (*schemas.User, error) {
+// UpdateProfile changes the name. The address is Registre's: it is the key sign-in links
+// accounts by, so a user who could rewrite it could squat another person's address and
+// lock them out of linking.
+func (service *Service) UpdateProfile(ctx context.Context, userID int64, name string) (*schemas.User, error) {
 	var record schemas.User
 	if err := service.orm.WithContext(ctx).First(&record, userID).Error; err != nil {
 		return nil, errors.NotFound("user not found")
 	}
 	record.Name = name
-	record.Email = email
-	if err := service.orm.WithContext(ctx).Save(&record).Error; err != nil {
-		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
-			return nil, errors.Conflict("email already in use")
-		}
+	if err := service.orm.WithContext(ctx).Model(&record).Update("name", name).Error; err != nil {
 		return nil, errors.Internal("failed to update user", err)
 	}
 	return &record, nil
@@ -136,10 +128,10 @@ func (service *Service) getUserByString(ctx context.Context, userID string) (*sc
 	return service.GetUser(ctx, id)
 }
 
-func (service *Service) updateProfileByString(ctx context.Context, userID, name, email string) (*schemas.User, error) {
+func (service *Service) updateProfileByString(ctx context.Context, userID, name string) (*schemas.User, error) {
 	id, err := strconv.ParseInt(userID, 10, 64)
 	if err != nil {
 		return nil, errors.Internal("failed to parse user id", err)
 	}
-	return service.UpdateProfile(ctx, id, name, email)
+	return service.UpdateProfile(ctx, id, name)
 }

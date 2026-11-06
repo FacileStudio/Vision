@@ -16,6 +16,7 @@ All notable changes to Vision are recorded here. The format follows
 
 ### Changed
 
+- `PUT /auth/me` saves the name only and ignores `email`: the address comes from Registre, and a user who could set it could squat another person's address and block their first Facile sign-in
 - `porte` v0.5.2 to v0.12.0, `porte/directory` v0.1.0 to v0.3.0, `tronc` v0.16.0 to v0.17.1, `@facile/muse` v0.11.0 to v0.12.1
 - The login page is muse `AuthScreen`, the landing page uses `LandingHeader` and `LandingFooter`, and every sign-in button is `SignInWithFacile`
 - An existing account links to a Facile sign-in only by a verified email, and is refused when it already holds another subject of the same issuer

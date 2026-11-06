@@ -6,7 +6,8 @@ type AuthResponse struct {
 	Token  string `json:"token"`
 }
 
-// UpdateProfileRequest is the payload for editing the profile.
+// UpdateProfileRequest is the payload for editing the profile. Email is accepted for
+// older clients and ignored: the address comes from Registre.
 type UpdateProfileRequest struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
