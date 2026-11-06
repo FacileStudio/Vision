@@ -10,6 +10,7 @@ type User struct {
 	PasswordHash     string    `gorm:"column:password_hash"`
 	AvatarURL        string    `gorm:"column:avatar_url"`
 	AvatarSource     string    `gorm:"column:avatar_source"`
+	Locale           string    `gorm:"column:locale;not null;default:en"`
 	OIDCPictureURL   string    `gorm:"column:oidc_picture_url"`
 	OIDCSubject      *string   `gorm:"column:oidc_subject;uniqueIndex"`
 	OIDCAccessToken  string    `gorm:"column:oidc_access_token"`

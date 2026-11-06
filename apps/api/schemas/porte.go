@@ -38,6 +38,11 @@ func AdoptPorte(db *gorm.DB, issuer string) error {
 // everything except authentication. The other three stores come from porte/pg
 // unchanged — they only ever touch the tables below.
 //
+// porte v0.10.0 added provider and subject to porte_login_codes, which bind a CLI or
+// mobile login code to the identity that vouched for it; without them those logins fail.
+// porte v0.12.0's EraseIdentity deletes from porte_magic_links, so the table exists here
+// even though no magic link is mounted under OIDC.
+//
 // Kept verbatim from porte otherwise, column for column: pg's queries are
 // written against these names, and a divergence here surfaces as a runtime
 // error on the login path rather than at boot. That includes the UPDATE below,
@@ -88,6 +93,18 @@ CREATE TABLE IF NOT EXISTS porte_login_codes (
 	consumed_at timestamptz
 );
 ALTER TABLE porte_login_codes ADD COLUMN IF NOT EXISTS consumed_at timestamptz;
+ALTER TABLE porte_login_codes ADD COLUMN IF NOT EXISTS provider text NOT NULL DEFAULT '',
+	ADD COLUMN IF NOT EXISTS subject text NOT NULL DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS porte_magic_links (
+	token_hash  text PRIMARY KEY,
+	user_id     bigint NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	ip          text NOT NULL DEFAULT '',
+	created_at  timestamptz NOT NULL,
+	expires_at  timestamptz NOT NULL,
+	consumed_at timestamptz
+);
+CREATE INDEX IF NOT EXISTS porte_magic_links_user_idx ON porte_magic_links (user_id, created_at);
 `
 
 // carryLegacySessionsOver moves the pre-porte sessions table across instead of

@@ -8,8 +8,6 @@ import (
 	"strconv"
 
 	"github.com/FacileStudio/Vision/apps/api/schemas"
-	"github.com/FacileStudio/porte"
-	"github.com/FacileStudio/porte/local"
 	"github.com/FacileStudio/porte/session"
 	"github.com/FacileStudio/tronc/errors"
 
@@ -17,19 +15,17 @@ import (
 )
 
 // Service is what is left of Vision's authentication after porte took the
-// credential: the profile lookup the rest of the app reads, and a thin wrapper
-// over porte/local so the register and login routes keep their response shape.
+// credential: the profile lookup the rest of the app reads.
 type Service struct {
 	orm        *gorm.DB
 	sessions   *session.Manager
-	passwords  *local.Kit
 	logger     *slog.Logger
 	controller *Controller
 }
 
-// NewService wires a Service onto porte's session manager and local kit.
-func NewService(orm *gorm.DB, sessions *session.Manager, passwords *local.Kit, logger *slog.Logger) *Service {
-	service := &Service{orm: orm, sessions: sessions, passwords: passwords, logger: logger}
+// NewService wires a Service onto porte's session manager.
+func NewService(orm *gorm.DB, sessions *session.Manager, logger *slog.Logger) *Service {
+	service := &Service{orm: orm, sessions: sessions, logger: logger}
 	service.controller = newController(service)
 	return service
 }
@@ -68,37 +64,6 @@ func (service *Service) IdentityForUser(ctx context.Context, userID int64) (stri
 	return strconv.FormatInt(out.ID, 10), out.Email, nil
 }
 
-// Register creates an account through porte/local and signs it in. The cookie
-// is set on the way out and the token comes back in the body, so one call
-// serves the browser and anything holding the old {user_id, token} shape.
-func (service *Service) Register(ctx context.Context, w http.ResponseWriter, r *http.Request, email, password string) (string, string, error) {
-	userID, token, err := service.passwords.Register(ctx, w, r, email, "", password)
-	if err != nil {
-		return "", "", err
-	}
-	return strconv.FormatInt(userID, 10), token, nil
-}
-
-func (service *Service) Login(ctx context.Context, w http.ResponseWriter, r *http.Request, email, password string) (string, string, error) {
-	userID, token, err := service.passwords.Login(ctx, w, r, email, password)
-	if err != nil {
-		return "", "", err
-	}
-	return strconv.FormatInt(userID, 10), token, nil
-}
-
-// SetPassword gives a first password to an account that has none. porte answers
-// porte.ErrPasswordSet when one is already there; replacing it is ChangePassword.
-func (service *Service) SetPassword(ctx context.Context, userID int64, password string) error {
-	return service.passwords.SetPassword(ctx, userID, password)
-}
-
-// Issue mints a named API token: a porte session with a label and no expiry,
-// which is what the separate api_tokens table used to be.
-func (service *Service) Issue(ctx context.Context, userID int64, label string) (string, porte.Session, error) {
-	return service.sessions.Issue(ctx, userID, label)
-}
-
 // AuthenticateRequest resolves the caller of a route that is not mounted
 // behind RequireAuth — the inline-image endpoint, which a browser reaches with
 // an <img src> and therefore with a cookie and no header.
@@ -127,18 +92,6 @@ func (service *Service) AuthenticateToken(w http.ResponseWriter, r *http.Request
 	bearer := r.Clone(r.Context())
 	bearer.Header.Set("Authorization", "Bearer "+token)
 	return service.AuthenticateRequest(w, bearer)
-}
-
-// ChangePassword replaces an existing password after confirming the current
-// one, ends the account's other logins and rotates the caller's own session. It
-// returns the new bearer token and how many other logins it ended.
-//
-// It takes the writer and the request rather than a context because porte
-// writes the rotated cookie itself, so this cannot be reached from a service
-// method holding a bare ctx. The context comes off the request, which keeps the
-// parameter count inside filet's cap of five.
-func (service *Service) ChangePassword(w http.ResponseWriter, r *http.Request, userID int64, current, next string) (string, int64, error) {
-	return service.passwords.ChangePassword(r.Context(), w, r, userID, current, next)
 }
 
 // UpdateProfile changes the name and address.

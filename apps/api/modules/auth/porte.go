@@ -32,10 +32,7 @@ func NewUserStore(orm *gorm.DB) *UserStore {
 	return &UserStore{orm: orm}
 }
 
-var (
-	_ porte.UserStore         = (*UserStore)(nil)
-	_ porte.PasswordUserStore = (*UserStore)(nil)
-)
+var _ porte.UserStore = (*UserStore)(nil)
 
 // UpsertFromOIDC matches on (provider, subject) first, falls back to a verified
 // email, and creates the account when neither finds anything.
@@ -43,8 +40,10 @@ var (
 // porte has already done the matching it can: it looks up the identity row and
 // only calls this when it needs a user id. The email fallback here is what
 // links a pre-existing account to a subject signing in for the first time, and
-// it is refused for an unverified address because matching on one is an account
-// takeover primitive.
+// it follows porte/pg's linking rules because porte cannot enforce them over
+// Vision's own users table: the address must be verified by the provider, and
+// the account must not already hold another subject of the same issuer, so a
+// recycled address is never handed to a newcomer.
 //
 // The identity provider is the source of truth for the profile, but an absent
 // claim asserts nothing: a provider that stops sending a name should not blank
@@ -63,11 +62,11 @@ func (s *UserStore) UpsertFromOIDC(ctx context.Context, claims porte.Claims) (in
 	switch {
 	case err == nil:
 	case stderrors.Is(err, gorm.ErrRecordNotFound):
-		err = s.orm.WithContext(ctx).Where("email = ?", email).First(&user).Error
+		err = s.orm.WithContext(ctx).Where("lower(email) = ?", email).Order("id").First(&user).Error
 		switch {
 		case err == nil:
-			if !claims.EmailVerified {
-				return 0, errors.Conflict("an account with this email already exists and the identity provider did not verify the address")
+			if err := s.checkLink(ctx, user.ID, claims); err != nil {
+				return 0, err
 			}
 		case stderrors.Is(err, gorm.ErrRecordNotFound):
 			created, createErr := s.create(ctx, email, claims.DisplayName())
@@ -86,42 +85,33 @@ func (s *UserStore) UpsertFromOIDC(ctx context.Context, claims porte.Claims) (in
 	if displayName := claims.DisplayName(); displayName != "" {
 		updates["name"] = displayName
 	}
+	if claims.Locale != "" {
+		updates["locale"] = claims.Locale
+	}
 	if err := s.orm.WithContext(ctx).Model(&schemas.User{}).Where("id = ?", user.ID).Updates(updates).Error; err != nil {
 		return 0, errors.Internal("failed to update the account", err)
 	}
 	return user.ID, nil
 }
 
-// CreateFromPassword creates a user row for a local registration. porte has
-// already validated the address and hashed the password.
-func (s *UserStore) CreateFromPassword(ctx context.Context, email, name string) (int64, error) {
-	user, err := s.create(ctx, email, name)
+// checkLink decides whether a verified-email match may link this subject to an
+// existing account. The provider must have verified the address, and the account
+// must hold no identity under the same issuer with a different subject.
+func (s *UserStore) checkLink(ctx context.Context, userID int64, claims porte.Claims) error {
+	if !claims.EmailVerified {
+		return errors.Conflict("an account with this email already exists and the identity provider did not verify the address")
+	}
+	var others int64
+	err := s.orm.WithContext(ctx).Table("porte_identities").
+		Where("user_id = ? AND provider = ? AND subject <> ?", userID, claims.Provider, claims.Subject).
+		Count(&others).Error
 	if err != nil {
-		return 0, err
+		return errors.Internal("failed to check the account's identities", err)
 	}
-	return user.ID, nil
-}
-
-// FindByEmail returns the user id for an address, or porte.ErrNotFound.
-func (s *UserStore) FindByEmail(ctx context.Context, email string) (int64, error) {
-	var user schemas.User
-	err := s.orm.WithContext(ctx).Select("id").Where("email = ?", email).First(&user).Error
-	if stderrors.Is(err, gorm.ErrRecordNotFound) {
-		return 0, porte.ErrNotFound
+	if others > 0 {
+		return errors.Conflict("an account with this email is already linked to another identity")
 	}
-	if err != nil {
-		return 0, errors.Internal("failed to look up the account", err)
-	}
-	return user.ID, nil
-}
-
-// CountUsers backs porte/local's registration gate.
-func (s *UserStore) CountUsers(ctx context.Context) (int64, error) {
-	var count int64
-	if err := s.orm.WithContext(ctx).Model(&schemas.User{}).Count(&count).Error; err != nil {
-		return 0, errors.Internal("failed to count users", err)
-	}
-	return count, nil
+	return nil
 }
 
 // create is the one place a Vision account comes into existence, whichever

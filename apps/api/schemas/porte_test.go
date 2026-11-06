@@ -1,6 +1,7 @@
 package schemas
 
 import (
+	portepg "github.com/FacileStudio/porte/pg"
 	"testing"
 	"time"
 
@@ -312,5 +313,43 @@ func TestAdoptPorteBackfillsPictureURLs(t *testing.T) {
 		if p.OIDCPictureURL != want[p.ID] {
 			t.Errorf("user %d: picture %q, want %q", p.ID, p.OIDCPictureURL, want[p.ID])
 		}
+	}
+}
+
+// porte v0.10.0 binds a login code to its identity, so a database that predates the
+// columns must gain them, and porte v0.12.0's EraseIdentity needs porte_magic_links to
+// exist. Running the adoption twice proves both statements are idempotent.
+func TestAdoptPorteAddsTheLoginCodeBindingAndErasesAnIdentity(t *testing.T) {
+	db := openTestDatabase(t)
+	seedPrePorte(t, db)
+	old := `CREATE TABLE porte_login_codes (code_hash text PRIMARY KEY, user_id bigint NOT NULL REFERENCES users(id),
+		expires_at timestamptz NOT NULL, consumed_at timestamptz)`
+	if err := db.Exec(old).Error; err != nil {
+		t.Fatalf("old table: %v", err)
+	}
+	for range 2 {
+		if err := AdoptPorte(db, testIssuer); err != nil {
+			t.Fatalf("adopt: %v", err)
+		}
+	}
+
+	var columns int64
+	db.Raw(`SELECT count(*) FROM information_schema.columns WHERE table_schema = current_schema()
+		AND table_name = 'porte_login_codes' AND column_name IN ('provider', 'subject')`).Scan(&columns)
+	if columns != 2 {
+		t.Fatalf("porte_login_codes has %d of the 2 binding columns", columns)
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := portepg.New(sqlDB).EraseIdentity(t.Context(), testIssuer, "sub-1"); err != nil {
+		t.Fatalf("erase the identity: %v", err)
+	}
+	var left int64
+	db.Raw(`SELECT count(*) FROM porte_identities WHERE subject = 'sub-1'`).Scan(&left)
+	if left != 0 {
+		t.Fatal("the identity survived its erasure")
 	}
 }
