@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button, Card, icons } from '@facile/muse';
-	import { fmt } from '$lib/utils/analytics';
+	import { fmt } from '$lib/i18n/format';
+	import { t } from '$lib/i18n/index.svelte';
 	import type { Snippet } from 'svelte';
 
 	let {
@@ -10,7 +11,7 @@
 		onSeeAll,
 		onItemClick,
 		label: labelSnippet,
-		empty = 'Nothing recorded yet.',
+		empty,
 		class: className = ''
 	}: {
 		title: string;
@@ -35,12 +36,12 @@
 	<div class="flex items-center justify-between gap-3">
 		<p class="text-fc-sm font-medium text-fc-fg">{title}</p>
 		{#if showSeeAll && onSeeAll}
-			<Button variant="ghost" size="sm" iconRight={icons.arrow} onclick={onSeeAll}>See all</Button>
+			<Button variant="ghost" size="sm" iconRight={icons.arrow} onclick={onSeeAll}>{t('common.seeAll')}</Button>
 		{/if}
 	</div>
 
 	{#if items.length === 0}
-		<p class="text-fc-sm text-fc-fg-muted">{empty}</p>
+		<p class="text-fc-sm text-fc-fg-muted">{empty ?? t('common.nothingYet')}</p>
 	{:else}
 		<div class="flex flex-col gap-0.5">
 			<!-- Keyed by position, not by label. This is a ranked list: the row's identity IS

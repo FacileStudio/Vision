@@ -4,6 +4,7 @@
 	import { api } from '$lib';
 	import type { Workspace } from '$lib';
 	import { Avatar, Badge, Button, Card, EmptyState, Input, Skeleton, icons, toast } from '@facile/muse';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let workspaces = $state<Workspace[]>([]);
 	let loading = $state(true);
@@ -25,18 +26,18 @@
 			workspaces = list;
 			registreSpaces = cfg.oidc_enabled && cfg.oidc_issuer ? `${cfg.oidc_issuer.replace(/\/$/, '')}/spaces` : '';
 		} catch (e) {
-			toast.danger(e instanceof Error ? e.message : 'Could not load your spaces.');
+			toast.danger(e instanceof Error ? e.message : t('team.loadFailed'));
 		} finally {
 			loading = false;
 		}
 	});
 
-	const roleLabels: Record<string, string> = {
-		owner: 'Owner',
-		admin: 'Admin',
-		editor: 'Editor',
-		viewer: 'Viewer'
-	};
+	const roleLabels = $derived<Record<string, string>>({
+		owner: t('role.owner'),
+		admin: t('role.admin'),
+		editor: t('role.editor'),
+		viewer: t('role.viewer')
+	});
 
 	/* `owner` and `admin` are the two role tones in the shared vocabulary; everything else
 	   is a plain member and gets `neutral`. */
@@ -47,26 +48,28 @@
 	}
 </script>
 
-<svelte:head><title>Teams — Vision</title></svelte:head>
+<svelte:head><title>{t('team.pageTitle')}</title></svelte:head>
 
 <div class="flex flex-col gap-10">
 	<div class="flex flex-wrap items-start justify-between gap-4">
 		<div class="flex min-w-0 flex-col gap-2">
-			<h1 class="text-fc-2xl font-semibold text-fc-fg">Teams</h1>
-			<p class="text-fc-sm text-fc-fg-muted">
-				Spaces you belong to. Everyone in a space sees its sites and their stats.
-			</p>
+			<h1 class="text-fc-2xl font-semibold text-fc-fg">{t('team.heading')}</h1>
+			<p class="text-fc-sm text-fc-fg-muted">{t('team.subtitle')}</p>
 		</div>
 		{#if registreSpaces}
-			<Button icon={icons.space} href={registreSpaces}>Manage in Registre</Button>
+			<Button icon={icons.space} href={registreSpaces}>{t('team.manageRegistre')}</Button>
 		{:else if !loading}
-			<Button icon={icons.plus} onclick={() => goto('/team/new')}>New space</Button>
+			<Button icon={icons.plus} onclick={() => goto('/team/new')}>{t('team.newSpace')}</Button>
 		{/if}
 	</div>
 
 	<section class="flex flex-col gap-4">
 		{#if workspaces.length > 3}
-			<Input bind:value={search} placeholder="Search spaces…" aria-label="Search spaces" />
+			<Input
+				bind:value={search}
+				placeholder={t('team.searchPlaceholder')}
+				aria-label={t('team.searchAria')}
+			/>
 		{/if}
 
 		{#if loading}
@@ -76,10 +79,8 @@
 		{:else if filtered.length === 0}
 			<EmptyState
 				icon={icons.space}
-				title={search ? `No space matches “${search}”` : 'No spaces yet'}
-				description={search
-					? 'Try another name, or clear the search.'
-					: 'A space holds sites and the people who can read them.'}
+				title={search ? t('team.noMatch', { query: search }) : t('team.empty')}
+				description={search ? t('team.noMatchHint') : t('team.emptyHint')}
 			/>
 		{:else}
 			{#each filtered as ws (ws.id)}
@@ -95,9 +96,9 @@
 								<Badge tone={roleTone(ws.role)}>{roleLabels[ws.role] ?? ws.role}</Badge>
 							</div>
 							<span class="text-fc-xs text-fc-fg-muted">
-								{ws.member_count}
-								{ws.member_count === 1 ? 'member' : 'members'} · {ws.site_count}
-								{ws.site_count === 1 ? 'site' : 'sites'}
+								{t('team.members', { count: ws.member_count })} · {t('team.sites', {
+									count: ws.site_count
+								})}
 							</span>
 						</div>
 						<iconify-icon

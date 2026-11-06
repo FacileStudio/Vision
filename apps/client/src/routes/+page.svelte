@@ -2,28 +2,28 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { currentUser } from '$lib';
-	import { Button, Card, Divider, PricingPlans, icons } from '@facile/muse';
+	import {
+		Card,
+		Divider,
+		LandingFooter,
+		LandingHeader,
+		PricingPlans,
+		SignInWithFacile,
+		icons
+	} from '@facile/muse';
+	import { rememberLocale, t } from '$lib/i18n/index.svelte';
+
+	const logo = 'solar:panorama-bold-duotone';
+	const signInHref = '/api/auth/oidc';
 
 	let redirecting = $state(true);
-	let ssoOnly = $state(false);
 
+	const heroLines = $derived(t('landing.heroTitle').split('|'));
 	const features = [
-		{
-			icon: icons.code,
-			title: 'One script tag',
-			body: 'Drop a single <script> tag on your site. No API keys, no config, nothing to maintain.'
-		},
-		{
-			icon: icons.dashboard,
-			title: 'Real-time analytics',
-			body: 'Pageviews, visitors, entry and exit pages, referrers, devices and countries — one dashboard.'
-		},
-		{
-			icon: icons.shield,
-			title: 'Domain-locked',
-			body: 'Events are verified against the domains you registered, so nobody can inflate your numbers.'
-		}
-	];
+		{ icon: icons.code, id: 'script' },
+		{ icon: icons.dashboard, id: 'realtime' },
+		{ icon: icons.shield, id: 'locked' }
+	] as const;
 
 	/* This page is where OIDC_SUCCESS_URL lands, so it is the first thing an SSO
 	   user sees after the identity provider sends them back. It used to read a
@@ -35,64 +35,37 @@
 			goto('/sites');
 			return;
 		}
-
-		try {
-			const cfg = await fetch('/api/auth/config').then((r) => r.json());
-			ssoOnly = cfg.sso_only ?? false;
-		} catch {}
-
 		redirecting = false;
 	});
-
-	const startHref = $derived(ssoOnly ? '/login' : '/login?tab=register');
 </script>
 
 <svelte:head>
-	<title>Vision — Privacy-friendly analytics</title>
-	<meta
-		name="description"
-		content="Self-hosted, cookie-free web analytics. Drop a 3.7 KB script on a site and watch pageviews, visitors, referrers and goals in a dashboard you own."
-	/>
+	<title>{t('landing.title')}</title>
+	<meta name="description" content={t('landing.description')} />
 </svelte:head>
 
 {#if !redirecting}
 	<div class="min-h-dvh bg-fc-page text-fc-fg">
-		<header class="border-b border-fc-border">
-			<div class="mx-auto flex max-w-fc-xl items-center justify-between gap-4 px-6 py-4">
-				<span class="flex items-center gap-3">
-					<iconify-icon icon="solar:panorama-bold-duotone" width="24" height="24" class="block"
-					></iconify-icon>
-					<span class="text-fc-xl font-semibold tracking-tight">Vision</span>
-				</span>
-				<div class="flex items-center gap-2">
-					<Button href="/login" variant="outline" class="rounded-fc-md">Log in</Button>
-					<Button href={startHref} class="rounded-fc-md">{ssoOnly ? 'Sign in with Facile' : 'Get started'}</Button>
-				</div>
-			</div>
-		</header>
+		<LandingHeader appName="Vision" icon={logo} skipHref="#main">
+			{#snippet actions()}
+				<SignInWithFacile href={signInHref} />
+			{/snippet}
+		</LandingHeader>
 
-		<main>
+		<main id="main">
 			<section class="mx-auto max-w-fc-lg px-6 py-20 text-center sm:py-24">
 				<h1 class="text-fc-3xl font-semibold tracking-tight">
-					See your traffic.<br />Know your audience.
+					{heroLines[0]}<br />{heroLines[1]}
 				</h1>
-				<p class="mx-auto mt-6 max-w-xl text-fc-md text-fc-fg-muted">
-					Vision is a lightweight, self-hosted analytics tracker for your projects. One script
-					tag, zero config, full visibility.
-				</p>
-				<div class="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-					<Button href={startHref} size="lg" class="rounded-fc-md">
-						{ssoOnly ? 'Sign in with Facile' : 'Start tracking'}
-					</Button>
-					<Button href="/login" size="lg" variant="outline" class="rounded-fc-md">Log in</Button>
+				<p class="mx-auto mt-6 max-w-xl text-fc-md text-fc-fg-muted">{t('landing.heroText')}</p>
+				<div class="mt-10 flex justify-center">
+					<SignInWithFacile href={signInHref} size="lg" />
 				</div>
 			</section>
 
-			<Divider class="my-0" />
-
 			<section class="mx-auto max-w-fc-xl px-6 py-20">
 				<div class="grid gap-4 md:grid-cols-3">
-					{#each features as feature (feature.title)}
+					{#each features as feature (feature.id)}
 						<Card class="flex flex-col gap-4">
 							<span
 								class="flex size-10 items-center justify-center rounded-fc-md bg-fc-surface text-fc-fg"
@@ -101,8 +74,8 @@
 								></iconify-icon>
 							</span>
 							<div class="flex flex-col gap-1">
-								<h2 class="text-fc-lg font-semibold">{feature.title}</h2>
-								<p class="text-fc-sm text-fc-fg-muted">{feature.body}</p>
+								<h2 class="text-fc-lg font-semibold">{t(`landing.feature.${feature.id}.title`)}</h2>
+								<p class="text-fc-sm text-fc-fg-muted">{t(`landing.feature.${feature.id}.text`)}</p>
 							</div>
 						</Card>
 					{/each}
@@ -111,32 +84,27 @@
 
 			<PricingPlans
 				highlight={[]}
-				title="Pricing"
+				title={t('landing.pricing')}
 				class="mx-auto max-w-fc-xl px-6 py-20"
 			/>
 
 			<Divider class="my-0" />
 
 			<section class="mx-auto max-w-fc-lg px-6 py-20 text-center">
-				<h2 class="text-fc-2xl font-semibold tracking-tight">
-					{ssoOnly ? 'Ready to sign in?' : 'Ready to start?'}
-				</h2>
-				<p class="mt-4 text-fc-sm text-fc-fg-muted">
-					{ssoOnly
-						? 'Use your Facile SSO to reach Vision.'
-						: 'Free to use. Self-hosted. No credit card, no third party.'}
-				</p>
-				<Button href={startHref} size="lg" class="mt-8 rounded-fc-md">
-					{ssoOnly ? 'Sign in with Facile' : 'Create an account'}
-				</Button>
+				<h2 class="text-fc-2xl font-semibold tracking-tight">{t('landing.ctaTitle')}</h2>
+				<p class="mt-4 text-fc-sm text-fc-fg-muted">{t('landing.ctaText')}</p>
+				<div class="mt-8 flex justify-center">
+					<SignInWithFacile href={signInHref} size="lg" />
+				</div>
 			</section>
 		</main>
 
-		<footer class="border-t border-fc-border">
-			<div class="mx-auto max-w-fc-xl px-6 py-6 text-center text-fc-sm text-fc-fg-muted">
-				© {new Date().getFullYear()} Vision by
-				<a href="https://facile.studio" class="font-semibold text-fc-fg underline">Facile.</a>
-			</div>
-		</footer>
+		<LandingFooter
+			appName="Vision"
+			icon={logo}
+			tagline={t('landing.tagline')}
+			legal={{ onLocaleChange: rememberLocale }}
+			year={new Date().getFullYear()}
+		/>
 	</div>
 {/if}

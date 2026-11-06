@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Drawer, Input } from '@facile/muse';
-	import { fmt } from '$lib/utils/analytics';
+	import { fmt } from '$lib/i18n/format';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let {
 		open = $bindable(false),
@@ -28,9 +29,9 @@
 	let total = $derived(items.reduce((sum, i) => sum + i.count, 0));
 </script>
 
-<Drawer bind:open {title} description="{fmt(total)} total · {items.length} entries" showClose>
+<Drawer bind:open {title} description={t('drawer.summary', { total: fmt(total), count: items.length })} showClose>
 	<div class="flex flex-col gap-3">
-		<Input bind:value={search} placeholder="Search…" aria-label="Search {title}" />
+		<Input bind:value={search} placeholder={t('common.search')} aria-label={t('drawer.searchAria', { title })} />
 
 		<div class="flex flex-col gap-0.5">
 			<!-- Positional, same reasoning as bar-list: a ranked list keyed on API-supplied
@@ -64,7 +65,7 @@
 			{/each}
 
 			{#if filtered.length === 0}
-				<p class="py-8 text-center text-fc-sm text-fc-fg-muted">Nothing matches “{search}”.</p>
+				<p class="py-8 text-center text-fc-sm text-fc-fg-muted">{t('drawer.noMatch', { query: search })}</p>
 			{/if}
 		</div>
 	</div>

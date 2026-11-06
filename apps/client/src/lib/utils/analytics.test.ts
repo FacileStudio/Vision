@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { mergeByLabel } from './analytics';
+import { countryName, fmt, formatChartDate, mergeByLabel, trendPercent } from './analytics';
 
 describe('mergeByLabel', () => {
 	it('sums rows that share a label', () => {
@@ -44,5 +44,27 @@ describe('mergeByLabel', () => {
 		mergeByLabel(rows);
 
 		expect(rows[0].count).toBe(1);
+	});
+});
+
+describe('locale formatting', () => {
+	it('groups numbers the way each locale does', () => {
+		expect(fmt(1234567, 'en')).toBe('1,234,567');
+		expect(fmt(1234567, 'de')).toBe('1.234.567');
+	});
+
+	it('names a country in the locale', () => {
+		expect(countryName('DE', 'en')).toBe('Germany');
+		expect(countryName('DE', 'fr')).toBe('Allemagne');
+		expect(countryName('de', 'es')).toBe('Alemania');
+	});
+
+	it('labels a week with the locale prefix', () => {
+		expect(formatChartDate('2026-12', 'week', 'de')).toBe('KW12');
+		expect(formatChartDate('2026-12', 'week', 'en')).toBe('W12');
+	});
+
+	it('writes the trend with the locale decimal separator', () => {
+		expect(trendPercent(112.5, 100, 'fr').text).toContain('12,5');
 	});
 });

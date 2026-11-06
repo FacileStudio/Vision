@@ -4,6 +4,8 @@
 	import { api } from '$lib';
 	import type { APIKeyItem } from '$lib';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
+	import { formatDate } from '$lib/i18n/format';
+	import { t } from '$lib/i18n/index.svelte';
 	import {
 		Alert,
 		Badge,
@@ -41,7 +43,7 @@
 		try {
 			keys = await api.apiKeys.list(workspaceStore.current?.id);
 		} catch (e) {
-			toast.danger(e instanceof Error ? e.message : 'Could not load your API keys.');
+			toast.danger(e instanceof Error ? e.message : t('apiKeys.loadFailed'));
 		} finally {
 			loading = false;
 		}
@@ -77,7 +79,7 @@
 			newName = '';
 			await load();
 		} catch (e) {
-			createError = e instanceof Error ? e.message : 'Could not create the key.';
+			createError = e instanceof Error ? e.message : t('apiKeys.createFailed');
 		} finally {
 			creating = false;
 		}
@@ -88,47 +90,38 @@
 		if (!target) return;
 		await api.apiKeys.revoke(target.id);
 		revokeTarget = null;
-		toast.neutral('Key revoked.');
+		toast.neutral(t('apiKeys.revoked'));
 		await load();
 	}
 
 	function when(value: string | null) {
-		return value ? new Date(value).toLocaleDateString() : 'Never';
+		return value ? formatDate(value, { dateStyle: 'medium' }) : t('common.never');
 	}
 </script>
 
 <div class="flex flex-col gap-10">
-	<SettingsSection
-		title="Endpoint"
-		description="Point a script or an HTTP client here. Not a secret — the key is."
-	>
-		<SecretField value={endpoint} sensitive={false} label="Base URL" />
+	<SettingsSection title={t('apiKeys.endpointTitle')} description={t('apiKeys.endpointText')}>
+		<SecretField value={endpoint} sensitive={false} label={t('apiKeys.baseUrl')} />
 	</SettingsSection>
 
-	<SettingsSection
-		title="API keys"
-		description="One key per machine. Revoking one never touches the others."
-		bare
-	>
+	<SettingsSection title={t('apiKeys.title')} description={t('apiKeys.text')} bare>
 		{#snippet actions()}
-			<Button icon={icons.plus} onclick={openCreate}>New key</Button>
+			<Button icon={icons.plus} onclick={openCreate}>{t('apiKeys.new')}</Button>
 		{/snippet}
 
 		{#if loading}
-			<p class="text-fc-sm text-fc-fg-muted">Loading…</p>
+			<p class="text-fc-sm text-fc-fg-muted">{t('common.loading')}</p>
 		{:else if keys.length === 0}
-			<Alert tone="info">
-				No keys yet. A script needs one before it can read this space's analytics.
-			</Alert>
+			<Alert tone="info">{t('apiKeys.empty')}</Alert>
 		{:else}
 			<Table>
 				<thead>
 					<tr>
-						<th scope="col">Name</th>
-						<th scope="col">Key</th>
-						<th scope="col">Scope</th>
-						<th scope="col">Last used</th>
-						<th scope="col" class="text-right">Actions</th>
+						<th scope="col">{t('apiKeys.colName')}</th>
+						<th scope="col">{t('apiKeys.colKey')}</th>
+						<th scope="col">{t('apiKeys.colScope')}</th>
+						<th scope="col">{t('apiKeys.colLastUsed')}</th>
+						<th scope="col" class="text-right">{t('apiKeys.colActions')}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -141,7 +134,7 @@
 							</td>
 							<td>
 								<Badge tone={key.scopes.includes('write') ? 'accent' : 'neutral'}>
-									{key.scopes.includes('write') ? 'read + write' : 'read'}
+									{key.scopes.includes('write') ? t('apiKeys.scopeWrite') : t('apiKeys.scopeRead')}
 								</Badge>
 							</td>
 							<td class="whitespace-nowrap text-fc-fg-muted">{when(key.last_used_at)}</td>
@@ -151,16 +144,16 @@
 										variant="ghost-danger"
 										size="sm"
 										icon={icons.revoke}
-										aria-label="Revoke {key.name}"
+										aria-label={t('apiKeys.revokeAria', { name: key.name })}
 										onclick={() => {
 											revokeTarget = key;
 											revokeOpen = true;
 										}}
 									>
-										Revoke
+										{t('apiKeys.revoke')}
 									</Button>
 								{:else}
-									<Badge>Revoked</Badge>
+									<Badge>{t('apiKeys.revokedBadge')}</Badge>
 								{/if}
 							</td>
 						</tr>
@@ -171,13 +164,10 @@
 	</SettingsSection>
 </div>
 
-<Drawer bind:open={createOpen} title="New API key" showClose>
+<Drawer bind:open={createOpen} title={t('apiKeys.drawerTitle')} showClose>
 	{#if createdKey}
 		<div class="flex flex-col gap-4">
-			<Alert tone="warning" title="Copy it now">
-				This is the only time the key is shown. Vision stores a hash, so it cannot be shown to
-				you again — losing it means issuing a new one.
-			</Alert>
+			<Alert tone="warning" title={t('apiKeys.copyTitle')}>{t('apiKeys.copyText')}</Alert>
 
 			<!-- The one-time key is the exception to the auto-hide rule: it starts revealed and
 			     stays that way, because hiding a value nobody has copied yet is theatre. -->
@@ -185,36 +175,36 @@
 				value={createdKey}
 				visible
 				autoHideMs={0}
-				label="Key"
-				helper="Store it in your password manager or your CI secret store."
+				label={t('apiKeys.colKey')}
+				helper={t('apiKeys.secretHelper')}
 			/>
 		</div>
 	{:else}
 		<form id="api-key-form" class="flex flex-col gap-4" onsubmit={create}>
-			<Field label="Name" helper="Where the key will live — a machine, a pipeline, a script.">
+			<Field label={t('common.name')} helper={t('apiKeys.nameHelper')}>
 				<Input bind:value={newName} placeholder="ci-dashboard" required disabled={creating} />
 			</Field>
 
-			<Field label="Scope">
+			<Field label={t('apiKeys.scope')}>
 				<Select bind:value={newScopes} disabled={creating}>
-					<option value="read">Read — fetch analytics</option>
-					<option value="read,write">Read and write — fetch and change data</option>
+					<option value="read">{t('apiKeys.scopeReadOption')}</option>
+					<option value="read,write">{t('apiKeys.scopeWriteOption')}</option>
 				</Select>
 			</Field>
 
 			{#if createError}
-				<Alert tone="danger" title="Not created">{createError}</Alert>
+				<Alert tone="danger" title={t('apiKeys.notCreated')}>{createError}</Alert>
 			{/if}
 		</form>
 	{/if}
 
 	{#snippet footer()}
 		{#if createdKey}
-			<Button size="lg" class="w-full" onclick={() => (createOpen = false)}>Done</Button>
+			<Button size="lg" class="w-full" onclick={() => (createOpen = false)}>{t('common.done')}</Button>
 		{:else}
 			<div class="flex gap-2">
 				<Button variant="ghost" size="lg" class="flex-1" disabled={creating} onclick={() => (createOpen = false)}>
-					Cancel
+					{t('common.cancel')}
 				</Button>
 				<Button
 					type="submit"
@@ -225,7 +215,7 @@
 					disabled={creating || !newName.trim()}
 				>
 					{#if creating}<Spinner size="sm" />{/if}
-					{creating ? 'Creating…' : 'Create key'}
+					{creating ? t('common.creating') : t('apiKeys.submit')}
 				</Button>
 			</div>
 		{/if}
@@ -235,10 +225,10 @@
 <ConfirmModal
 	bind:open={revokeOpen}
 	tone="danger"
-	title="Revoke this key?"
-	description={`"${revokeTarget?.name ?? ''}" stops working immediately, and anything still using it starts failing. It cannot be un-revoked — the row stays listed so the audit trail still names it.`}
-	confirmLabel="Revoke key"
-	cancelLabel="Keep it"
+	title={t('apiKeys.revokeTitle')}
+	description={t('apiKeys.revokeBody', { name: revokeTarget?.name ?? '' })}
+	confirmLabel={t('apiKeys.revokeConfirm')}
+	cancelLabel={t('common.keepIt')}
 	onConfirm={revoke}
 	onCancel={() => (revokeTarget = null)}
 />

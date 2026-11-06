@@ -6,6 +6,7 @@
 	import type { Workspace, WorkspaceMember } from '$lib';
 	import { userStore } from '$lib/stores/user.svelte';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 	import {
 		Alert,
 		Avatar,
@@ -57,12 +58,12 @@
 	const canEditSpace = $derived(!workspace?.manage_url);
 	const manageURL = $derived(workspace?.manage_url || registreSpaces);
 
-	const roleLabels: Record<string, string> = {
-		owner: 'Owner',
-		admin: 'Admin',
-		editor: 'Editor',
-		viewer: 'Viewer'
-	};
+	const roleLabels = $derived<Record<string, string>>({
+		owner: t('role.owner'),
+		admin: t('role.admin'),
+		editor: t('role.editor'),
+		viewer: t('role.viewer')
+	});
 
 	const roleTones = { owner: 'owner', admin: 'admin' } as const;
 
@@ -82,7 +83,7 @@
 			members = m;
 			registreSpaces = cfg.oidc_enabled && cfg.oidc_issuer ? `${cfg.oidc_issuer.replace(/\/$/, '')}/spaces` : '';
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Could not load this space.';
+			error = e instanceof Error ? e.message : t('space.loadFailed');
 		} finally {
 			loading = false;
 		}
@@ -99,9 +100,9 @@
 			workspaceStore.all = workspaceStore.all.map((w) => (w.id === updated.id ? updated : w));
 			if (workspaceStore.current?.id === updated.id) workspaceStore.current = updated;
 			editingName = false;
-			toast.success('Space renamed.');
+			toast.success(t('space.renamed'));
 		} catch (e) {
-			toast.danger(e instanceof Error ? e.message : 'Could not rename the space.');
+			toast.danger(e instanceof Error ? e.message : t('space.renameFailed'));
 		} finally {
 			savingName = false;
 		}
@@ -115,10 +116,10 @@
 		try {
 			const member = await api.workspaces.addMember(wsId, inviteEmail.trim(), inviteRole);
 			members = [...members, member];
-			toast.success(`${inviteEmail.trim()} was added.`);
+			toast.success(t('space.added', { email: inviteEmail.trim() }));
 			inviteEmail = '';
 		} catch (e) {
-			inviteError = e instanceof Error ? e.message : 'Could not add that person.';
+			inviteError = e instanceof Error ? e.message : t('space.addFailed');
 		} finally {
 			inviting = false;
 		}
@@ -128,9 +129,9 @@
 		try {
 			await api.workspaces.updateMember(wsId, userId, role);
 			members = members.map((m) => (m.user_id === userId ? { ...m, role } : m));
-			toast.success('Role updated.');
+			toast.success(t('space.roleUpdated'));
 		} catch (e) {
-			toast.danger(e instanceof Error ? e.message : 'Could not change that role.');
+			toast.danger(e instanceof Error ? e.message : t('space.roleFailed'));
 		}
 	}
 
@@ -140,7 +141,7 @@
 		await api.workspaces.removeMember(wsId, target.user_id);
 		members = members.filter((m) => m.user_id !== target.user_id);
 		removeTarget = null;
-		toast.neutral(`${target.name || target.email} no longer has access.`);
+		toast.neutral(t('space.removed', { name: target.name || target.email }));
 	}
 
 	function forgetSpace() {
@@ -153,7 +154,7 @@
 
 	async function leaveWorkspace() {
 		await api.workspaces.leave(wsId);
-		toast.neutral('You left the space.');
+		toast.neutral(t('space.left'));
 		forgetSpace();
 	}
 
@@ -167,13 +168,13 @@
 			throw new Error('confirmation text does not match');
 		}
 		await api.workspaces.delete(wsId);
-		toast.neutral('Space deleted.');
+		toast.neutral(t('space.deleted'));
 		deleteText = '';
 		forgetSpace();
 	}
 </script>
 
-<svelte:head><title>{workspace?.name ?? 'Space'} — Vision</title></svelte:head>
+<svelte:head><title>{workspace?.name ?? t('space.fallbackTitle')} — Vision</title></svelte:head>
 
 <div class="flex flex-col gap-10">
 	<a
@@ -181,23 +182,23 @@
 		class="inline-flex items-center gap-1.5 self-start rounded-fc-sm text-fc-sm text-fc-fg-muted transition-colors hover:text-fc-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fc-ring"
 	>
 		<iconify-icon icon={icons.chevronLeft} width="16" height="16" class="block"></iconify-icon>
-		Back to teams
+		{t('newSpace.back')}
 	</a>
 
 	{#if loading}
 		<Skeleton class="h-24 w-full rounded-fc-md" />
 		<Skeleton class="h-64 w-full rounded-fc-md" />
 	{:else if error}
-		<Alert tone="danger" title="Could not open this space">{error}</Alert>
+		<Alert tone="danger" title={t('space.openFailed')}>{error}</Alert>
 	{:else if workspace}
 		<div class="flex items-start gap-4">
 			<Avatar name={workspace.name} size="lg" />
 			<div class="flex min-w-0 flex-1 flex-col gap-2">
 				{#if editingName}
 					<div class="flex flex-wrap items-center gap-2">
-						<Input bind:value={wsName} class="min-w-48 flex-1" aria-label="Space name" />
-						<Button icon={icons.check} disabled={savingName} onclick={saveName}>Save</Button>
-						<Button variant="ghost" onclick={() => (editingName = false)}>Cancel</Button>
+						<Input bind:value={wsName} class="min-w-48 flex-1" aria-label={t('space.nameAria')} />
+						<Button icon={icons.check} disabled={savingName} onclick={saveName}>{t('common.save')}</Button>
+						<Button variant="ghost" onclick={() => (editingName = false)}>{t('common.cancel')}</Button>
 					</div>
 				{:else}
 					<div class="flex min-w-0 items-center gap-2">
@@ -205,7 +206,7 @@
 						{#if isOwnerOrAdmin && canEditSpace}
 							<IconButton
 								variant="ghost"
-								aria-label="Rename space"
+								aria-label={t('space.renameAria')}
 								onclick={() => {
 									wsName = workspace?.name ?? '';
 									editingName = true;
@@ -218,9 +219,9 @@
 				{/if}
 				<div class="flex flex-wrap items-center gap-3 text-fc-sm text-fc-fg-muted">
 					<span>
-						{members.length}
-						{members.length === 1 ? 'member' : 'members'} · {workspace.site_count}
-						{workspace.site_count === 1 ? 'site' : 'sites'}
+						{t('team.members', { count: members.length })} · {t('team.sites', {
+							count: workspace.site_count
+						})}
 					</span>
 					<Badge tone={roleTone(workspace.role)}>{roleLabels[workspace.role] ?? workspace.role}</Badge>
 				</div>
@@ -228,14 +229,12 @@
 		</div>
 
 		<SettingsSection
-			title="Members"
-			description={registreSpaces
-				? 'Members and their roles are managed in Registre, for every Facile app at once.'
-				: 'Owners cannot be removed, and nobody can change their own role.'}
+			title={t('space.membersTitle')}
+			description={registreSpaces ? t('space.membersManaged') : t('space.membersLocal')}
 		>
 			{#if registreSpaces}
-				<SettingsRow label="Manage this space" description="Invite people, change roles or leave in Registre.">
-					<Button variant="outline" icon={icons.space} href={manageURL}>Manage in Registre</Button>
+				<SettingsRow label={t('space.manageLabel')} description={t('space.manageText')}>
+					<Button variant="outline" icon={icons.space} href={manageURL}>{t('team.manageRegistre')}</Button>
 				</SettingsRow>
 			{/if}
 			{#each members as member (member.id)}
@@ -250,29 +249,29 @@
 						</div>
 					</div>
 					{#if member.user_id === myUserId}
-						<span class="text-fc-xs text-fc-fg-muted">you</span>
+						<span class="text-fc-xs text-fc-fg-muted">{t('common.you')}</span>
 					{/if}
 					{#if canEditMembers && member.role !== 'owner' && member.user_id !== myUserId}
 						<Select
 							value={member.role}
-							aria-label="Role for {member.name || member.email}"
+							aria-label={t('space.roleAria', { name: member.name || member.email })}
 							class="w-32"
 							onchange={(e) => updateRole(member.user_id, e.currentTarget.value)}
 						>
-							<option value="admin">Admin</option>
-							<option value="editor">Editor</option>
-							<option value="viewer">Viewer</option>
+							<option value="admin">{t('role.admin')}</option>
+							<option value="editor">{t('role.editor')}</option>
+							<option value="viewer">{t('role.viewer')}</option>
 						</Select>
 						<Button
 							variant="ghost-danger"
 							icon={icons.remove}
-							aria-label="Remove {member.name || member.email}"
+							aria-label={t('space.removeAria', { name: member.name || member.email })}
 							onclick={() => {
 								removeTarget = member;
 								removeOpen = true;
 							}}
 						>
-							Remove
+							{t('common.remove')}
 						</Button>
 					{:else}
 						<Badge tone={roleTone(member.role)}>{roleLabels[member.role] ?? member.role}</Badge>
@@ -283,51 +282,56 @@
 
 		{#if canEditMembers}
 			<SettingsSection
-				title="Add someone"
-				description="They need a Vision account already — adding grants access immediately."
+				title={t('space.addTitle')}
+				description={t('space.addText')}
 			>
 				<form class="flex flex-col gap-3 sm:flex-row sm:items-end" onsubmit={invite}>
 					<div class="min-w-0 flex-1">
-						<Field label="Email">
-							<Input bind:value={inviteEmail} type="email" placeholder="name@studio.com" disabled={inviting} />
+						<Field label={t('common.email')}>
+							<Input
+								bind:value={inviteEmail}
+								type="email"
+								placeholder={t('space.addEmailPlaceholder')}
+								disabled={inviting}
+							/>
 						</Field>
 					</div>
-					<Field label="Role">
+					<Field label={t('common.role')}>
 						<Select bind:value={inviteRole} class="sm:w-40" disabled={inviting}>
-							<option value="viewer">Viewer</option>
-							<option value="editor">Editor</option>
-							<option value="admin">Admin</option>
+							<option value="viewer">{t('role.viewer')}</option>
+							<option value="editor">{t('role.editor')}</option>
+							<option value="admin">{t('role.admin')}</option>
 						</Select>
 					</Field>
 					<Button type="submit" icon={icons.plus} disabled={inviting || !inviteEmail.trim()}>
-						{inviting ? 'Adding…' : 'Add'}
+						{inviting ? t('common.adding') : t('common.add')}
 					</Button>
 				</form>
 
 				{#if inviteError}
-					<Alert tone="danger" title="Not added">{inviteError}</Alert>
+					<Alert tone="danger" title={t('space.addErrorTitle')}>{inviteError}</Alert>
 				{/if}
 			</SettingsSection>
 		{/if}
 
 		{#if canEditSpace && (isOwner || !registreSpaces)}
-			<SettingsSection title="Danger zone" description="Irreversible, and nobody can undo it for you.">
+			<SettingsSection title={t('space.dangerTitle')} description={t('space.dangerText')}>
 				{#if isOwner}
 					<SettingsRow
-						label="Delete this space"
-						description="Every site must be removed first. Members lose access the moment it goes."
+						label={t('space.deleteLabel')}
+						description={t('space.deleteText')}
 					>
 						<Button variant="danger" icon={icons.remove} onclick={() => (deleteOpen = true)}>
-							Delete space
+							{t('space.deleteButton')}
 						</Button>
 					</SettingsRow>
 				{:else}
 					<SettingsRow
-						label="Leave this space"
-						description="You lose access to every site in it. An owner can add you back."
+						label={t('space.leaveLabel')}
+						description={t('space.leaveText')}
 					>
 						<Button variant="danger" icon={icons.logout} onclick={() => (leaveOpen = true)}>
-							Leave space
+							{t('space.leaveButton')}
 						</Button>
 					</SettingsRow>
 				{/if}
@@ -339,10 +343,10 @@
 <ConfirmModal
 	bind:open={removeOpen}
 	tone="danger"
-	title="Remove {removeTarget?.name || removeTarget?.email || 'this member'}?"
-	description="They lose access to every site in this space immediately. The stats they looked at are unaffected — this only revokes access."
-	confirmLabel="Remove"
-	cancelLabel="Keep access"
+	title={t('space.removeTitle', { name: removeTarget?.name || removeTarget?.email || t('space.thisMember') })}
+	description={t('space.removeBody')}
+	confirmLabel={t('common.remove')}
+	cancelLabel={t('space.removeKeep')}
 	onConfirm={removeMember}
 	onCancel={() => (removeTarget = null)}
 />
@@ -350,24 +354,24 @@
 <ConfirmModal
 	bind:open={leaveOpen}
 	tone="danger"
-	title="Leave {workspace?.name ?? 'this space'}?"
-	description="You lose access to every site in it, and only an owner can add you back."
-	confirmLabel="Leave space"
-	cancelLabel="Stay"
+	title={t('space.leaveTitle', { name: workspace?.name ?? t('space.thisSpace') })}
+	description={t('space.leaveBody')}
+	confirmLabel={t('space.leaveButton')}
+	cancelLabel={t('space.leaveStay')}
 	onConfirm={leaveWorkspace}
 />
 
 <ConfirmModal
 	bind:open={deleteOpen}
 	tone="danger"
-	title="Delete {workspace?.name ?? 'this space'}?"
-	description="The space and its membership are gone for good. Sites must already be removed."
-	confirmLabel="Delete space"
-	cancelLabel="Keep it"
+	title={t('space.deleteTitle', { name: workspace?.name ?? t('space.thisSpace') })}
+	description={t('space.deleteBody')}
+	confirmLabel={t('space.deleteButton')}
+	cancelLabel={t('common.keepIt')}
 	onConfirm={deleteWorkspace}
 	onCancel={() => (deleteText = '')}
 >
-	<Field label="Type DELETE to confirm">
+	<Field label={t('space.deleteType')}>
 		<Input bind:value={deleteText} placeholder="DELETE" autocomplete="off" />
 	</Field>
 </ConfirmModal>
