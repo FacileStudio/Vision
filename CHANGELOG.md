@@ -6,6 +6,12 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `@facile/muse` v0.14.1 to v0.14.2: the user menu clamps itself inside the viewport at the right edge of a header.
+- The user menu has a Subscription row that opens `https://sso.facile.studio/spaces`, where plans are managed.
+- API keys: the create drawer has no expiry field and the list has no expiry column, because Vision keys never expire.
+
 ## [0.2.2] - 2026-11-07
 
 ### Changed

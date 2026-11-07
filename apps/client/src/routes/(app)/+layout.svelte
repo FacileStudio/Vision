@@ -89,6 +89,7 @@
 	}
 
 	const userMenu = $derived({
+		subscription: { plan: '', href: 'https://sso.facile.studio/spaces' },
 		helpHref: `${page.url.origin}/docs`,
 		onSignOut: signOut,
 		theme: theme.mode,

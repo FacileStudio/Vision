@@ -24,7 +24,6 @@
 			prefix: `${key.prefix}_****${key.key_hint}`,
 			scope: key.scopes.includes('write') ? t('apiKeys.scopeWrite') : t('apiKeys.scopeRead'),
 			lastUsed: key.last_used_at ? formatDate(key.last_used_at, { dateStyle: 'medium' }) : undefined,
-			expires: key.expires_at ? formatDate(key.expires_at, { dateStyle: 'medium' }) : undefined,
 			revoked: !key.is_active
 		}))
 	);
@@ -44,7 +43,7 @@
 		load();
 	});
 
-	async function create(draft: TokenDraft): Promise<string> {
+	async function create(draft: Omit<TokenDraft, 'days'>): Promise<string> {
 		const resp = await api.apiKeys.create({
 			name: draft.name,
 			scopes: draft.scope ?? 'read',
@@ -61,7 +60,7 @@
 	}
 </script>
 
-<TokensSection tokens={items} {scopes} onCreate={create} onRevoke={revoke}>
+<TokensSection tokens={items} {scopes} expiry={false} onCreate={create} onRevoke={revoke}>
 	<SettingsSection title={t('apiKeys.endpointTitle')} description={t('apiKeys.endpointText')}>
 		<SecretField value={endpoint} sensitive={false} label={t('apiKeys.baseUrl')} />
 	</SettingsSection>
