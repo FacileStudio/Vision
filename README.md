@@ -70,7 +70,6 @@ hostname needs no configuration. `window.vision.track(name, props)` sends a cust
 | `STORAGE_DIR` | Where uploaded avatars live |
 | `API_URL` | Client container only: where the SvelteKit proxy forwards `/api/*` |
 | `OIDC_ISSUER` | Set it to turn on SSO; three more `OIDC_*` variables become required |
-| `APP_VERSION` | Build argument, served at `GET /version` |
 
 Full reference: [docs/configuration.md](docs/configuration.md).
 
