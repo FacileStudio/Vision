@@ -4,6 +4,13 @@ All notable changes to Vision are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- `@facile/muse` v0.14.2 to v0.14.4: the language chosen in the user menu re-renders the whole UI without a reload, and a single 100% slice in a donut chart is drawn as a clean ring.
+- The user menu's Subscription row drops its empty `plan` placeholder and shows only its label.
+
 ## [0.2.4] - 2026-11-07
 
 ### Security
