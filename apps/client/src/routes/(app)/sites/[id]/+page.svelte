@@ -489,7 +489,7 @@
 							</Button>
 						</div>
 					{:else}
-						<Button variant="outline" icon={icons.globe} onclick={generateShare}>
+						<Button variant="secondary" icon={icons.globe} onclick={generateShare}>
 							{t('share.create')}
 						</Button>
 					{/if}

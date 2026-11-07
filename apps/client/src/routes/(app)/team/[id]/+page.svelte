@@ -234,7 +234,7 @@
 		>
 			{#if registreSpaces}
 				<SettingsRow label={t('space.manageLabel')} description={t('space.manageText')}>
-					<Button variant="outline" icon={icons.space} href={manageURL}>{t('team.manageRegistre')}</Button>
+					<Button variant="secondary" icon={icons.space} href={manageURL}>{t('team.manageRegistre')}</Button>
 				</SettingsRow>
 			{/if}
 			{#each members as member (member.id)}
@@ -321,7 +321,7 @@
 						label={t('space.deleteLabel')}
 						description={t('space.deleteText')}
 					>
-						<Button variant="danger" icon={icons.remove} onclick={() => (deleteOpen = true)}>
+						<Button variant="ghost-danger" icon={icons.remove} onclick={() => (deleteOpen = true)}>
 							{t('space.deleteButton')}
 						</Button>
 					</SettingsRow>
@@ -330,7 +330,7 @@
 						label={t('space.leaveLabel')}
 						description={t('space.leaveText')}
 					>
-						<Button variant="danger" icon={icons.logout} onclick={() => (leaveOpen = true)}>
+						<Button variant="ghost-danger" icon={icons.logout} onclick={() => (leaveOpen = true)}>
 							{t('space.leaveButton')}
 						</Button>
 					</SettingsRow>

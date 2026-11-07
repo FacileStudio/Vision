@@ -75,7 +75,7 @@ unknown hostname is rejected. `CF-IPCountry` supplies the country; no IP is stor
 | GET | `/auth/config` | no | `{ sso_only, oidc_enabled }` |
 | GET | `/auth/me` | yes | `{ id, email, name, avatar_url, avatar_source, locale, created_at }` |
 | PUT | `/auth/me` | yes | `{ name, email }` |
-| GET | `/version` | no | `{ version }`, the `APP_VERSION` build argument or `dev` |
+| GET | `/version` | no | `{ version }`, the version in `apps/client/package.json`, baked in at build time, or `dev` |
 | POST | `/registre/deletions` | signed | Registre's signed `user.deleted` notice (public path `/api/registre/deletions`) |
 | GET | `/auth/oidc` | no | Redirects to the provider |
 | GET | `/auth/oidc/callback` | no | Redirects to `OIDC_SUCCESS_URL#token=…` |

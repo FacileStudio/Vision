@@ -19,8 +19,6 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-      args:
-        APP_VERSION: ${APP_VERSION:-dev}
     expose:
       - "4000"
     healthcheck:
