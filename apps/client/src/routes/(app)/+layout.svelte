@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { api, currentUser } from '$lib';
+	import { api, currentUser, logout } from '$lib';
 	import {
 		MobileNav,
 		PageTransition,
@@ -13,7 +13,8 @@
 	} from '@facile/muse';
 	import { userStore } from '$lib/stores/user.svelte';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
-	import { setSessionLocale, t } from '$lib/i18n/index.svelte';
+	import { rememberLocale, setSessionLocale, t } from '$lib/i18n/index.svelte';
+	import { setTheme, theme, type ThemeMode } from '$lib/theme.svelte';
 
 	let { children } = $props();
 
@@ -75,7 +76,24 @@
 
 	const user = $derived({
 		name: userStore.value?.name?.trim() || userStore.value?.email || t('nav.account'),
+		email: userStore.value?.email,
 		avatar: userStore.value?.avatar_url || undefined
+	});
+
+	/**
+	 * Ends the session on both transports and returns to the login page.
+	 */
+	async function signOut() {
+		await logout();
+		void goto('/login');
+	}
+
+	const userMenu = $derived({
+		helpHref: `${page.url.origin}/docs`,
+		onSignOut: signOut,
+		theme: theme.mode,
+		onThemeChange: (next: ThemeMode) => setTheme(next),
+		onLocaleChange: rememberLocale
 	});
 
 	const spaces = $derived(workspaceStore.all.map((w) => ({ id: String(w.id), name: w.name })));
@@ -108,6 +126,7 @@
 			{user}
 			userHref="/settings"
 			userActive={onSettings}
+			{userMenu}
 			class="h-full"
 		/>
 	</div>
@@ -141,5 +160,5 @@
 		</div>
 	</main>
 
-	<MobileNav items={navPages} {user} profileHref="/settings" profileActive={onSettings} />
+	<MobileNav items={navPages} {user} profileHref="/settings" profileActive={onSettings} {userMenu} />
 </div>

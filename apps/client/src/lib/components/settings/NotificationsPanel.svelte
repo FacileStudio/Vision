@@ -13,10 +13,10 @@
 		Field,
 		IconButton,
 		Input,
+		NotificationsSection,
 		SecretField,
 		Select,
 		SettingsRow,
-		SettingsSection,
 		Spinner,
 		StatusDot,
 		Switch,
@@ -171,7 +171,7 @@
 </script>
 
 <div class="flex flex-col gap-10">
-	<SettingsSection title={t('webhooks.title')} description={t('webhooks.text')}>
+	<NotificationsSection title={t('webhooks.title')} description={t('webhooks.text')}>
 		{#snippet actions()}
 			<Button icon={icons.plus} onclick={openCreate}>{t('webhooks.new')}</Button>
 		{/snippet}
@@ -220,7 +220,7 @@
 				</SettingsRow>
 			{/each}
 		{/if}
-	</SettingsSection>
+	</NotificationsSection>
 </div>
 
 <Drawer
