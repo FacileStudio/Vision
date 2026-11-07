@@ -6,6 +6,10 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Libraries: porte v0.12.0 to v0.12.1 and `@facile/muse` v0.12.1 to v0.13.0 (borderless controls with the light `fc-field` fill, `Select` as a custom combobox, badges that never wrap). No app code change: every `Select` sits in a labelled `Field` or carries an `aria-label`.
+
 ## [0.2.0] - 2026-11-06
 
 ### Added
