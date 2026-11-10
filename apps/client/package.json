@@ -1,5 +1,6 @@
 {
 	"name": "vision-client",
+	"license": "AGPL-3.0-only",
 	"private": true,
 	"version": "0.2.6",
 	"type": "module",
