@@ -55,6 +55,9 @@ func (f *fixture) seedErasableData(zoe int64) {
 	f.site(f.acme, zoe, "zoe-acme.test")
 	f.must(f.db.Create(&schemas.Webhook{OwnerID: zoe, WorkspaceID: &f.acme, URL: "https://hooks.test/zoe", Secret: "s", Period: "daily"}).Error)
 	f.must(f.db.Create(&schemas.APIKey{UserID: zoe, WorkspaceID: &f.acme, Name: "acme", KeyHash: "k-acme"}).Error)
+	f.must(f.db.Exec(`INSERT INTO mcp_actions (id, user_id, kind, target, digest, summary, expires_at)
+		VALUES ('a-zoe', ?, 'delete_site', ?, 'd', ?, now() + interval '1 day')`,
+		fmt.Sprint(zoe), fmt.Sprint(mine), "Delete the site of "+erasedName+"?").Error)
 }
 
 // traces counts, column by column, the rows that still name the person: any text, jsonb
@@ -90,7 +93,8 @@ func TestErasureLeavesNoTraceOfThePersonInAnyColumn(t *testing.T) {
 	before := f.traces(zoe)
 	for _, column := range []string{"users.email", "users.name", "porte_identities.subject", "workspaces.name",
 		"porte_sessions.user_id", "workspace_members.user_id", "sites.owner_id", "goals.owner_id",
-		"webhooks.owner_id", "api_keys.user_id", "porte_login_codes.subject", "porte_magic_links.user_id"} {
+		"webhooks.owner_id", "api_keys.user_id", "porte_login_codes.subject", "porte_magic_links.user_id",
+		"mcp_actions.summary"} {
 		if before[column] == 0 {
 			t.Errorf("the seed left nothing in %s, so the scan proves nothing there", column)
 		}

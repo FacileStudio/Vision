@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
+
+	mcpkit "github.com/FacileStudio/tronc/mcp"
 )
 
 // successorOrder ranks the members who can inherit what a departing person authored:
@@ -66,7 +69,7 @@ func personCascade() []string {
 // so do their goals; their authorship moves to the next member, or to nobody when none is
 // left. Vision stores no author name, so the "Deleted user" label is the absence of an
 // owner. The person's own webhooks and API keys go, because the URL, the secret and the
-// key are theirs.
+// key are theirs, and so do the actions their MCP clients left waiting for confirmation.
 func EraseData(ctx context.Context, tx *sql.Tx, userID int64) error {
 	ids, err := personalWorkspaceIDs(ctx, tx, userID)
 	if err != nil {
@@ -78,6 +81,9 @@ func EraseData(ctx context.Context, tx *sql.Tx, userID int64) error {
 		}
 	}
 	if err := execAll(ctx, tx, personCascade(), userID); err != nil {
+		return fmt.Errorf("erase user %d: %w", userID, err)
+	}
+	if err := mcpkit.ErasePending(ctx, tx, strconv.FormatInt(userID, 10)); err != nil {
 		return fmt.Errorf("erase user %d: %w", userID, err)
 	}
 	return nil

@@ -154,8 +154,43 @@ export const api = {
 		create: (data: CreateAPIKeyRequest) => request<CreateAPIKeyResponse>('POST', '/api-keys', data),
 		revoke: (id: number) => request<void>('DELETE', `/api-keys/${id}`)
 	},
-	events: {}
+	events: {},
+	pending: {
+		list: () => request<{ actions: PendingAction[] }>('GET', '/mcp/pending'),
+		confirm: (id: string) =>
+			request<PendingResult>('POST', `/mcp/pending/${encodeURIComponent(id)}/confirm`, {}),
+		dismiss: (id: string) =>
+			request<PendingResult>('POST', `/mcp/pending/${encodeURIComponent(id)}/dismiss`, {})
+	}
 };
+
+/** The site or goal an MCP client's pending action targets, as it is now. */
+export interface PendingTarget {
+	type: 'site' | 'goal';
+	id: number;
+	name: string;
+	domain?: string;
+	site?: string;
+	url: string;
+}
+
+/** One action an MCP client asked for, waiting for the person on /pending. */
+export interface PendingAction {
+	id: string;
+	kind: 'delete_site' | 'share_site' | 'delete_goal';
+	client_id: string;
+	summary: string;
+	created_at: string;
+	expires_at: string;
+	state: 'ready' | 'changed' | 'missing';
+	target?: PendingTarget;
+}
+
+/** What a confirmed or dismissed action answers: a public link carries its url. */
+export interface PendingResult {
+	status: string;
+	url?: string;
+}
 
 export interface UserProfile {
 	id: string;

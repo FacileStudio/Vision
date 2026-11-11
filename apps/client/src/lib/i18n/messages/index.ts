@@ -1,5 +1,6 @@
 import type { Catalogs, Message } from '@facile/muse';
 import { dashboard } from './dashboard';
+import { pending } from './pending';
 import { settings } from './settings';
 import { shell } from './shell';
 import { sites } from './sites';
@@ -13,7 +14,8 @@ const rows = {
 	...dashboard,
 	...team,
 	...settings,
-	...webhooks
+	...webhooks,
+	...pending
 };
 
 export type AppKey = keyof typeof rows;

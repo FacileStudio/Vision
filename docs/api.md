@@ -203,3 +203,39 @@ of the raw body keyed on the webhook's secret.
   "top_browsers": [], "top_devices": []
 }
 ```
+
+## MCP
+
+`POST /mcp`, at the root and outside `/api`, is Vision's remote MCP server (spec 2026-07-28,
+stateless Streamable HTTP, built on `tronc/mcp`). It takes Registre access tokens bound to
+`https://vision.facile.studio/mcp` with the scopes `vision.read` and `vision.write`;
+`/.well-known/oauth-protected-resource/mcp` is the RFC 9728 metadata that tells a client how
+to get one. MCP is free on every plan. A person's first call creates their Vision account.
+
+| Tool | Scope | Confirmed |
+|---|---|---|
+| `vision_list_spaces` | read | |
+| `vision_list_sites` | read | |
+| `vision_get_stats` | read | |
+| `vision_list_goals` | read | |
+| `vision_create_site` | write | |
+| `vision_update_site` | write | |
+| `vision_unshare_site` | write | |
+| `vision_create_goal` | write | |
+| `vision_update_goal` | write | |
+| `vision_delete_site` | write | yes |
+| `vision_share_site` | write | yes |
+| `vision_delete_goal` | write | yes |
+
+Each tool calls the service of the matching REST route, so roles hold as in the web app.
+A confirmed tool asks the person through MCP elicitation when the client supports it.
+Otherwise it stores a pending action and returns a `confirm_url` to `/pending`, where the
+signed-in person confirms or dismisses it:
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/mcp/pending` | session | Open actions with their site or goal as it is now |
+| POST | `/mcp/pending/{id}/confirm` | session | Runs it once; 412 when the target changed since |
+| POST | `/mcp/pending/{id}/dismiss` | session | Closes it without running it |
+
+An API key or a delegated token cannot confirm: only the person's own browser session can.

@@ -22,6 +22,30 @@
 	let invitations = $state<{ count: number; href: string } | null>(null);
 	let scroller: HTMLElement | null = $state(null);
 
+	/*
+	 * An MCP client hands the person a /pending?action=… link. Signing in lands on OIDC's
+	 * success page, so the link is kept for this tab and reopened once the session is back.
+	 * Only /pending is kept: the value is read back into goto, and no other path needs it.
+	 */
+	const RETURN_KEY = 'vision.return';
+
+	function keepReturn() {
+		if (page.url.pathname !== '/pending') return;
+		try {
+			sessionStorage.setItem(RETURN_KEY, page.url.pathname + page.url.search);
+		} catch {}
+	}
+
+	function resumeReturn() {
+		let back: string | null = null;
+		try {
+			back = sessionStorage.getItem(RETURN_KEY);
+			sessionStorage.removeItem(RETURN_KEY);
+		} catch {}
+		const safe = back === '/pending' || back?.startsWith('/pending?');
+		if (back && safe && back !== page.url.pathname + page.url.search) void goto(back);
+	}
+
 	onMount(async () => {
 		/* The API is the only thing that knows whether this browser has a session: it is a
 		   cookie the client cannot read. A thrown error is a bad round-trip, not a logout —
@@ -33,10 +57,12 @@
 			return;
 		}
 		if (!me) {
+			keepReturn();
 			goto('/login');
 			return;
 		}
 		userStore.value = me;
+		resumeReturn();
 		setSessionLocale(me.locale);
 		api.me.invitations().then((answer) => (invitations = answer));
 		try {

@@ -37,6 +37,7 @@ Off until `OIDC_ISSUER` is set. Once it is, three more variables become required
 | `OIDC_CLIENT_SECRET` | with issuer | — | Client secret |
 | `OIDC_REDIRECT_URL` | with issuer | — | The provider's callback target. It must keep the `/api` prefix — `https://<host>/api/auth/oidc/callback`. A bare `/auth/oidc/callback` lands on the SPA catch-all and answers 200 with HTML, so the login never completes |
 | `OIDC_SUCCESS_URL` | no | value of `DOMAIN` | Where the callback sends the browser once the session cookie is set |
+| `MCP_RESOURCE` | no | compose: `https://vision.facile.studio/mcp` | Canonical URI of the remote MCP server and the RFC 8707 resource Registre binds its tokens to. Set with SSO on, it mounts `/mcp`; empty leaves it off |
 
 ## Compose-only variables
 

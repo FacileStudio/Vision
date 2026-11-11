@@ -65,6 +65,7 @@ services:
       PORTE_TOKEN_KEY: ${PORTE_TOKEN_KEY:-}
       OIDC_REDIRECT_URL: ${OIDC_REDIRECT_URL:-}
       OIDC_SUCCESS_URL: ${OIDC_SUCCESS_URL:-}
+      MCP_RESOURCE: ${MCP_RESOURCE:-https://vision.facile.studio/mcp}
       JOURNAL_URL: ${JOURNAL_URL:-}
       JOURNAL_TOKEN: ${JOURNAL_TOKEN:-}
     depends_on:

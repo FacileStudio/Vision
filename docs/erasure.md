@@ -26,6 +26,7 @@ matches with or without a trailing slash. Any error rolls the whole erasure back
 | A personal workspace: unlinked, and the person is its only member | Deleted with its sites, pageviews, custom events, visitor sessions, goals, API keys and webhooks |
 | Sites and goals the person authored in a workspace that stays | Handed to the next member (owner, admin, editor, viewer, oldest membership first), or to nobody (`0`) when none is left |
 | The person's own webhooks and API keys anywhere | Deleted: the URL, the secret and the key are theirs |
+| Actions the person's MCP clients left waiting for confirmation (`mcp_actions`) | Deleted, open or resolved |
 | Memberships | Deleted |
 | A shared, unlinked workspace still named after the person (their name or address) | Renamed `Workspace` |
 | A workspace linked to a Registre space | Kept, with its Registre name |

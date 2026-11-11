@@ -207,3 +207,37 @@ func toResponse(record *schemas.Goal) *GoalResponse {
 		CreatedAt: record.CreatedAt,
 	}
 }
+
+// List is GET /goals?site_id=: the goals of a site userID can read.
+func (s *Service) List(ctx context.Context, userID, siteID string) ([]GoalResponse, error) {
+	return s.controller.list(ctx, userID, siteID)
+}
+
+// Conversions is GET /goals/{siteId}/conversions: each goal's distinct converting visitors in the range.
+func (s *Service) Conversions(ctx context.Context, userID, siteID string, from, to time.Time) (*ConversionsResponse, error) {
+	return s.controller.conversions(ctx, userID, siteID, from, to)
+}
+
+// Create is POST /goals, with the same validation.
+func (s *Service) Create(ctx context.Context, userID string, req *CreateRequest) (*GoalResponse, error) {
+	return s.controller.create(ctx, userID, req)
+}
+
+// Update is PUT /goals/{id}: only the goal's author can change it.
+func (s *Service) Update(ctx context.Context, userID, goalID string, req *UpdateRequest) (*GoalResponse, error) {
+	return s.controller.update(ctx, userID, goalID, req)
+}
+
+// Delete is DELETE /goals/{id}: only the goal's author can delete it.
+func (s *Service) Delete(ctx context.Context, userID, goalID string) error {
+	return s.controller.delete(ctx, userID, goalID)
+}
+
+// Own is the goal userID authored, as DELETE /goals/{id} would find it.
+func (s *Service) Own(ctx context.Context, userID, goalID string) (*GoalResponse, error) {
+	record, err := s.findOwned(ctx, userID, goalID)
+	if err != nil {
+		return nil, err
+	}
+	return toResponse(record), nil
+}

@@ -297,3 +297,9 @@ func (s *Service) leaveWorkspace(ctx context.Context, userID string, wsID string
 	}
 	return s.orm.WithContext(ctx).Delete(member).Error
 }
+
+// List is GET /workspaces: the workspaces userID belongs to, with a personal one made for
+// a person who has none, as the web app does on first load.
+func (s *Service) List(ctx context.Context, userID string) ([]WorkspaceResponse, error) {
+	return s.controller.list(ctx, userID)
+}

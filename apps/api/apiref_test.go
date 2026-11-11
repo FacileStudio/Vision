@@ -13,6 +13,7 @@ import (
 	"github.com/FacileStudio/Vision/apps/api/modules/auth"
 	"github.com/FacileStudio/Vision/apps/api/modules/events"
 	"github.com/FacileStudio/Vision/apps/api/modules/goals"
+	"github.com/FacileStudio/Vision/apps/api/modules/mcp"
 	"github.com/FacileStudio/Vision/apps/api/modules/sites"
 	"github.com/FacileStudio/Vision/apps/api/modules/webhooks"
 	"github.com/FacileStudio/Vision/apps/api/modules/workspaces"
@@ -41,6 +42,7 @@ func buildTestRouter() chi.Router {
 	goals.RegisterRoutes(api, nil, authService)
 	apikeys.RegisterRoutes(api, nil, authService)
 	webhooks.RegisterRoutes(api, nil, nil, authService)
+	mcp.RegisterPendingRoutes(api, nil, authService)
 	router.Mount("/api", api)
 
 	return router
