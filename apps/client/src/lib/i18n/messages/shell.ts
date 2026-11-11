@@ -42,18 +42,6 @@ export const shell = {
 		'Facile konnte Sie nicht anmelden. Versuchen Sie es erneut.'
 	],
 
-	'landing.title': [
-		'Vision — Privacy-friendly analytics',
-		'Vision — Des statistiques respectueuses de la vie privée',
-		'Vision — Analítica que respeta la privacidad',
-		'Vision — Datenschutzfreundliche Webanalyse'
-	],
-	'landing.description': [
-		'Self-hosted, cookie-free web analytics. Drop a 3.7 KB script on a site and watch pageviews, visitors, referrers and goals in a dashboard you own.',
-		'Des statistiques web auto-hébergées, sans cookie. Ajoutez un script de 3,7 Ko à un site et suivez pages vues, visiteurs, sources et objectifs dans un tableau de bord qui vous appartient.',
-		'Analítica web autoalojada y sin cookies. Añade un script de 3,7 KB a un sitio y sigue las visitas, los visitantes, las fuentes y los objetivos en un panel que es tuyo.',
-		'Selbst gehostete, cookiefreie Webanalyse. Binden Sie ein 3,7-KB-Skript in eine Website ein und verfolgen Sie Seitenaufrufe, Besucher, Quellen und Ziele in einem Dashboard, das Ihnen gehört.'
-	],
 	'landing.heroTitle': [
 		'See your traffic.|Know your audience.',
 		'Voyez votre trafic.|Connaissez votre audience.',

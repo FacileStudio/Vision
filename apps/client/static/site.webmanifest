@@ -1,7 +1,7 @@
 {
   "name": "Vision",
   "short_name": "Vision",
-  "description": "Self-hosted, cookie-free web analytics.",
+  "description": "A lightweight script, no cookies and real-time numbers. GDPR compliant by design, hosted on your server.",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -12,15 +12,10 @@
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
-    },
-    {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
     }
   ],
-  "theme_color": "#0a0a0a",
-  "background_color": "#0a0a0a",
+  "theme_color": "#fafafa",
+  "background_color": "#fafafa",
   "display": "standalone",
   "start_url": "/"
 }
