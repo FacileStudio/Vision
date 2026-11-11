@@ -6,6 +6,11 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- chi v5.3.1 to v5.5.0 and go-jose v4.1.4 to v4.1.9, the two findings douane reported (go-jose
+  high, chi medium). The mounted routes are the same before and after.
+
 ## [0.3.0] - 2026-11-11
 
 ### Added
