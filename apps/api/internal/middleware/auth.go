@@ -3,23 +3,20 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
-	"github.com/FacileStudio/porte"
+	"github.com/FacileStudio/porte/kit"
 	"github.com/FacileStudio/tronc/errors"
 	"github.com/FacileStudio/tronc/httpjson"
 )
 
-// Authenticator is the auth service: porte's session middleware, plus the
-// lookup that turns the user id porte resolved into the identity the rest of
-// Vision reads.
+// Authenticator is the auth service: porte/kit's session middleware, which
+// authenticates the credential and puts the account's kit.Identity on the request.
 type Authenticator interface {
-	// RequireAuth wraps a handler with porte's session middleware.
+	// RequireAuth wraps a handler with porte/kit's session middleware.
 	RequireAuth(http.Handler) http.Handler
-	// IdentityForUser resolves the user id porte authenticated into the
-	// identity the rest of Vision reads.
-	IdentityForUser(ctx context.Context, userID int64) (id string, email string, err error)
 
 	// AuthenticateRequest authenticates the live-events stream. EventSource
 	// cannot set a request header.
@@ -44,9 +41,8 @@ func SetAPIKeyAuthenticator(auth APIKeyAuthenticator) {
 }
 
 // RequireAuth gates a handler behind an authenticator. When the request is not
-// an API key it is a session: porte verifies the credential and hands on a user
-// id, and the profile the rest of Vision reads is looked up here — porte carries
-// no email by design.
+// an API key it is a session: porte/kit verifies the credential and reads the
+// account, and the identity is carried on in the string form the controllers take.
 func RequireAuth(authService Authenticator) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
@@ -68,19 +64,14 @@ func RequireAuth(authService Authenticator) func(http.Handler) http.Handler {
 			}
 
 			session := authService.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
-				authenticated, ok := porte.From(request.Context())
+				identity, ok := kit.FromContext(request.Context())
 				if !ok {
 					httpjson.WriteError(w, errors.Unauthorized("missing auth"))
 					return
 				}
-				userID, email, err := authService.IdentityForUser(request.Context(), authenticated.UserID)
-				if err != nil {
-					httpjson.WriteError(w, err)
-					return
-				}
 				authContext := authcontext.WithIdentity(request.Context(), authcontext.Identity{
-					UserID: userID,
-					Email:  email,
+					UserID: strconv.FormatInt(identity.UserID, 10),
+					Email:  identity.Email,
 				})
 				next.ServeHTTP(w, request.WithContext(authContext))
 			}))

@@ -3,11 +3,13 @@ package auth
 import (
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strconv"
 	"testing"
 
 	"github.com/FacileStudio/Vision/apps/api/schemas"
 	"github.com/FacileStudio/porte"
+	"github.com/FacileStudio/porte/kit"
 	"github.com/FacileStudio/tronc/testdb"
 
 	"github.com/go-chi/chi/v5"
@@ -18,7 +20,7 @@ const testIssuer = "https://sso.test"
 
 var testConfig = testdb.Config{Prefix: "vision_auth_test", Migrate: schemas.Migrate}
 
-func openStore(t *testing.T) (*UserStore, *gorm.DB) {
+func openStore(t *testing.T) (*kit.Store, *gorm.DB) {
 	t.Helper()
 	url, ok := testdb.URL()
 	if !ok {
@@ -31,7 +33,15 @@ func openStore(t *testing.T) (*UserStore, *gorm.DB) {
 	if err := testdb.Truncate(db, testConfig); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
-	return NewUserStore(db), db
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err := NewStore(t.Context(), sqlDB, nil)
+	if err != nil {
+		t.Fatalf("build the store: %v", err)
+	}
+	return store, db
 }
 
 func claims(subject, email string, verified bool) porte.Claims {
@@ -119,7 +129,7 @@ func TestProfileUpdateCannotChangeTheEmail(t *testing.T) {
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatal(err)
 	}
-	service := NewService(db, nil, nil)
+	service := NewService(db, nil, nil, nil)
 
 	got, err := service.controller.updateMe(t.Context(), strconv.FormatInt(user.ID, 10),
 		&UpdateProfileRequest{Name: " Mal ", Email: "victim@facile.studio"})
@@ -133,5 +143,81 @@ func TestProfileUpdateCannotChangeTheEmail(t *testing.T) {
 	db.First(&stored, user.ID)
 	if stored.Email != "mallory@example.com" {
 		t.Fatalf("the stored email became %q", stored.Email)
+	}
+}
+
+func TestTheColumnsTheKitLeavesOutArePinned(t *testing.T) {
+	store, _ := openStore(t)
+	want := []string{"avatar_source", "avatar_url", "oidc_access_token", "oidc_refresh_token",
+		"oidc_subject", "oidc_token_expiry", "password_hash", "profile_synced_at"}
+	if got := slices.Sorted(slices.Values(store.Unwritten())); !slices.Equal(got, want) {
+		t.Fatalf("unwritten = %v, want %v: fill a new column in fillNewAccount or accept it here", got, want)
+	}
+}
+
+func TestANewAccountReadsLikeTheOldOnes(t *testing.T) {
+	store, db := openStore(t)
+	id, err := store.UpsertFromOIDC(t.Context(), claims("sub-new", "new@facile.studio", true))
+	if err != nil {
+		t.Fatalf("sign up: %v", err)
+	}
+	var nulls []string
+	err = db.Raw(`SELECT key FROM users u, jsonb_each(to_jsonb(u)) WHERE u.id = ? AND value = 'null'::jsonb`, id).
+		Scan(&nulls).Error
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(nulls, []string{"oidc_subject"}) {
+		t.Fatalf("NULL columns on a new account: %v, want only oidc_subject", nulls)
+	}
+	var user schemas.User
+	if err := db.First(&user, id).Error; err != nil {
+		t.Fatalf("GORM cannot read the new account: %v", err)
+	}
+	if user.CreatedAt.IsZero() || user.Locale != "de" || user.Name != "Camille" {
+		t.Errorf("created_at %v locale %q name %q", user.CreatedAt, user.Locale, user.Name)
+	}
+}
+
+func TestAnUnverifiedAddressIsNotWrittenOverTheStoredOne(t *testing.T) {
+	store, db := openStore(t)
+	id, err := store.UpsertFromOIDC(t.Context(), claims("sub-1", "camille@facile.studio", true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	linkIdentity(t, db, id, "sub-1")
+	if _, err := store.UpsertFromOIDC(t.Context(), claims("sub-1", "other@facile.studio", false)); err != nil {
+		t.Fatal(err)
+	}
+	var user schemas.User
+	db.First(&user, id)
+	if user.Email != "camille@facile.studio" {
+		t.Fatalf("email became %q, want the verified one kept", user.Email)
+	}
+}
+
+func TestBackfillFillsEmptyPicturesOnly(t *testing.T) {
+	store, db := openStore(t)
+	empty := schemas.User{Email: "a@facile.studio"}
+	chosen := schemas.User{Email: "b@facile.studio", OIDCPictureURL: "https://elsewhere.test/b.png"}
+	for _, user := range []*schemas.User{&empty, &chosen} {
+		if err := db.Create(user).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	linkIdentity(t, db, empty.ID, "sub-a")
+	linkIdentity(t, db, chosen.ID, "sub-b")
+	for range 2 {
+		if _, err := store.BackfillPictures(t.Context(), testIssuer); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := map[int64]string{empty.ID: testIssuer + "/avatars/sub-a", chosen.ID: "https://elsewhere.test/b.png"}
+	for id, picture := range want {
+		var user schemas.User
+		db.First(&user, id)
+		if user.OIDCPictureURL != picture {
+			t.Errorf("user %d picture %q, want %q", id, user.OIDCPictureURL, picture)
+		}
 	}
 }

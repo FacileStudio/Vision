@@ -275,47 +275,6 @@ func TestAdoptPorteWithoutAnIssuerStillMovesTheCredentials(t *testing.T) {
 	}
 }
 
-// An SSO member who has not signed in since Registre began sending the picture
-// claim must still render with one, and the backfill must not overwrite a URL
-// a sign-in already stored.
-func TestAdoptPorteBackfillsPictureURLs(t *testing.T) {
-	db := openTestDatabase(t)
-	seedPrePorte(t, db)
-	statements := []string{
-		`INSERT INTO users (id, email, name, oidc_subject, oidc_picture_url, password_hash, created_at)
-		 VALUES (3, 'lea@facile.studio', 'Lea', 'sub-3', 'https://elsewhere.test/lea.png', '', now())`,
-	}
-	for _, statement := range statements {
-		if err := db.Exec(statement).Error; err != nil {
-			t.Fatalf("seed: %v", err)
-		}
-	}
-
-	for range 2 {
-		if err := AdoptPorte(db, testIssuer); err != nil {
-			t.Fatalf("adopt: %v", err)
-		}
-	}
-
-	var pictures []struct {
-		ID             int64
-		OIDCPictureURL string `gorm:"column:oidc_picture_url"`
-	}
-	if err := db.Raw(`SELECT id, oidc_picture_url FROM users ORDER BY id`).Scan(&pictures).Error; err != nil {
-		t.Fatalf("read pictures: %v", err)
-	}
-	want := map[int64]string{
-		1: "https://porte.test/application/o/vision/avatars/sub-1",
-		2: "",
-		3: "https://elsewhere.test/lea.png",
-	}
-	for _, p := range pictures {
-		if p.OIDCPictureURL != want[p.ID] {
-			t.Errorf("user %d: picture %q, want %q", p.ID, p.OIDCPictureURL, want[p.ID])
-		}
-	}
-}
-
 // porte v0.10.0 binds a login code to its identity, so a database that predates the
 // columns must gain them, and porte v0.12.0's EraseIdentity needs porte_magic_links to
 // exist. Running the adoption twice proves both statements are idempotent.

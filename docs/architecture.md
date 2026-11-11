@@ -41,9 +41,8 @@ paths get special treatment:
 |---|---|
 | `main.go` | Config, logger, DB, migrations, service wiring, router, graceful shutdown |
 | `internal/env` | Vision's own config loader — see the note below |
-| `internal/middleware` | `RequireAuth`, which accepts both session tokens and API keys |
+| `internal/middleware` | `RequireAuth`: an API key first, else porte/kit's session middleware |
 | `internal/siteaccess` | `CanAccess` and `CanWrite`, the workspace-aware permission check |
-| `internal/oidcavatar` | Downloads and stores the OIDC `picture` claim |
 | `modules/events` | Ingestion, the SSE hub, and the in-memory active-visitor tracker |
 | `modules/analytics` | Dashboard aggregation queries, export, public share views |
 | `modules/*` | `auth`, `sites`, `goals`, `apikeys`, `workspaces`, `webhooks` |
@@ -145,14 +144,17 @@ reads and discards. `POST /auth/sync-profile` re-reads userinfo for the current 
 `GET /auth/config` reports `sso_only` and `oidc_enabled`. porte mounts no password route
 while `OIDC_ISSUER` is set.
 
+Accounts live in Vision's `users` table through porte/kit's store (`modules/auth/store.go`).
 An existing account links to a Facile sign-in by verified email only, and only when it holds
-no other subject of the same issuer (`modules/auth/porte.go`). The person's Registre locale is
-stored in `users.locale`.
+no other subject of the same issuer. The stored address changes at sign-in only when Registre
+marks it verified. The picture is `users.oidc_picture_url`, and the person's Registre locale
+is stored in `users.locale`. Vision has no admin flag: roles live in `workspace_members`.
 
-When Registre erases a person, `modules/workspaces/erase.go` deletes their account and their
-personal workspaces, and hands the sites and goals they authored in shared workspaces to the
-next member. It runs from the deletion poll or from Registre's signed push, and a second call
-changes nothing.
+When Registre erases a person, porte/kit's `EraseAccount` runs `workspaces.EraseData` and then
+deletes the account, in one transaction. It deletes their personal workspaces and hands the
+sites and goals they authored in shared workspaces to the next member. It runs from the
+deletion poll or from Registre's signed push, and a second call changes nothing. See
+[erasure.md](erasure.md).
 
 ## Cross-app integration
 

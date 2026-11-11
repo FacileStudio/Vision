@@ -17,25 +17,24 @@ import (
 // goes, and the data a workspace shares with others stays.
 //
 // It wraps porte's receiver, which polls Registre's deletion list, accepts Registre's
-// signed push and hands each person to eraseSubject once. Run it in exactly one replica;
-// Vision is single-replica.
+// signed push and hands each person once to the account erasure (porte/kit's
+// EraseAccount, which runs EraseData). Run it in exactly one replica; Vision is
+// single-replica.
 type Deletions struct {
-	orm      *gorm.DB
 	receiver *directory.Deletions
 }
 
-// NewDeletions returns the receiver for the Registre behind client. erase is porte's own
-// erasure (pg.Store.EraseIdentity), which runs after Vision has removed its account.
-func NewDeletions(orm *gorm.DB, client directory.Client, erase func(context.Context, string, string) error, logger *slog.Logger) *Deletions {
-	d := &Deletions{orm: orm}
-	d.receiver = &directory.Deletions{
+// NewDeletions returns the receiver for the Registre behind client. eraseAccount removes
+// Vision's account and its data; erase is porte's own erasure (pg.Store.EraseIdentity),
+// which runs after it.
+func NewDeletions(orm *gorm.DB, client directory.Client, eraseAccount, erase func(context.Context, string, string) error, logger *slog.Logger) *Deletions {
+	return &Deletions{receiver: &directory.Deletions{
 		Client:          client,
-		OnPersonDeleted: d.eraseSubject,
+		OnPersonDeleted: eraseAccount,
 		Erase:           erase,
 		State:           deletionState{orm: orm},
 		Logger:          logger,
-	}
-	return d
+	}}
 }
 
 // Handler answers Registre's signed user.deleted push. It is mounted outside the session

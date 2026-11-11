@@ -23,10 +23,7 @@ func AdoptPorte(db *gorm.DB, issuer string) error {
 	if issuer == "" {
 		return nil
 	}
-	if err := db.Exec(adoptOIDCSubjects, issuer).Error; err != nil {
-		return err
-	}
-	return db.Exec(backfillPictureURLs, issuer, issuer).Error
+	return db.Exec(adoptOIDCSubjects, issuer).Error
 }
 
 // porteSchema is porte/pg's Schema with its porte_users table left out and the
@@ -198,24 +195,4 @@ SELECT id, ?, oidc_subject
   FROM users
  WHERE oidc_subject IS NOT NULL AND oidc_subject <> ''
 ON CONFLICT (provider, subject) DO NOTHING;
-`
-
-// backfillPictureURLs gives every SSO account the picture URL its next sign-in
-// would store, so a member who has not signed in since Registre began sending
-// the claim still renders with a photo in somebody else's member list.
-//
-// Registre's picture claim is the stable URL <issuer>/avatars/<subject> for
-// every human, and it answers 404 for somebody with no photo, which the client
-// already draws as initials. The issuer comes from the running config and never
-// from this file, and only an https issuer is used, matching what
-// oidcavatar.PhotoURL accepts at sign-in. Only empty rows are filled, so the
-// statement is idempotent and never overwrites a URL a sign-in wrote.
-const backfillPictureURLs = `
-UPDATE users u
-   SET oidc_picture_url = rtrim(i.provider, '/') || '/avatars/' || i.subject
-  FROM porte_identities i
- WHERE i.user_id = u.id
-   AND i.provider = ?
-   AND ? LIKE 'https://%'
-   AND coalesce(u.oidc_picture_url, '') = '';
 `

@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/FacileStudio/Vision/apps/api/schemas"
+	"github.com/FacileStudio/porte/kit"
 	"github.com/FacileStudio/porte/session"
 	"github.com/FacileStudio/tronc/errors"
 
@@ -18,49 +19,23 @@ import (
 type Service struct {
 	orm        *gorm.DB
 	sessions   *session.Manager
+	users      kit.Resolver
 	logger     *slog.Logger
 	controller *Controller
 }
 
-// NewService wires a Service onto porte's session manager.
-func NewService(orm *gorm.DB, sessions *session.Manager, logger *slog.Logger) *Service {
-	service := &Service{orm: orm, sessions: sessions, logger: logger}
+// NewService wires a Service onto porte's session manager and the kit store that turns a
+// session's user id into an identity.
+func NewService(orm *gorm.DB, sessions *session.Manager, users kit.Resolver, logger *slog.Logger) *Service {
+	service := &Service{orm: orm, sessions: sessions, users: users, logger: logger}
 	service.controller = newController(service)
 	return service
 }
 
-// RequireAuth is porte's session middleware, re-exported so the module routers
-// keep passing this one service to middleware.RequireAuth.
+// RequireAuth is porte/kit's session middleware: porte authenticates the credential and the
+// kit reads the account behind it. A session whose user is gone answers 401.
 func (service *Service) RequireAuth(next http.Handler) http.Handler {
-	return service.sessions.RequireAuth(next)
-}
-
-// IdentityForUser turns the user id porte authenticated into the identity the
-// rest of Vision reads. It is no longer where authentication happens.
-//
-// porte deliberately carries neither the email nor any role: what a role may
-// do is the app's business, and the profile lives in the app's table. So the
-// address is looked up here, which costs the one query the old join cost.
-//
-// The session may have outlived the user: porte's foreign key cascades a
-// delete, so this is a race, and it is still not authenticated.
-func (service *Service) IdentityForUser(ctx context.Context, userID int64) (string, string, error) {
-	var out struct {
-		ID    int64
-		Email string
-	}
-	err := service.orm.WithContext(ctx).
-		Model(&schemas.User{}).
-		Select("id", "email").
-		Where("id = ?", userID).
-		Scan(&out).Error
-	if err != nil {
-		return "", "", errors.Internal("failed to load the account", err)
-	}
-	if out.ID == 0 {
-		return "", "", errors.Unauthorized("invalid auth token")
-	}
-	return strconv.FormatInt(out.ID, 10), out.Email, nil
+	return kit.RequireAuth(service.sessions, service.users)(next)
 }
 
 // AuthenticateRequest resolves the caller of a route that is not mounted

@@ -26,7 +26,7 @@ func buildTestRouter() chi.Router {
 
 	appEnv := env.Config{Domain: "localhost"}
 	sessions, _ := session.New(appEnv.Porte(), session.Deps{})
-	authService := auth.NewService(nil, sessions, nil)
+	authService := auth.NewService(nil, sessions, nil, nil)
 
 	auth.RegisterRoutes(router, authService)
 	workspaces.RegisterRoutes(router, nil, authService)

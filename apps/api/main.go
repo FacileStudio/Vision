@@ -22,9 +22,8 @@ import (
 	"github.com/FacileStudio/Vision/apps/api/modules/sites"
 	"github.com/FacileStudio/Vision/apps/api/modules/webhooks"
 	"github.com/FacileStudio/porte/directory"
-	"github.com/FacileStudio/porte/oidc"
+	"github.com/FacileStudio/porte/kit"
 	portepg "github.com/FacileStudio/porte/pg"
-	"github.com/FacileStudio/porte/session"
 
 	"github.com/FacileStudio/Vision/apps/api/modules/workspaces"
 	"github.com/FacileStudio/Vision/apps/api/schemas"
@@ -39,55 +38,6 @@ import (
 	"github.com/FacileStudio/tronc/logger"
 	troncmiddleware "github.com/FacileStudio/tronc/middleware"
 )
-
-// buildAuth constructs porte: one session manager and the OIDC kit over the identity
-// tables.
-//
-// Sign-in goes through Registre only. porte mounts no password route while an issuer is
-// configured, so Vision builds no local kit and keeps no register or login route.
-// Discovery runs here, so an unreachable or half-configured issuer fails at boot rather
-// than on somebody's first login.
-//
-// ConfigExtra keeps the two keys this app's client reads off /auth/config.
-// porte owns that route and writes sso_only and oidc_enabled itself.
-func buildAuth(ctx context.Context, db *gorm.DB, appEnv env.Config, appLogger *slog.Logger) (*session.Manager, *oidc.Kit, error) {
-	sqlDB, err := db.DB()
-	if err != nil {
-		return nil, nil, err
-	}
-	store, err := newPorteStore(sqlDB)
-	if err != nil {
-		return nil, nil, err
-	}
-	resealInBackground(ctx, store, appLogger)
-	users := auth.NewUserStore(db)
-	cfg := appEnv.Porte()
-
-	sessions, err := session.New(cfg, session.Deps{Sessions: store.Sessions(), Logger: appLogger})
-	if err != nil {
-		return nil, nil, err
-	}
-	kit, err := oidc.New(ctx, cfg, oidc.Deps{
-		Users:      users,
-		Identities: store.Identities(),
-		Sessions:   sessions,
-		Codes:      store.LoginCodes(),
-		Logger:     appLogger,
-		ConfigExtra: func() map[string]any {
-			if appEnv.OIDC == nil {
-				return nil
-			}
-			return map[string]any{
-				"oidc_redirect_url": appEnv.OIDC.RedirectURL,
-				"oidc_issuer":       appEnv.OIDC.Issuer,
-			}
-		},
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-	return sessions, kit, nil
-}
 
 func main() {
 	if healthcheck.Handle(os.Args) {
@@ -158,12 +108,12 @@ func run() int {
 		}
 	}()
 
-	sessions, kit, err := buildAuth(context.Background(), db, appEnv, appLogger)
+	authn, err := buildAuth(context.Background(), sqlDB, appEnv, appLogger)
 	if err != nil {
 		appLogger.Error("failed to build authentication", slog.Any("error", err))
 		return 1
 	}
-	authService := auth.NewService(db, sessions, appLogger)
+	authService := auth.NewService(db, authn.sessions, authn.users, appLogger)
 	workspaceService := workspaces.NewService(db, appEnv.IssuerForMigration())
 	siteService := sites.NewService(db)
 	eventHub := events.NewHub()
@@ -189,11 +139,13 @@ func run() int {
 	router.Get("/version", versionHandler)
 	apiref.Mount(router, referenceConfig())
 
-	sessions.Mount(router)
-	kit.Mount(router)
+	if err := kit.Mount(router, kit.Config{Sessions: authn.sessions, OIDC: authn.oidc}); err != nil {
+		appLogger.Error("failed to mount authentication", slog.Any("error", err))
+		return 1
+	}
 	auth.RegisterRoutes(router, authService)
 	workspaces.RegisterRoutes(router, workspaceService, authService)
-	stopDirectory := startDirectory(router, db, appEnv, appLogger)
+	stopDirectory := startDirectory(router, db, authn.users, appEnv, appLogger)
 	defer stopDirectory()
 	sites.RegisterRoutes(router, siteService, authService)
 	events.RegisterRoutes(router, eventService, eventHub, activeTracker, authService, db)
@@ -249,7 +201,7 @@ func run() int {
 // Registre. The returned func stops both. Registre being down or not serving the
 // directory yet never fails the boot: each loop retries on its own while Vision keeps
 // serving what it has. Vision runs one replica, so this is the one deletion poller.
-func startDirectory(router chi.Router, db *gorm.DB, appEnv env.Config, appLogger *slog.Logger) func() {
+func startDirectory(router chi.Router, db *gorm.DB, users *kit.Store, appEnv env.Config, appLogger *slog.Logger) func() {
 	if appEnv.OIDC == nil {
 		return func() {}
 	}
@@ -263,7 +215,7 @@ func startDirectory(router chi.Router, db *gorm.DB, appEnv env.Config, appLogger
 		appLogger.Error("deletion receiver not started", slog.Any("error", err))
 		return func() {}
 	}
-	deletions := workspaces.NewDeletions(db, client, portepg.New(sqlDB).EraseIdentity, appLogger)
+	deletions := workspaces.NewDeletions(db, client, users.EraseAccount, portepg.New(sqlDB).EraseIdentity, appLogger)
 	workspaces.RegisterDeletions(router, deletions)
 
 	ctx, cancel := context.WithCancel(context.Background())

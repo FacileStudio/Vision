@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/FacileStudio/Vision/apps/api/modules/auth"
 	"github.com/FacileStudio/Vision/apps/api/schemas"
 	"github.com/FacileStudio/porte/directory"
 
@@ -20,7 +21,15 @@ func (f *fixture) count(table, where string, args ...any) int64 {
 }
 
 func (f *fixture) deletions() *Deletions {
-	return NewDeletions(f.db, directory.Client{Issuer: testIssuer}, nil, slog.New(slog.DiscardHandler))
+	sqlDB, err := f.db.DB()
+	f.must(err)
+	users, err := auth.NewStore(context.Background(), sqlDB, EraseData)
+	f.must(err)
+	return NewDeletions(f.db, directory.Client{Issuer: testIssuer}, users.EraseAccount, nil, slog.New(slog.DiscardHandler))
+}
+
+func (d *Deletions) eraseSubject(ctx context.Context, provider, subject string) error {
+	return d.receiver.OnPersonDeleted(ctx, provider, subject)
 }
 
 func (f *fixture) site(workspaceID, ownerID int64, domain string) int64 {
