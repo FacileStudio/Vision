@@ -7,5 +7,6 @@
 | [Development](development.md) | Local setup, tests, the quality gate |
 | [Deployment](deployment.md) | Compose topology and why Vision is not one container |
 | [API](api.md) | HTTP endpoints and payloads |
+| [Erasure](erasure.md) | What Vision deletes when Registre erases a person, and the test that proves it |
 
 Back to the [README](../README.md).

@@ -35,9 +35,15 @@ func workspaceCascade() []string {
 }
 
 // personCascade hands over what the person authored in workspaces that stay, to the next
-// member or to nobody (0), then removes their webhooks, keys and memberships.
+// member or to nobody (0), then removes their webhooks, keys and memberships. A shared,
+// unlinked workspace still carrying the name Vision gave it after the person (their name
+// or address) is renamed, because that name is theirs.
 func personCascade() []string {
 	return []string{
+		`UPDATE workspaces w SET name = 'Workspace' FROM users u
+		 WHERE u.id = $1 AND w.registre_space_id IS NULL
+		   AND w.id IN (SELECT workspace_id FROM workspace_members WHERE user_id = $1)
+		   AND ((u.name <> '' AND w.name = u.name) OR lower(w.name) = lower(u.email))`,
 		`UPDATE sites s SET owner_id = COALESCE((
 		SELECT m.user_id FROM workspace_members m
 		 WHERE m.workspace_id = s.workspace_id AND m.user_id <> $1
