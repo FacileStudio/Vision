@@ -6,9 +6,37 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-11
+
+### Added
+
+- Pending Registre space invitations in the user menu. `GET /api/me/invitations` (porte/kit
+  `MountInvitations`) answers behind the session when SSO is on, and muse's `SideBar` and
+  `MobileNav` draw an Invitations row and an avatar dot.
+- `docs/erasure.md`: what Vision deletes when Registre erases a person, and the test that scans
+  every text column for their email, name and subject before and after.
+
 ### Changed
 
 - Licensed under the GNU Affero General Public License v3.0 only (`AGPL-3.0-only`). See `LICENSE`.
+- Libraries: tronc v0.17.1 to v0.21.0, porte v0.13.0 to v0.18.3, porte/directory v0.3.0 to
+  v0.4.0, `@facile/muse` v0.16.1 to v0.18.0, Go 1.26.10. No schema change: porte's tables are
+  the same.
+- Sign-in goes through porte/kit's account store over Vision's `users` table. The stored email
+  now changes at sign-in only when Registre marks it verified.
+- Erasure runs through porte/kit's `EraseAccount`, which accepts the issuer with or without a
+  trailing slash. A shared workspace still named after the erased person is renamed `Workspace`.
+- The client's fetch kernel, 401 redirect and theme store are `@facile/client` v0.2.0. A 401 on
+  any call but the session probe sends the person to `/login`.
+- Gates: `filet.yml` is `preset: facile`, CI pins filet v0.19.2 and runs douane 0.7.2
+  (`-fail critical -scope prod`), and `lefthook.yml` replaces `.githooks` (pre-push:
+  `filet gate .`). Run `mise run hooks` once in an existing clone.
+
+### Security
+
+- The browser no longer keeps or sends a bearer token from `localStorage`; the session is
+  porte's HttpOnly cookie. Any `vision.token` or `token` key an old login left is deleted on load.
+- Go 1.26.10 clears the standard library and toolchain advisories douane rated critical.
 
 ## [0.2.6] - 2026-11-07
 
