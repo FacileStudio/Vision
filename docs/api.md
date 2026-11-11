@@ -33,6 +33,9 @@ Every route here sets `Access-Control-Allow-Origin: *`. The GET variants take th
 as a JSON-encoded `data` query parameter and answer with a 43-byte transparent GIF whether
 or not anything was recorded — a valid image is not proof of ingestion.
 
+Each client address gets a token bucket of 300 requests refilling at 60 a second across all
+of `/e/*`. Past it the answer is `429` with `Retry-After` and the `rate_limited` error body.
+
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/e/p` | Pageview. `data` is a `PageviewRequest`. `?type=perf` stores Navigation-Timing numbers instead |

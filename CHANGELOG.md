@@ -6,6 +6,12 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A rate limit on the public `/e/*` tracker routes: 300 requests per client address, refilling
+  at 60 a second, then `429` with `Retry-After`. Production peaked near 5.5 tracker requests a
+  second, so a real visitor never meets it.
+
 ### Security
 
 - chi v5.3.1 to v5.5.0 and go-jose v4.1.4 to v4.1.9, the two findings douane reported (go-jose

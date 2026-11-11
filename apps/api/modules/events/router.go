@@ -11,6 +11,7 @@ import (
 	"github.com/FacileStudio/Vision/apps/api/internal/siteaccess"
 	"github.com/FacileStudio/tronc/errors"
 	"github.com/FacileStudio/tronc/httpjson"
+	troncmiddleware "github.com/FacileStudio/tronc/middleware"
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
@@ -24,6 +25,30 @@ var pixel = []byte{
 	0x01, 0x00, 0x3b,
 }
 
+// TrackerRate and TrackerBurst bound the public /e/* routes per client address: a token
+// bucket refilling TrackerRate requests a second, holding TrackerBurst. Production's peak
+// was about 5.5 tracker requests a second and 24 in one second, all of it then arriving from
+// one address, so each address gets ten times the whole service's peak.
+const (
+	TrackerRate  = 60
+	TrackerBurst = 300
+)
+
+// trackerLimiter refuses a client address past the tracker budget with 429. The key is the
+// host of RemoteAddr as tronc's real-IP middleware rewrote it, so a forwarded header the
+// client wrote never mints a fresh bucket.
+func trackerLimiter() func(http.Handler) http.Handler {
+	return troncmiddleware.Ratelimit(troncmiddleware.RatelimitConfig{
+		Limit:   TrackerRate,
+		Burst:   TrackerBurst,
+		MaxKeys: 50000,
+		OnRefuse: func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			httpjson.WriteError(w, errors.RateLimited("too many tracker requests"))
+		},
+	})
+}
+
 // RegisterRoutes mounts the event ingestion and live-stream routes.
 //
 // The live stream accepts the credential as ?token= instead of a header:
@@ -32,6 +57,7 @@ var pixel = []byte{
 // than relaxed for every route.
 func RegisterRoutes(router chi.Router, service *Service, hub *Hub, tracker *ActiveTracker, authService middleware.Authenticator, orm *gorm.DB) {
 	router.Route("/e", func(router chi.Router) {
+		router.Use(trackerLimiter())
 		router.Post("/p", func(w http.ResponseWriter, request *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 
