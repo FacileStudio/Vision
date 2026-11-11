@@ -8,16 +8,20 @@ import (
 	"github.com/FacileStudio/Vision/apps/api/internal/env"
 	"github.com/FacileStudio/Vision/apps/api/modules/auth"
 	"github.com/FacileStudio/Vision/apps/api/modules/workspaces"
+	"github.com/FacileStudio/porte/directory"
 	"github.com/FacileStudio/porte/kit"
 	"github.com/FacileStudio/porte/oidc"
+	portepg "github.com/FacileStudio/porte/pg"
 	"github.com/FacileStudio/porte/session"
+	"github.com/go-chi/chi/v5"
 )
 
-// authentication is what buildAuth assembles: porte's session manager, its OIDC kit, and
-// porte/kit's account store over Vision's users table.
+// authentication is what buildAuth assembles: porte's session manager, its OIDC kit,
+// porte's identity tables, and porte/kit's account store over Vision's users table.
 type authentication struct {
 	sessions *session.Manager
 	oidc     *oidc.Kit
+	porte    *portepg.Store
 	users    *kit.Store
 }
 
@@ -67,7 +71,7 @@ func buildAuth(ctx context.Context, sqlDB *sql.DB, appEnv env.Config, appLogger 
 	if err != nil {
 		return authentication{}, err
 	}
-	return authentication{sessions: sessions, oidc: oidcKit, users: users}, nil
+	return authentication{sessions: sessions, oidc: oidcKit, porte: store, users: users}, nil
 }
 
 // backfillPictures gives every SSO account the picture URL its next sign-in would store,
@@ -85,4 +89,15 @@ func backfillPictures(ctx context.Context, users *kit.Store, appEnv env.Config, 
 	if filled > 0 {
 		appLogger.Info("picture backfill complete", slog.Int64("filled", filled))
 	}
+}
+
+// mountInvitations serves GET /me/invitations, the signed-in person's pending Registre space
+// invitations for muse's user menu, behind the session. The client proxy strips /api, so the
+// public path is /api/me/invitations. It asks Registre with the directory credentials.
+func mountInvitations(router chi.Router, authn authentication, client directory.Client, appLogger *slog.Logger) error {
+	return kit.MountInvitations(router.With(kit.RequireAuth(authn.sessions, authn.users)), kit.InvitationsConfig{
+		Directory:  client,
+		Identities: authn.porte.Identities(),
+		Logger:     appLogger,
+	})
 }

@@ -1,4 +1,4 @@
-import { ApiError, createApi, redirectToLogin } from '@facile/client';
+import { ApiError, createApi, invitationsFrom, redirectToLogin, type Invitations } from '@facile/client';
 
 export { ApiError };
 
@@ -56,6 +56,12 @@ export const api = {
 		updateProfile: (name: string, email: string) =>
 			request<UserProfile>('PUT', '/auth/me', { name, email }),
 		syncProfile: () => request<{ status: string }>('POST', '/auth/sync-profile')
+	},
+	me: {
+		invitations: (): Promise<Invitations | null> =>
+			request<unknown>('GET', '/me/invitations', undefined, true)
+				.then(invitationsFrom)
+				.catch(() => null)
 	},
 	workspaces: {
 		list: () => request<Workspace[]>('GET', '/workspaces'),

@@ -19,6 +19,7 @@
 	let { children } = $props();
 
 	let collapsed = $state(false);
+	let invitations = $state<{ count: number; href: string } | null>(null);
 	let scroller: HTMLElement | null = $state(null);
 
 	onMount(async () => {
@@ -37,6 +38,7 @@
 		}
 		userStore.value = me;
 		setSessionLocale(me.locale);
+		api.me.invitations().then((answer) => (invitations = answer));
 		try {
 			workspaceStore.hydrate(await api.workspaces.list());
 		} catch {}
@@ -93,7 +95,8 @@
 		onSignOut: signOut,
 		theme: theme.mode,
 		onThemeChange: (next: ThemeMode) => theme.set(next),
-		onLocaleChange: rememberLocale
+		onLocaleChange: rememberLocale,
+		invitations
 	});
 
 	const spaces = $derived(workspaceStore.all.map((w) => ({ id: String(w.id), name: w.name })));

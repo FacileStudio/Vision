@@ -23,7 +23,6 @@ import (
 	"github.com/FacileStudio/Vision/apps/api/modules/webhooks"
 	"github.com/FacileStudio/porte/directory"
 	"github.com/FacileStudio/porte/kit"
-	portepg "github.com/FacileStudio/porte/pg"
 
 	"github.com/FacileStudio/Vision/apps/api/modules/workspaces"
 	"github.com/FacileStudio/Vision/apps/api/schemas"
@@ -145,7 +144,7 @@ func run() int {
 	}
 	auth.RegisterRoutes(router, authService)
 	workspaces.RegisterRoutes(router, workspaceService, authService)
-	stopDirectory := startDirectory(router, db, authn.users, appEnv, appLogger)
+	stopDirectory := startDirectory(router, db, authn, appEnv, appLogger)
 	defer stopDirectory()
 	sites.RegisterRoutes(router, siteService, authService)
 	events.RegisterRoutes(router, eventService, eventHub, activeTracker, authService, db)
@@ -196,12 +195,12 @@ func run() int {
 	return 0
 }
 
-// startDirectory mounts Registre's nudge and its deletion push, and starts syncing shared
-// workspaces and erasing deleted people in the background, when Vision signs in through
-// Registre. The returned func stops both. Registre being down or not serving the
+// startDirectory mounts Registre's nudge, its deletion push and the pending invitations,
+// and starts syncing shared workspaces and erasing deleted people in the background, when
+// Vision signs in through Registre. The returned func stops both. Registre being down or not serving the
 // directory yet never fails the boot: each loop retries on its own while Vision keeps
 // serving what it has. Vision runs one replica, so this is the one deletion poller.
-func startDirectory(router chi.Router, db *gorm.DB, users *kit.Store, appEnv env.Config, appLogger *slog.Logger) func() {
+func startDirectory(router chi.Router, db *gorm.DB, authn authentication, appEnv env.Config, appLogger *slog.Logger) func() {
 	if appEnv.OIDC == nil {
 		return func() {}
 	}
@@ -210,12 +209,10 @@ func startDirectory(router chi.Router, db *gorm.DB, users *kit.Store, appEnv env
 	workspaces.RegisterDirectory(router, registre)
 
 	client := directory.Client{Issuer: oidcEnv.Issuer, ClientID: oidcEnv.ClientID, ClientSecret: oidcEnv.ClientSecret}
-	sqlDB, err := db.DB()
-	if err != nil {
-		appLogger.Error("deletion receiver not started", slog.Any("error", err))
-		return func() {}
+	if err := mountInvitations(router, authn, client, appLogger); err != nil {
+		appLogger.Error("invitations not mounted", slog.Any("error", err))
 	}
-	deletions := workspaces.NewDeletions(db, client, users.EraseAccount, portepg.New(sqlDB).EraseIdentity, appLogger)
+	deletions := workspaces.NewDeletions(db, client, authn.users.EraseAccount, authn.porte.EraseIdentity, appLogger)
 	workspaces.RegisterDeletions(router, deletions)
 
 	ctx, cancel := context.WithCancel(context.Background())

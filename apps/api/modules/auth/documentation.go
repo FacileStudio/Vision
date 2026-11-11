@@ -2,6 +2,7 @@ package auth
 
 import (
 	documentation "github.com/FacileStudio/Vision/apps/api/internal/documentation"
+	"github.com/FacileStudio/porte/kit"
 )
 
 type ConfigResponse struct {
@@ -92,5 +93,12 @@ var Documentation = documentation.Module{
 			RequestBody:  UpdateProfileRequest{},
 			ResponseBody: ProfileResponse{},
 		},
+		invitationsRoute(),
 	},
+}
+
+func invitationsRoute() documentation.Route {
+	route := kit.InvitationsRoute()
+	route.ResponseBody = kit.InvitationsResponse{}
+	return route
 }

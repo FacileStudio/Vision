@@ -82,3 +82,15 @@ test('no request carries a bearer token, and logout deletes any an old login lef
 	forgetStoredToken();
 	expect(store.has('token')).toBe(false);
 });
+
+test('invitations reach the user menu only with an href, and a failure is no row', async () => {
+	respondWith(200, { count: 2, href: 'https://sso.facile.studio/spaces' });
+	expect(await api.me.invitations()).toEqual({ count: 2, href: 'https://sso.facile.studio/spaces' });
+	respondWith(200, { count: 0 });
+	expect(await api.me.invitations()).toBeNull();
+	respondWith(404, { error: { message: 'not found' } });
+	expect(await api.me.invitations()).toBeNull();
+	respondWith(401, { error: { message: 'missing auth' } });
+	expect(await api.me.invitations()).toBeNull();
+	expect(visits).toEqual([]);
+});
