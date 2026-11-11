@@ -35,7 +35,7 @@ Off until `OIDC_ISSUER` is set. Once it is, three more variables become required
 | `OIDC_CLIENT_ID` | with issuer | — | Client ID |
 | `OIDC_CLIENT_SECRET` | with issuer | — | Client secret |
 | `OIDC_REDIRECT_URL` | with issuer | — | The provider's callback target. It has to be a URL that reaches the API, which in the deployed topology means going through the SvelteKit proxy — `https://<host>/api/auth/oidc/callback`, not the API's own `/auth/oidc/callback` |
-| `OIDC_SUCCESS_URL` | no | value of `DOMAIN` | Where the callback sends the browser, with `#token=…` appended |
+| `OIDC_SUCCESS_URL` | no | value of `DOMAIN` | Where the callback sends the browser once the session cookie is set |
 
 ## Client container
 

@@ -78,7 +78,7 @@ unknown hostname is rejected. `CF-IPCountry` supplies the country; no IP is stor
 | GET | `/version` | no | `{ version }`, the version in `apps/client/package.json`, baked in at build time, or `dev` |
 | POST | `/registre/deletions` | signed | Registre's signed `user.deleted` notice (public path `/api/registre/deletions`) |
 | GET | `/auth/oidc` | no | Redirects to the provider |
-| GET | `/auth/oidc/callback` | no | Redirects to `OIDC_SUCCESS_URL#token=…` |
+| GET | `/auth/oidc/callback` | no | Sets the session cookie and redirects to `OIDC_SUCCESS_URL` |
 | POST | `/auth/sync-profile` | yes | Re-reads userinfo for the current user |
 
 The OIDC routes only exist when `OIDC_ISSUER` is set.

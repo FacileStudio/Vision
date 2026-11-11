@@ -4,7 +4,7 @@
 	import { PreferencesSection, ProfileSection, SettingsLayout, icons, settingsRoute } from '@facile/muse';
 	import { userStore } from '$lib/stores/user.svelte';
 	import { rememberLocale, t } from '$lib/i18n/index.svelte';
-	import { setTheme, theme } from '$lib/theme.svelte';
+	import { theme } from '$lib/theme.svelte';
 	import NotificationsPanel from '$lib/components/settings/NotificationsPanel.svelte';
 	import TokensPanel from '$lib/components/settings/TokensPanel.svelte';
 
@@ -49,7 +49,7 @@
 				avatar={user?.avatar_url || undefined}
 			/>
 		{:else if id === 'preferences'}
-			<PreferencesSection theme={theme.mode} onThemeChange={setTheme} onLocaleChange={rememberLocale} />
+			<PreferencesSection theme={theme.mode} onThemeChange={(mode) => theme.set(mode)} onLocaleChange={rememberLocale} />
 		{:else if id === 'notifications'}
 			<NotificationsPanel />
 		{:else}

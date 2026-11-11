@@ -14,7 +14,7 @@
 	import { userStore } from '$lib/stores/user.svelte';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
 	import { rememberLocale, setSessionLocale, t } from '$lib/i18n/index.svelte';
-	import { setTheme, theme, type ThemeMode } from '$lib/theme.svelte';
+	import { theme, type ThemeMode } from '$lib/theme.svelte';
 
 	let { children } = $props();
 
@@ -22,9 +22,8 @@
 	let scroller: HTMLElement | null = $state(null);
 
 	onMount(async () => {
-		/* The API is the only thing that knows whether this browser has a session:
-		   a local login leaves a bearer token, an SSO login leaves a cookie the
-		   client cannot read. A thrown error is a bad round-trip, not a logout —
+		/* The API is the only thing that knows whether this browser has a session: it is a
+		   cookie the client cannot read. A thrown error is a bad round-trip, not a logout —
 		   bouncing to /login on one would sign people out on a hiccup. */
 		let me;
 		try {
@@ -93,7 +92,7 @@
 		helpHref: `${page.url.origin}/docs`,
 		onSignOut: signOut,
 		theme: theme.mode,
-		onThemeChange: (next: ThemeMode) => setTheme(next),
+		onThemeChange: (next: ThemeMode) => theme.set(next),
 		onLocaleChange: rememberLocale
 	});
 

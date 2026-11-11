@@ -1,5 +1,15 @@
-import { afterEach, expect, test } from 'bun:test';
-import { currentUser } from './backend';
+import { afterEach, expect, mock, test } from 'bun:test';
+
+const visits: string[] = [];
+mock.module('$app/environment', () => ({ browser: true }));
+mock.module('$app/navigation', () => ({
+	goto: async (target: string) => {
+		visits.push(target);
+	}
+}));
+Object.assign(globalThis, { window: { location: { pathname: '/sites', search: '' } } });
+
+const { api, currentUser, forgetStoredToken, logout } = await import('./backend');
 
 const originalFetch = globalThis.fetch;
 
@@ -15,8 +25,21 @@ function respondWith(status: number, body: unknown) {
 	return calls;
 }
 
+function storage(entries: Record<string, string>) {
+	const store = new Map(Object.entries(entries));
+	Object.assign(globalThis, {
+		localStorage: {
+			getItem: (key: string) => store.get(key) ?? null,
+			setItem: (key: string, value: string) => store.set(key, value),
+			removeItem: (key: string) => store.delete(key)
+		}
+	});
+	return store;
+}
+
 afterEach(() => {
 	globalThis.fetch = originalFetch;
+	visits.length = 0;
 });
 
 test('currentUser reports the signed-in user from a session the client cannot read', async () => {
@@ -24,9 +47,10 @@ test('currentUser reports the signed-in user from a session the client cannot re
 	expect((await currentUser())?.email).toBe('a@b.c');
 });
 
-test('currentUser reports no session on 401 rather than throwing', async () => {
+test('currentUser reports no session on 401 rather than throwing, and does not redirect', async () => {
 	respondWith(401, { error: { message: 'missing auth' } });
 	expect(await currentUser()).toBeNull();
+	expect(visits).toEqual([]);
 });
 
 test('currentUser rethrows a server failure, so a bad round-trip is not a logout', async () => {
@@ -34,8 +58,27 @@ test('currentUser rethrows a server failure, so a bad round-trip is not a logout
 	expect(currentUser()).rejects.toThrow('boom');
 });
 
-test('every request carries the CSRF header porte demands of a cookie session', async () => {
+test('a 401 on any other call sends the person to the login page', async () => {
+	respondWith(401, { error: { message: 'missing auth' } });
+	await expect(api.sites.list()).rejects.toThrow('missing auth');
+	expect(visits).toEqual(['/login?next=%2Fsites']);
+});
+
+test('a mutation carries the CSRF header porte demands of a cookie session', async () => {
+	const calls = respondWith(200, {});
+	await api.workspaces.create('Acme');
+	expect(calls[0].headers.get('X-Facile-CSRF')).toBe('1');
+	expect(calls[0].headers.get('Content-Type')).toBe('application/json');
+});
+
+test('no request carries a bearer token, and logout deletes any an old login left', async () => {
+	const store = storage({ 'vision.token': 't1', token: 't0', 'vision-theme': 'dark' });
 	const calls = respondWith(200, { id: '1', email: 'a@b.c', name: 'A' });
 	await currentUser();
-	expect(calls[0].headers.get('X-Facile-CSRF')).toBe('1');
+	expect(calls[0].headers.get('Authorization')).toBeNull();
+	await logout();
+	expect([...store.keys()]).toEqual(['vision-theme']);
+	store.set('token', 't2');
+	forgetStoredToken();
+	expect(store.has('token')).toBe(false);
 });

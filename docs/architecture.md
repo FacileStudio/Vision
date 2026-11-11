@@ -129,17 +129,19 @@ prevented by application code only.
 Sign-in goes through Registre only: Vision has no register, login or password route. Three
 credentials reach the same middleware.
 
-1. **Session.** The OIDC callback issues a porte session, sent as an HttpOnly cookie or as
-   `Authorization: Bearer` (older sessions and CLI tokens).
+1. **Session.** The OIDC callback issues a porte session as an HttpOnly cookie. The browser
+   sends nothing else: it keeps no token in `localStorage` and deletes any an old login left.
+   `Authorization: Bearer` still works for CLI tokens.
 2. **API key.** `Authorization: Bearer vis_…` or an `X-API-Key` header. Keys are prefixed
    `vis_ro` (read) or `vis_rw` (read and write), stored only as a SHA-256 hash plus a
    four-character hint, and returned in full exactly once at creation.
 3. **OIDC.** Enabled by `OIDC_ISSUER`, discovered at boot through `go-oidc/v3`.
 
 The OIDC flow is the suite's standard one: `GET /auth/oidc` redirects to the provider,
-`GET /auth/oidc/callback` verifies the ID token, upserts the user, and redirects to
-`OIDC_SUCCESS_URL` with the session token in the **URL fragment** (`#token=…`), which the SPA
-reads and discards. `POST /auth/sync-profile` re-reads userinfo for the current user.
+`GET /auth/oidc/callback` verifies the ID token, upserts the user, sets the session cookie and
+redirects to `OIDC_SUCCESS_URL`. The client's fetch kernel is `@facile/client`: it sends the
+cookie same-origin, adds `X-Facile-CSRF` on mutations, and sends the person to `/login` on a
+401. `POST /auth/sync-profile` re-reads userinfo for the current user.
 
 `GET /auth/config` reports `sso_only` and `oidc_enabled`. porte mounts no password route
 while `OIDC_ISSUER` is set.
