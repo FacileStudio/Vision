@@ -26,7 +26,7 @@ Live at [vision.facile.studio](https://vision.facile.studio).
 
 | Layer | Tech |
 |---|---|
-| API | Go 1.26, Chi v5, GORM, PostgreSQL 16, [tronc](https://github.com/FacileStudio/tronc) v0.3.0 |
+| API | Go 1.26, Chi v5, GORM, PostgreSQL 16, [tronc](https://github.com/FacileStudio/tronc) v0.21.0, [porte](https://github.com/FacileStudio/porte) v0.18.3 |
 | Client | SvelteKit 2 (Svelte 5 runes), Tailwind CSS 4, shadcn-svelte, LayerChart, TopoJSON world map |
 | Auth | Sign-in through Registre (OIDC) and porte sessions, `vis_*` API keys |
 | Deploy | Docker Compose, three containers: database, API, SvelteKit server |

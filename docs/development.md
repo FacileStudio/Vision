@@ -16,7 +16,7 @@ Local setup, the three processes, the tests, and the quality gate that guards pu
 
 ```sh
 mise run install       # bun install --frozen-lockfile in apps/client
-mise run hooks         # git config core.hooksPath .githooks
+mise run hooks         # lefthook install --reset-hooks-path
 ```
 
 Bring up a database:
@@ -95,9 +95,14 @@ If `bun` is missing, the client half is skipped with a warning rather than faili
 
 ## The pre-push hook
 
-`.githooks/pre-push` runs the **full** `scripts/check.sh`, both halves. Vision is not one of
-the repos that had to fall back to `--go-only`, so a push that fails the client type-check is
-telling you something real. Bypass once with `git push --no-verify`.
+`lefthook.yml` is tracked. Its pre-push runs `filet gate .`, which covers both units
+(`apps/api` and `apps/client`): gofmt, `filet check`, `go vet`, staticcheck, `bun run check`,
+the Go and bun tests and douane, then `scripts/check-version.sh`. The commit-msg hook comes from
+the shared `FacileStudio/hooks` config. A push therefore needs `go`, `bun`, `filet`, `douane`
+and `TEST_DATABASE_URL` in the shell. Bypass once with `git push --no-verify`.
+
+`filet.yml` is `preset: facile` with no exception. `.filet-baseline.json` is the ratchet
+baseline; it is empty because every standing finding is a warning.
 
 ## Conventions
 
