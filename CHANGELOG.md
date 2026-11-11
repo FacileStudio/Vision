@@ -6,6 +6,12 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-11
+
+### Fixed
+
+- fix(brand): favicons, touch and manifest icons, the link preview image and `site.webmanifest` come from muse v0.19.2's brand generator, and `app.html` carries its head block: the catalog title "Vision · Web analytics that respects visitors", its description, theme colours and Open Graph and Twitter tags. The landing page no longer overrides the title and description, so every locale shows the catalog's.
+
 ## [0.5.1] - 2026-11-11
 
 ### Fixed
