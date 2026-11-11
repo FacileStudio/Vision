@@ -6,6 +6,8 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-11
+
 ### Changed
 
 - Vision ships as one container, the suite's deployment shape. The Go binary mounts every API
