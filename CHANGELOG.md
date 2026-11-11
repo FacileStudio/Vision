@@ -6,6 +6,8 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-11
+
 ### Added
 
 - A remote MCP server at `POST /mcp` (spec 2026-07-28, stateless, on `tronc/mcp` v0.22.1 and
