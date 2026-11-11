@@ -6,6 +6,12 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-11
+
+### Security
+
+- build(api): Go 1.26.11 (`go` directive, `golang:1.26.11-alpine` builder, mise pin). It fixes GO-2026-6848 to GO-2026-6859 in the standard library and toolchain, which douane reported as unscored gaps and which failed the gate.
+
 ## [0.4.0] - 2026-11-11
 
 ### Changed
