@@ -34,11 +34,11 @@ DATABASE_URL=postgres://postgres:postgres@localhost:5432/vision?sslmode=disable 
 
 ```sh
 cd apps/client
-API_URL=http://localhost:4000 bun run dev     # Vite on :5173
+bun run dev     # Vite on :5173
 ```
 
-The Vite dev server runs the same `hooks.server.ts` proxy as production, so the browser only
-ever talks to `:5173` and `/api/*` reaches the API with its prefix stripped. Keep `DOMAIN` at
+Vite proxies `/api` and `/docs` to `http://127.0.0.1:4000`, so the browser only ever talks to
+`:5173` and every path reaches the API unchanged, as in production. Keep `DOMAIN` at
 its `http://localhost:5173` default so anything that does hit the API cross-origin is
 allowed.
 
@@ -67,9 +67,7 @@ cd apps/api    && go test ./...
 cd apps/client && bun test
 ```
 
-Two test files exist: `apps/api/modules/workspaces/controller_test.go` and
-`apps/client/src/hooks.server.test.ts`, the latter covering the proxy's header handling. The
-client uses Bun's built-in test runner, no extra dependency; `*.test.ts` files under `src/`
+The client uses Bun's built-in test runner, no extra dependency; `*.test.ts` files under `src/`
 are excluded from `svelte-check` through `tsconfig.json`.
 
 ## The quality gate
@@ -107,8 +105,8 @@ baseline; it is empty because every standing finding is a warning.
 ## Conventions
 
 - API modules follow `types.go`, `service.go`, `router.go`, `controller.go` where it applies,
-  and `documentation.go`. Modules are registered at the router root in `main.go` — not under
-  `/api`, which is added by the proxy.
+  and `documentation.go`. Modules are registered on the `/api` router in `main.go`;
+  `TestEveryAPIRouteHangsOffTheAPIPrefix` fails on anything else outside `/docs`.
 - Handlers return through `httpjson.WriteJSON` and `httpjson.WriteError` from tronc.
 - Any handler that takes a `siteId` must go through `siteaccess.CanAccess` or `CanWrite`
   before touching data; ownership is workspace-scoped, not `owner_id`-scoped.

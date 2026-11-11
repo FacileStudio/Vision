@@ -1,80 +1,65 @@
 # Vision — Deployment
 
-What Compose brings up, why Vision is the suite's documented exception to the
-one-container rule, and what to watch during an upgrade.
+What Compose brings up, how the hostname is routed, and what to watch during an upgrade.
 
-## Why three containers
+## One container
 
-Every other Go app in the suite ships as one binary serving both `/api/*` and the built SPA
-behind a single Traefik router. Vision does not, and the reason is the tracker.
+Vision follows the suite's deployment shape: one Go binary behind one Traefik router on one
+hostname. It answers `/api/*`, keeps `/docs`, `/health` and `/ready` at the root, and serves
+the built SvelteKit client for every other path.
 
-`/api/e/*` is the collection endpoint for a script embedded on **third-party sites**. It has
-to answer preflights with `Access-Control-Allow-Origin: *` and propagate `CF-IPCountry`.
-Putting it behind the app's own Traefik router would subject it to the app's CORS policy,
-which allows exactly one origin — `DOMAIN`. Every tracked site would stop reporting, with no
-visible error anywhere: the pixel endpoints return a valid GIF regardless, so the failure
-would be silent on both ends.
-
-Collapsing Vision into one container therefore requires first porting that collection point
-into Go with a permissive CORS policy scoped to that route alone. Until then, three
-containers is the deliberate, reviewed choice — not drift. It is recorded as such in the
-suite's `ROADMAP.md`, Appendix C.
+The tracker was the reason Vision once ran a SvelteKit server in front of the API: the
+collection endpoint `/api/e/*` must answer preflights from third-party sites, and the API's
+CORS policy allows one origin, `DOMAIN`. The binary now answers those preflights itself,
+before its CORS middleware (`events.Preflight`), so the proxy is gone.
 
 ## Compose topology
 
 ```
-                    ┌──────────────── published ────────────────┐
-Traefik ──▶ vision-client (bun, :3000) ──▶ vision-api (:4000) ──▶ vision-db (:5432)
-                                                                        │
-                                                                   db_data volume
+Traefik ──▶ vision (:4000) ──▶ vision-db (:5432)
+                                    │
+                               db_data volume
 ```
 
 | Service | Image | Notes |
 |---|---|---|
 | `vision-db` | `postgres:16-alpine` | `pg_isready` healthcheck every 5s, 10 retries |
-| `vision-api` | built from `apps/api/Dockerfile` | `expose: 4000`, waits for the database to be healthy |
-| `vision-client` | built from `apps/client/Dockerfile` | `expose: 3000`, `API_URL=http://vision-api:4000`, depends on the API |
+| `vision` | built from the root `Dockerfile` | `expose: 4000`, waits for the database to be healthy |
 
-Neither app service publishes a port. Only `vision-client` is reachable from outside, and
-the API is only reachable from the client over the Compose network. That is the security
-property that makes the split acceptable: the Go API is not on the internet.
+Neither service publishes a port. One named volume, `vision_db_data`.
 
-One named volume, `vision_db_data`. There is no volume for `STORAGE_DIR`, so **avatars do
-not survive a container rebuild**.
+## Image
 
-## Images
-
-`apps/api/Dockerfile` builds a static binary with `CGO_ENABLED=0` from `golang:1.24-alpine`
-and copies it into `gcr.io/distroless/static-debian12`. `apps/client/Dockerfile` builds with
-`oven/bun:1`, then runs `bun build/index.js` on `oven/bun:1-slim` with `node_modules` copied
-across — the SvelteKit adapter is `adapter-node`, so it needs a runtime, not just static
-files.
+The root `Dockerfile` builds the client with `oven/bun` (`bun install --frozen-lockfile`,
+then `vite build` with `adapter-static`), builds the API with `golang:1.26.10-alpine` and
+`CGO_ENABLED=0`, stamping the version from `apps/client/package.json` through
+`scripts/version.sh`, and copies both into `gcr.io/distroless/static-debian12:nonroot`: the
+binary at `/api`, the SPA at `/client` (`CLIENT_DIR`). The container writes nothing, so it
+runs as `nonroot`. Anything that adds a writable volume must drop `:nonroot` and the `USER`
+line.
 
 ## Routing
 
 `docker-compose.yml` carries **no Traefik labels**. Routing is configured in Dokploy at
-`gare.facile.studio`, whose `Domain` record points at a Compose service name — here,
-`vision-client`. Two consequences:
+`gare.facile.studio`, whose `Domain` record for `vision.facile.studio` points at the Compose
+service `vision`, port `4000`, path `/`, no path stripping. Two consequences:
 
-- Renaming or removing `vision-client` fails the deployment with
-  `Domain "x" is attached to service "y" which does not exist in the compose`. Repoint with
-  `dokploy domain update` first.
-- The Go API's own paths are not publicly reachable. `https://vision.facile.studio/health`
-  is a 404; `https://vision.facile.studio/api/health` returns `{"status":"ok"}` because it
-  goes through the proxy. Monitor the second one.
+- Renaming or removing `vision` fails the deployment with
+  `Domain "x" is attached to service "y" which does not exist in the compose`. Repoint the
+  domain first.
+- The `/api` prefix must reach the binary intact. A strip-prefix middleware 404s every route.
 
 Vision sits behind Cloudflare, which is what supplies `CF-IPCountry`. Losing that header
 does not break ingestion — country simply goes blank.
 
 ## Healthchecks
 
-`tronc/health` mounts `/health` and `/ready` on the Go router, plus `/api/health` and
-`/api/ready`. `/ready` pings the database. Through the public hostname only the `/api/*`
-pair is reachable, and each is served by the Go API after the proxy strips the prefix.
+`tronc/health` mounts `/health` and `/ready`, plus `/api/health` and `/api/ready`, all public.
+`/ready` pings the database.
 
-The API image is distroless, with no shell and no `curl`, so any container-level healthcheck
-has to invoke the binary itself — `tronc`'s `healthcheck.Handle` intercepts `os.Args` before
-anything else in `main` for exactly that.
+The image is distroless, with no shell and no `curl`, so the container healthcheck runs
+`/api healthcheck`: `tronc`'s `healthcheck.Handle` intercepts `os.Args` before anything else
+in `main` for exactly that.
 
 ## Migrations
 

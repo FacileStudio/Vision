@@ -2,17 +2,14 @@
 
 A Scalar reference is served at `GET /docs`, with the OpenAPI 3.1 document at
 `GET /docs/openapi.json`, built by `tronc/apiref` from the per-module `documentation.go`
-registries. Vision is the suite's three-container exception, so the SvelteKit proxy forwards
-`/docs` through to the Go API unstripped — every other `/api/*` path has its prefix removed.
-`/api/docs` also works, because the reference derives its spec URL from the request path.
+registries. `/api/docs` also works, because the reference derives its spec URL from the
+request path.
 
 Every HTTP route the Go binary registers, grouped by module, generated from the routers in
 `apps/api/modules/`.
 
-**Paths are given as the Go router registers them, at the root.** The Go API is not exposed
-publicly; browsers reach it through the SvelteKit proxy, which strips a leading `/api`. So
-`/sites` here is `https://vision.facile.studio/api/sites` from a browser, and
-`http://vision-api:4000/sites` on the Compose network.
+**Paths are given relative to `/api`, the router every module hangs off.** So `/sites` here
+is `https://vision.facile.studio/api/sites`.
 
 Responses are JSON via `httpjson.WriteJSON`, errors share the tronc error shape.
 Authenticated routes accept either a session token or an API key:
@@ -40,7 +37,7 @@ of `/e/*`. Past it the answer is `429` with `Retry-After` and the `rate_limited`
 |---|---|---|
 | GET | `/e/p` | Pageview. `data` is a `PageviewRequest`. `?type=perf` stores Navigation-Timing numbers instead |
 | POST | `/e/p` | Same payload as a JSON body. Resolves the site from `Origin`/`Referer` and returns `204`, or an error |
-| OPTIONS | `/e/p` | Preflight, `204`, `Access-Control-Max-Age: 86400` |
+| OPTIONS | `/e/*` | Preflight from any origin, `204`, `Access-Control-Max-Age: 86400` |
 | GET | `/e/t` | Custom event. `data` is a `CustomEventRequest` |
 | GET | `/e/h` | Heartbeat. `{ hostname, visitor_id }`; touches the live-visitor tracker |
 

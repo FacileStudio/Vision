@@ -13,8 +13,8 @@
 
 	/*
 	 * muse renders <iconify-icon> elements; the custom element has to be registered by the
-	 * consumer. Imported dynamically because this layout is server-rendered and the package
-	 * calls customElements.define at module scope.
+	 * consumer. Imported dynamically so the package's module-scope customElements.define
+	 * never runs outside a browser, such as under svelte-check or bun test.
 	 */
 	if (browser) {
 		void import('iconify-icon');

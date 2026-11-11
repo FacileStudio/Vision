@@ -136,8 +136,8 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 }
 
 // RegisterDirectory mounts Registre's nudge outside every auth middleware, since the
-// nudge is anonymous and only schedules an authenticated pull. The client proxy strips
-// /api, so the API serves directory.SyncPath without it and the public URL keeps it.
+// nudge is anonymous and only schedules an authenticated pull. router is the /api
+// router, so directory.SyncPath is registered without its /api prefix.
 func RegisterDirectory(router chi.Router, d *Directory) {
 	router.Method(http.MethodPost, strings.TrimPrefix(directory.SyncPath, "/api"), d.Handler())
 }

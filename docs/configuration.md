@@ -1,7 +1,7 @@
 # Vision — Configuration
 
-Every environment variable the two containers actually read, taken from
-`apps/api/internal/env/env.go`, `apps/client/src/hooks.server.ts` and the Dockerfiles.
+Every environment variable the container actually reads, taken from
+`apps/api/internal/env/env.go`, `tronc/spa` and the `Dockerfile`.
 
 Vision keeps its own config loader rather than using `tronc/env`, so its defaults differ
 from the rest of the Go family — most importantly, **nothing is required**. A misconfigured
@@ -18,10 +18,11 @@ Vision starts happily and fails later against a database that is not there.
 | `STORAGE_DIR` | no | `./data` | Root for stored avatars. `STORAGE_DIR/avatars` is created at startup and served from `GET /files/*` |
 | `JOURNAL_URL` | no | — | Journal ingest URL. Shipping needs both this and the token |
 | `JOURNAL_TOKEN` | no | — | Per-app Journal key |
+| `CLIENT_DIR` | no | `./client`, `/client` in the image | Where the built SPA lives. Without an `index.html` there the binary serves the API alone |
 
 `DOMAIN` is the CORS allow-list, not a fallback for one. Setting it wrong does not break the
-dashboard, which goes through the SvelteKit proxy and is therefore same-origin — it breaks
-anything calling the API cross-origin. The tracker endpoints under `/e/` set
+dashboard, which the same binary serves and is therefore same-origin — it breaks anything
+calling the API cross-origin. The tracker endpoints under `/api/e/` answer preflights and set
 `Access-Control-Allow-Origin: *` on their own and are unaffected.
 
 ## OIDC
@@ -34,20 +35,8 @@ Off until `OIDC_ISSUER` is set. Once it is, three more variables become required
 | `OIDC_ISSUER` | no | — | Discovery URL, e.g. `https://porte.facile.studio/application/o/vision/` |
 | `OIDC_CLIENT_ID` | with issuer | — | Client ID |
 | `OIDC_CLIENT_SECRET` | with issuer | — | Client secret |
-| `OIDC_REDIRECT_URL` | with issuer | — | The provider's callback target. It has to be a URL that reaches the API, which in the deployed topology means going through the SvelteKit proxy — `https://<host>/api/auth/oidc/callback`, not the API's own `/auth/oidc/callback` |
+| `OIDC_REDIRECT_URL` | with issuer | — | The provider's callback target. It must keep the `/api` prefix — `https://<host>/api/auth/oidc/callback`. A bare `/auth/oidc/callback` lands on the SPA catch-all and answers 200 with HTML, so the login never completes |
 | `OIDC_SUCCESS_URL` | no | value of `DOMAIN` | Where the callback sends the browser once the session cookie is set |
-
-## Client container
-
-The SvelteKit server reads exactly two variables.
-
-| Variable | Required | Default | What it does |
-|---|---|---|---|
-| `API_URL` | no | `http://localhost:4000` in code, `http://vision-api:4000` in the Dockerfile | Where `hooks.server.ts` forwards everything under `/api/` |
-| `PORT` | no | `3000`, set in the Dockerfile | Listen port for the adapter-node server |
-
-`API_URL` is read from `process.env` at module load, so it must be present in the server
-process's environment — not baked in at build time.
 
 ## Compose-only variables
 

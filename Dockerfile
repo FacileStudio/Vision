@@ -1,4 +1,11 @@
-FROM golang:1.26.10-alpine AS build
+FROM oven/bun:1.3.11 AS client-build
+WORKDIR /client
+COPY apps/client/package.json apps/client/bun.lock ./
+RUN bun install --frozen-lockfile
+COPY apps/client/ .
+RUN bun run build
+
+FROM golang:1.26.10-alpine AS api-build
 
 ARG TARGETOS=linux
 ARG TARGETARCH
@@ -15,13 +22,14 @@ COPY scripts/version.sh /repo/scripts/version.sh
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH:-amd64} \
     go build -trimpath -ldflags="-s -w -X main.version=$(sh /repo/scripts/version.sh)" -o bin/api .
 
-
 FROM gcr.io/distroless/static-debian12:nonroot
 
-COPY --from=build /repo/apps/api/bin/api /api
+COPY --from=api-build /repo/apps/api/bin/api /api
+COPY --from=client-build /client/build /client
 
-# No STORAGE_DIR and no volume: the API keeps no files. Avatars are Porte URLs the browser
-# fetches directly, which is what removed the storage directory that used to 404 them.
+# The :nonroot base sets its own WorkingDir, so a relative ./client would resolve under
+# /home/nonroot and the SPA would silently not be served. Name the directory.
+ENV CLIENT_DIR=/client
 
 EXPOSE 4000
 

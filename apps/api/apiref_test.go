@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/FacileStudio/Vision/apps/api/internal/env"
@@ -23,26 +24,31 @@ import (
 func buildTestRouter() chi.Router {
 	router := chi.NewRouter()
 	apiref.Mount(router, referenceConfig())
+	router.Method(http.MethodGet, "/profile", http.RedirectHandler("/settings", http.StatusPermanentRedirect))
 
 	appEnv := env.Config{Domain: "localhost"}
 	sessions, _ := session.New(appEnv.Porte(), session.Deps{})
 	authService := auth.NewService(nil, sessions, nil, nil)
 
-	auth.RegisterRoutes(router, authService)
-	workspaces.RegisterRoutes(router, nil, authService)
-	sites.RegisterRoutes(router, nil, authService)
-	events.RegisterRoutes(router, nil, nil, nil, authService, nil)
-	analytics.RegisterRoutes(router, nil, nil, nil, authService)
-	goals.RegisterRoutes(router, nil, authService)
-	apikeys.RegisterRoutes(router, nil, authService)
-	webhooks.RegisterRoutes(router, nil, nil, authService)
+	api := chi.NewRouter()
+	api.Get("/version", versionHandler)
+	apiref.Mount(api, referenceConfig())
+	auth.RegisterRoutes(api, authService)
+	workspaces.RegisterRoutes(api, nil, authService)
+	sites.RegisterRoutes(api, nil, authService)
+	events.RegisterRoutes(api, nil, nil, nil, authService, nil)
+	analytics.RegisterRoutes(api, nil, nil, nil, authService)
+	goals.RegisterRoutes(api, nil, authService)
+	apikeys.RegisterRoutes(api, nil, authService)
+	webhooks.RegisterRoutes(api, nil, nil, authService)
+	router.Mount("/api", api)
 
 	return router
 }
 
 func TestEveryRouteIsDocumented(t *testing.T) {
 	router := buildTestRouter()
-	if missing := apiref.Undocumented(router, referenceConfig()); len(missing) > 0 {
+	if missing := apiref.Undocumented(router, referenceConfig(), "/profile", "/api/version", "/api/docs"); len(missing) > 0 {
 		t.Errorf("routes missing from the API registry: %v", missing)
 	}
 }
@@ -65,6 +71,16 @@ func TestRegistryIsComplete(t *testing.T) {
 	); len(issues) > 0 {
 		t.Errorf("incomplete documentation routes: %v", issues)
 	}
+}
+
+func TestEveryAPIRouteHangsOffTheAPIPrefix(t *testing.T) {
+	root := map[string]bool{"/docs": true, "/docs/openapi.json": true, "/profile": true}
+	_ = chi.Walk(buildTestRouter(), func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+		if !root[route] && !strings.HasPrefix(route, "/api/") {
+			t.Errorf("%s %s is mounted outside /api, where the client catch-all would shadow it", method, route)
+		}
+		return nil
+	})
 }
 
 func TestReferenceIsServedAtDocs(t *testing.T) {

@@ -7,8 +7,8 @@ Self-hosted web analytics platform. Go API + SvelteKit dashboard + PostgreSQL.
 - **API**: Go 1.26, Chi router, GORM (Postgres driver), OIDC auth support
 - **Client**: SvelteKit (Svelte 5 runes), TypeScript, Tailwind CSS v4, shadcn-svelte (nova style), Vite
 - **Database**: PostgreSQL 16 (auto-migrated via GORM)
-- **Runtime**: Bun (client build + runtime), Go (API)
-- **Infra**: Docker Compose (3 services: db, api, client)
+- **Runtime**: Bun (client build only), Go (API and the built client)
+- **Infra**: Docker Compose (2 services: `vision-db`, and `vision`, one Go binary serving `/api/*` and the SPA), one root `Dockerfile`
 
 ## Key Commands
 
@@ -17,7 +17,7 @@ Self-hosted web analytics platform. Go API + SvelteKit dashboard + PostgreSQL.
 ```sh
 bun install                  # install dependencies
 bun run dev                  # dev server (Vite, default :5173)
-bun run build                # production build (adapter-node)
+bun run build                # static SPA build (adapter-static, index.html fallback)
 bun run check                # svelte-check + TypeScript
 ```
 
@@ -31,7 +31,7 @@ go build -o bin/api .        # compile binary
 ### Docker (project root)
 
 ```sh
-docker compose up             # full stack (db + api + client)
+docker compose up             # full stack (db + the one app container)
 docker compose up -d          # detached
 ```
 
@@ -43,7 +43,7 @@ Key variables:
 - `DATABASE_URL` -- Postgres connection string (default: `postgres://postgres:postgres@db:5432/vision?sslmode=disable`)
 - `PORT` -- API port (default: `4000`)
 - `DOMAIN` -- Frontend origin for CORS (default: `http://localhost:5173`)
-- `API_URL` -- Client-side env, where the SvelteKit server proxies API requests (default: `http://localhost:4000`)
+- `CLIENT_DIR` -- where the built SPA lives (`/client` in the image, `./client` by default)
 - `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URL` -- optional OIDC/SSO config
 
 ## Project Structure
@@ -67,7 +67,6 @@ Vision/
       tracker/                # tracker.js (client-side snippet)
     client/                   # SvelteKit frontend
       src/
-        hooks.server.ts       # API proxy (/api/* -> Go backend)
         lib/
           backend.ts          # server-side API client
           components/         # UI components (map, shadcn-svelte primitives)
@@ -81,7 +80,7 @@ Vision/
 
 ## Architecture Notes
 
-- The SvelteKit server acts as an API proxy: all `/api/*` requests from the browser are forwarded to the Go backend via `hooks.server.ts`. Event/tracking requests (`/api/e/*`) get special CORS handling.
+- One container, the suite shape: `main.go` mounts every module on the `/api` router, `/docs`, `/health` and `/ready` at the root, and `tronc/spa` last as the catch-all. The client is a static SPA (`ssr = false`) and calls `/api`, relative. Vite proxies `/api` and `/docs` to `:4000` in dev. `events.Preflight` wraps the router and answers `OPTIONS /api/e/*` for any origin before tronc's CORS middleware, which would 403 a third-party preflight. The `/e` group sets `Access-Control-Allow-Origin: *`, `Cache-Control: no-cache, no-store` and a JSON default content type, and rate limits per client address (300 burst, 60/s). Routing lives in the Dokploy domain (service `vision`, port 4000), not in compose labels. `GET /profile` is a Go 308 to `/settings`.
 - Database migrations run automatically on API startup via `schemas.Migrate()` (GORM AutoMigrate).
 - The API has a self-documenting `/docs` endpoint built from per-module `Documentation` structs.
 - Tracker script lives in two places: `apps/api/tracker/tracker.js` (source) and `apps/client/static/s.js` (served to browsers). The path is intentionally short/renamed to resist ad blockers.
@@ -94,4 +93,3 @@ Vision/
 - Client uses shadcn-svelte with the `nova` style and `neutral` base color. Component aliases: `$lib/components/ui`.
 - Svelte 5 runes mode is enforced via `svelte.config.js` (`runes: true` for non-node_modules files).
 - The client uses Bun's built-in test runner (`bun test`, no extra dependency); `*.test.ts` files under `src/` are excluded from `svelte-check` via `tsconfig.json`. The API has no test runner configured.
-- The proxy strips `content-encoding`, `content-length`, and `transfer-encoding` from upstream responses: `fetch` transparently decompresses the body, so forwarding those headers verbatim would describe a body the client never receives.

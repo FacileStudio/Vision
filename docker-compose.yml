@@ -1,3 +1,22 @@
+# Vision deploys as ONE container behind ONE public hostname, the suite standard:
+#
+#   vision.facile.studio        -> the Go binary, which serves both halves
+#   vision.facile.studio/api/*  -> the API routes, mounted on the /api router in main.go
+#   everything else            -> the built SvelteKit SPA, served by tronc/spa
+#
+# The root `Dockerfile` builds the client with bun, builds the API with Go, and copies both
+# into one distroless image: the binary at /api, the SPA at /client. There is no client
+# container and no SvelteKit server.
+#
+# Routing lives in Dokploy, not in labels here: the Dokploy domain for vision.facile.studio
+# points at the `vision` service on port 4000, path `/`, with no path stripping. The /api
+# prefix must reach the binary intact; stripping it 404s every route. Renaming this service
+# fails the deployment until the Dokploy domain is repointed at the new name first.
+#
+# Every browser request is same-origin, so cookies stay first-party and the client build
+# carries no API URL: it calls `/api`, relative. The tracker pages on other sites load
+# `/s.js` and send to `/api/e/*`, which the binary answers with permissive CORS itself.
+
 services:
   vision-db:
     image: postgres:16-alpine
@@ -14,14 +33,18 @@ services:
       timeout: 5s
       retries: 10
 
-  vision-api:
+  vision:
     restart: unless-stopped
+    # The server drains for up to 10 seconds on SIGTERM. Docker's default grace is also 10,
+    # so a slow drain would be killed mid-request; 15 leaves room.
+    stop_grace_period: 15s
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: Dockerfile
     expose:
       - "4000"
     healthcheck:
+      # Distroless has no shell, no curl and no wget: the binary probes itself.
       test: ["CMD", "/api", "healthcheck"]
       interval: 10s
       timeout: 5s
@@ -34,7 +57,7 @@ services:
       # container was permanently unhealthy while serving traffic normally.
       PORT: "4000"
       DATABASE_URL: postgres://postgres:postgres@vision-db:5432/vision?sslmode=disable
-      DOMAIN: ${DOMAIN:-http://localhost:3000}
+      DOMAIN: ${DOMAIN:-http://localhost:4000}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       OIDC_ISSUER: ${OIDC_ISSUER:-}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
@@ -47,18 +70,6 @@ services:
     depends_on:
       vision-db:
         condition: service_healthy
-
-  vision-client:
-    restart: unless-stopped
-    build:
-      context: apps/client
-      dockerfile: Dockerfile
-    expose:
-      - "3000"
-    environment:
-      API_URL: http://vision-api:4000
-    depends_on:
-      - vision-api
 
 volumes:
   db_data:

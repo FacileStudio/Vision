@@ -1,39 +1,40 @@
 # Vision — Architecture
 
-Two servers instead of the suite's usual one, why the tracker drives that split, how a
-pageview becomes a row, and how the dashboard reads it back.
+One Go binary serves the whole hostname, how a pageview becomes a row, and how the dashboard
+reads it back.
 
 ## Runtime topology
 
 ```
                           ┌─ browser on the dashboard
-Internet ──▶ Traefik ──▶ SvelteKit server (bun, :3000) ──┬──▶ /api/e/*  permissive CORS
-    │                     hooks.server.ts strips /api    └──▶ /api/*    pass-through
-    │                                    │
-    └─ browser on a TRACKED third-party site               Go binary (:4000)
-       loads /s.js, pixels back to /api/e/p                        │
-                                                            Postgres 16
-                                                                  │
-                                              Journal (log shipping, optional)
-                                              Authentik (OIDC, optional)
+Internet ──▶ Traefik ──▶ Go binary (:4000) ──┬──▶ /api/e/*      tracker, permissive CORS
+    │                                         ├──▶ /api/*        API routes
+    └─ browser on a TRACKED third-party site  ├──▶ /docs, /health, /ready
+       loads /s.js, pixels back to /api/e/p   └──▶ everything else: the built SPA
+                                                        │
+                                                   Postgres 16
+                                                        │
+                                       Journal (log shipping, optional)
+                                       Registre (OIDC, optional)
 ```
 
-Only the SvelteKit container is published. The Go API has no route through Traefik at all —
-`https://vision.facile.studio/health` returns 404, while `/api/health` works, because the
-former never reaches the API and the latter is proxied.
+The suite's one-container shape: `main.go` mounts every module on a router at `/api`, keeps
+`/docs`, `/health` and `/ready` at the root, and mounts `tronc/spa` last as the catch-all
+over `CLIENT_DIR` (`/client` in the image). The client is a static SvelteKit build
+(`adapter-static`, `index.html` fallback, `ssr = false`), so there is no client server and
+every browser request is same-origin.
 
-`hooks.server.ts` slices four characters off the path (`/api/sites` becomes `/sites`) and
-forwards to `API_URL`. The Go router mounts its modules at the root, not under `/api`. Two
-paths get special treatment:
+The tracker routes are the one cross-origin surface:
 
-- `/api/e/*` — the tracker collection endpoints. The proxy answers `OPTIONS` itself with
-  `Access-Control-Allow-Origin: *`, forwards only `Content-Type`, `User-Agent` and
-  `CF-IPCountry`, and returns `Cache-Control: no-cache, no-store`.
-- everything else under `/api/` — a streaming pass-through that strips hop-by-hop request
-  headers and, on the way back, `content-encoding`, `content-length` and
-  `transfer-encoding`. `fetch` transparently decompresses the body, so forwarding those
-  verbatim would describe a body the client never receives. `set-cookie` is re-appended
-  through `getSetCookie()` so multiple cookies survive.
+- `events.Preflight` wraps the whole router and answers `OPTIONS /api/e/*` with
+  `Access-Control-Allow-Origin: *` before the router's CORS middleware, which would refuse a
+  preflight from any origin but `DOMAIN` with 403.
+- Every `/api/e/*` answer carries `Access-Control-Allow-Origin: *` and
+  `Cache-Control: no-cache, no-store`, and is `application/json` unless it is the GIF pixel.
+- Each client address gets 300 requests refilling at 60 a second (`TrackerRate`,
+  `TrackerBurst`), then `429`. The key is `RemoteAddr` as tronc's real-IP middleware rewrote
+  it from `TRUSTED_PROXIES`, never a header read by hand.
+- `GET /profile` answers `308` to `/settings` in Go, so the bookmarked path keeps its status.
 
 ## Components
 

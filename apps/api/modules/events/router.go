@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/FacileStudio/Vision/apps/api/internal/middleware"
@@ -43,9 +44,43 @@ func trackerLimiter() func(http.Handler) http.Handler {
 		Burst:   TrackerBurst,
 		MaxKeys: 50000,
 		OnRefuse: func(w http.ResponseWriter, _ *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
 			httpjson.WriteError(w, errors.RateLimited("too many tracker requests"))
 		},
+	})
+}
+
+// trackerHeaders gives every /e/* answer the headers a third-party page needs: any origin
+// may read it, nothing caches it, and an answer with no body of its own is JSON.
+func trackerHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		header := w.Header()
+		header.Set("Access-Control-Allow-Origin", "*")
+		header.Set("Cache-Control", "no-cache, no-store")
+		header.Set("Content-Type", "application/json")
+		next.ServeHTTP(w, request)
+	})
+}
+
+// answerPreflight allows any origin to send the tracker's GET and POST requests for a day.
+func answerPreflight(w http.ResponseWriter, _ *http.Request) {
+	header := w.Header()
+	header.Set("Access-Control-Allow-Origin", "*")
+	header.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	header.Set("Access-Control-Allow-Headers", "Content-Type")
+	header.Set("Access-Control-Max-Age", "86400")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Preflight answers OPTIONS for every path under prefix before next runs. The router's
+// CORS middleware refuses a preflight from an origin it does not list with 403, and every
+// site Vision tracks is such an origin.
+func Preflight(next http.Handler, prefix string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		if request.Method == http.MethodOptions && strings.HasPrefix(request.URL.Path, prefix) {
+			answerPreflight(w, request)
+			return
+		}
+		next.ServeHTTP(w, request)
 	})
 }
 
@@ -57,10 +92,8 @@ func trackerLimiter() func(http.Handler) http.Handler {
 // than relaxed for every route.
 func RegisterRoutes(router chi.Router, service *Service, hub *Hub, tracker *ActiveTracker, authService middleware.Authenticator, orm *gorm.DB) {
 	router.Route("/e", func(router chi.Router) {
-		router.Use(trackerLimiter())
+		router.Use(trackerHeaders, trackerLimiter())
 		router.Post("/p", func(w http.ResponseWriter, request *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-
 			origin := request.Header.Get("Origin")
 			referer := request.Header.Get("Referer")
 			site, err := service.resolveSiteByOrigin(request.Context(), origin, referer)
@@ -88,8 +121,6 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, tracker *Acti
 		})
 
 		router.Get("/p", func(w http.ResponseWriter, request *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Cache-Control", "no-cache, no-store")
 
 			dataParam := request.URL.Query().Get("data")
 			if dataParam == "" {
@@ -139,8 +170,6 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, tracker *Acti
 		})
 
 		router.Get("/t", func(w http.ResponseWriter, request *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Cache-Control", "no-cache, no-store")
 
 			dataParam := request.URL.Query().Get("data")
 			if dataParam == "" {
@@ -171,17 +200,9 @@ func RegisterRoutes(router chi.Router, service *Service, hub *Hub, tracker *Acti
 			w.Write(pixel)
 		})
 
-		router.Options("/p", func(w http.ResponseWriter, request *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-			w.Header().Set("Access-Control-Max-Age", "86400")
-			w.WriteHeader(http.StatusNoContent)
-		})
+		router.Options("/p", answerPreflight)
 
 		router.Get("/h", func(w http.ResponseWriter, request *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Cache-Control", "no-cache, no-store")
 
 			dataParam := request.URL.Query().Get("data")
 			if dataParam == "" {

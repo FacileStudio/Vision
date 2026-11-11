@@ -29,7 +29,7 @@ Live at [vision.facile.studio](https://vision.facile.studio).
 | API | Go 1.26, Chi v5, GORM, PostgreSQL 16, [tronc](https://github.com/FacileStudio/tronc) v0.21.0, [porte](https://github.com/FacileStudio/porte) v0.18.3 |
 | Client | SvelteKit 2 (Svelte 5 runes), Tailwind CSS 4, shadcn-svelte, LayerChart, TopoJSON world map |
 | Auth | Sign-in through Registre (OIDC) and porte sessions, `vis_*` API keys |
-| Deploy | Docker Compose, three containers: database, API, SvelteKit server |
+| Deploy | Docker Compose, two containers: database, and one Go binary serving the API and the built client |
 
 ## Quick start
 
@@ -38,15 +38,15 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Then open <http://localhost:3000>. The SvelteKit container is the only one you talk to; it
-proxies `/api/*` to the Go API on its own network.
+Then reach the `vision` service on port 4000. One Go binary answers `/api/*` and serves the
+built SvelteKit client for every other path.
 
 ### Local development
 
 ```sh
 mise run install
 cd apps/api    && go run .        # :4000
-cd apps/client && bun run dev     # :5173, proxies to API_URL
+cd apps/client && bun run dev     # :5173, Vite proxies /api and /docs to :4000
 ```
 
 ### Tracking a site
@@ -68,7 +68,6 @@ hostname needs no configuration. `window.vision.track(name, props)` sends a cust
 | `PORT` | API listen port, `4000` by default |
 | `DOMAIN` | Dashboard origin. It is the **only** allowed CORS origin on the API |
 | `STORAGE_DIR` | Where uploaded avatars live |
-| `API_URL` | Client container only: where the SvelteKit proxy forwards `/api/*` |
 | `OIDC_ISSUER` | Set it to turn on SSO; three more `OIDC_*` variables become required |
 
 Full reference: [docs/configuration.md](docs/configuration.md).
@@ -80,7 +79,7 @@ apps/
   api/       Go backend — modules/ (auth, sites, events, analytics, goals,
              apikeys, workspaces, webhooks), internal/ (env, middleware,
              siteaccess, database), schemas/ (GORM), tracker/ (stale, see docs)
-  client/    SvelteKit server — hooks.server.ts is the API proxy,
+  client/    SvelteKit SPA (adapter-static), served by the Go binary;
              static/s.js is the tracker actually served to browsers
 docs/        Architecture, configuration, development, deployment, API
 scripts/     check.sh, the repository quality gate

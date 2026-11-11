@@ -6,6 +6,24 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Vision ships as one container, the suite's deployment shape. The Go binary mounts every API
+  route under `/api`, keeps `/docs`, `/health` and `/ready` at the root, and serves the
+  SvelteKit client, now a static build (`adapter-static`, `index.html` fallback), as the
+  catch-all. The SvelteKit server, `hooks.server.ts` and both per-app Dockerfiles are gone;
+  the root `Dockerfile` builds both halves into `distroless/static-debian12:nonroot`.
+- The Compose service is `vision` on port 4000; `vision-api` and `vision-client` are gone. The
+  Dokploy domain must point at `vision:4000` before this deploys.
+- The tracker's CORS moved into Go: `OPTIONS /api/e/*` answers `204` with
+  `Access-Control-Allow-Origin: *` for any origin, and every `/api/e/*` answer carries
+  `Access-Control-Allow-Origin: *` and `Cache-Control: no-cache, no-store`. The routes now see
+  the visitor's `Origin`, `Referer` and address, which the old proxy dropped, so `POST /api/e/p`
+  from a registered site records a pageview instead of meeting SvelteKit's CSRF refusal.
+- `/health` and `/ready` answer at the root as well as under `/api`. An unknown page answers
+  `200` with the SPA, which renders its own not-found state, instead of a server-rendered `404`.
+  `GET /profile` still answers `308` to `/settings`.
+
 ### Added
 
 - A rate limit on the public `/e/*` tracker routes: 300 requests per client address, refilling

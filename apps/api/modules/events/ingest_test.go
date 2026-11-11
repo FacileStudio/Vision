@@ -11,6 +11,7 @@ import (
 	"github.com/FacileStudio/tronc/httpx"
 	troncmiddleware "github.com/FacileStudio/tronc/middleware"
 	"github.com/FacileStudio/tronc/testdb"
+	"github.com/go-chi/chi/v5"
 )
 
 var testConfig = testdb.Config{Prefix: "vision_events_test", Migrate: schemas.Migrate}
@@ -89,5 +90,42 @@ func TestIngestRefusesAnUnregisteredOrigin(t *testing.T) {
 	body := `{"hostname":"evil.example","path":"/a","visitor_id":"v1"}`
 	if recorder := ingest(handler, http.MethodPost, "/e/p", "https://evil.example", body); recorder.Code == http.StatusNoContent {
 		t.Error("an unregistered domain inflated somebody's numbers")
+	}
+}
+
+func TestPreflightFromATrackedSiteIsAnsweredBeforeTheRouterCORS(t *testing.T) {
+	router := httpx.NewRouter(httpx.Config{
+		CORS: troncmiddleware.CORSConfig{AllowedOrigins: []string{"https://vision.test"}},
+	})
+	router.Route("/api", func(api chi.Router) {
+		RegisterRoutes(api, nil, nil, nil, nil, nil)
+	})
+
+	for _, target := range []string{"/api/e/p", "/api/e/t", "/api/e/h"} {
+		if bare := ingest(router, http.MethodOptions, target, "https://blog.example", ""); bare.Code != http.StatusForbidden {
+			t.Fatalf("the router CORS answered %s with %d; the wrapper is no longer needed", target, bare.Code)
+		}
+		recorder := ingest(Preflight(router, "/api/e/"), http.MethodOptions, target, "https://blog.example", "")
+		if recorder.Code != http.StatusNoContent || recorder.Header().Get("Access-Control-Allow-Origin") != "*" {
+			t.Errorf("preflight %s: %d, ACAO %q", target, recorder.Code, recorder.Header().Get("Access-Control-Allow-Origin"))
+		}
+	}
+
+	if recorder := ingest(Preflight(router, "/api/e/"), http.MethodOptions, "/api/sites", "https://blog.example", ""); recorder.Code != http.StatusForbidden {
+		t.Errorf("the wrapper answered a preflight outside the tracker: %d", recorder.Code)
+	}
+}
+
+func TestTrackerAnswersCarryTheHeadersTheOldProxyAdded(t *testing.T) {
+	router := chi.NewRouter()
+	RegisterRoutes(router, nil, nil, nil, nil, nil)
+
+	recorder := ingest(router, http.MethodGet, "/e/p", "https://blog.example", "")
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("GET /e/p without data: %d", recorder.Code)
+	}
+	header := recorder.Header()
+	if header.Get("Content-Type") != "application/json" || header.Get("Cache-Control") != "no-cache, no-store" || header.Get("Access-Control-Allow-Origin") != "*" {
+		t.Errorf("headers: %v", header)
 	}
 }

@@ -92,8 +92,8 @@ func backfillPictures(ctx context.Context, users *kit.Store, appEnv env.Config, 
 }
 
 // mountInvitations serves GET /me/invitations, the signed-in person's pending Registre space
-// invitations for muse's user menu, behind the session. The client proxy strips /api, so the
-// public path is /api/me/invitations. It asks Registre with the directory credentials.
+// invitations for muse's user menu, behind the session, on the /api router, so the public
+// path is /api/me/invitations. It asks Registre with the directory credentials.
 func mountInvitations(router chi.Router, authn authentication, client directory.Client, appLogger *slog.Logger) error {
 	return kit.MountInvitations(router.With(kit.RequireAuth(authn.sessions, authn.users)), kit.InvitationsConfig{
 		Directory:  client,

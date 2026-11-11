@@ -36,6 +36,7 @@ import (
 	"github.com/FacileStudio/tronc/httpx"
 	"github.com/FacileStudio/tronc/logger"
 	troncmiddleware "github.com/FacileStudio/tronc/middleware"
+	"github.com/FacileStudio/tronc/spa"
 )
 
 func main() {
@@ -56,10 +57,9 @@ func main() {
 // extending it, so the visitor survives in Cf-Connecting-Ip alone, and
 // TRUSTED_PROXIES=private,cloudflare fills all three.
 //
-// The API's routes sit at the root: the client container strips /api before
-// proxying, so the server sees /auth/me. With the default prefix every request
-// was classified as static and logged at the quiet level, which is why this app
-// appeared to log nothing.
+// One binary serves the whole host: every API route under /api, the reference
+// and the probes at the root, and the built client as the catch-all, mounted
+// last so it never shadows a route.
 //
 // A port already bound, or a listener that dies under us, is a failure to
 // start. Logging it and falling through used to return 0, so a container that
@@ -127,7 +127,6 @@ func run() int {
 		TrustedProxies: appEnv.TrustedProxies,
 		CDNProxies:     appEnv.CDNProxies,
 		CDNHeader:      appEnv.CDNHeader,
-		APIPrefix:      httpx.RootAPI,
 		Logger:         appLogger,
 		CORS: troncmiddleware.CORSConfig{
 			AllowedOrigins: []string{appEnv.Domain},
@@ -135,32 +134,38 @@ func run() int {
 	})
 
 	health.Mount(router, health.DB(sqlDB))
-	router.Get("/version", versionHandler)
 	apiref.Mount(router, referenceConfig())
+	router.Method(http.MethodGet, "/profile", http.RedirectHandler("/settings", http.StatusPermanentRedirect))
 
-	if err := kit.Mount(router, kit.Config{Sessions: authn.sessions, OIDC: authn.oidc}); err != nil {
+	api := chi.NewRouter()
+	api.Get("/version", versionHandler)
+	apiref.Mount(api, referenceConfig())
+	if err := kit.Mount(api, kit.Config{Sessions: authn.sessions, OIDC: authn.oidc}); err != nil {
 		appLogger.Error("failed to mount authentication", slog.Any("error", err))
 		return 1
 	}
-	auth.RegisterRoutes(router, authService)
-	workspaces.RegisterRoutes(router, workspaceService, authService)
-	stopDirectory := startDirectory(router, db, authn, appEnv, appLogger)
+	auth.RegisterRoutes(api, authService)
+	workspaces.RegisterRoutes(api, workspaceService, authService)
+	stopDirectory := startDirectory(api, db, authn, appEnv, appLogger)
 	defer stopDirectory()
-	sites.RegisterRoutes(router, siteService, authService)
-	events.RegisterRoutes(router, eventService, eventHub, activeTracker, authService, db)
-	analytics.RegisterRoutes(router, analyticsService, activeTracker, db, authService)
-
-	goals.RegisterRoutes(router, goalService, authService)
-	apikeys.RegisterRoutes(router, apiKeyService, authService)
-
-	webhookService := webhooks.NewService(db)
-	webhooks.RegisterRoutes(router, webhookService, analyticsService, authService)
+	sites.RegisterRoutes(api, siteService, authService)
+	events.RegisterRoutes(api, eventService, eventHub, activeTracker, authService, db)
+	analytics.RegisterRoutes(api, analyticsService, activeTracker, db, authService)
+	goals.RegisterRoutes(api, goalService, authService)
+	apikeys.RegisterRoutes(api, apiKeyService, authService)
+	webhooks.RegisterRoutes(api, webhooks.NewService(db), analyticsService, authService)
+	router.Mount("/api", api)
 	webhooks.StartScheduler(db, analyticsService)
+
+	if clientDir := spa.DirFromEnv(); spa.Available(clientDir) {
+		router.Handle("/*", spa.Handler(spa.Config{Dir: clientDir}))
+		appLogger.Info("serving client", slog.String("dir", clientDir))
+	}
 
 	addr := ":" + appEnv.Port
 	server := &http.Server{
 		Addr:              addr,
-		Handler:           router,
+		Handler:           events.Preflight(router, "/api/e/"),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      15 * time.Second,
@@ -195,10 +200,10 @@ func run() int {
 	return 0
 }
 
-// startDirectory mounts Registre's nudge, its deletion push and the pending invitations,
-// and starts syncing shared workspaces and erasing deleted people in the background, when
-// Vision signs in through Registre. The returned func stops both. Registre being down or not serving the
-// directory yet never fails the boot: each loop retries on its own while Vision keeps
+// startDirectory mounts Registre's nudge, its deletion push and the pending invitations on
+// the /api router, and starts syncing shared workspaces and erasing deleted people in the
+// background, when Vision signs in through Registre. The returned func stops both. Registre
+// being down or not serving the directory yet never fails the boot: each loop retries on its own while Vision keeps
 // serving what it has. Vision runs one replica, so this is the one deletion poller.
 func startDirectory(router chi.Router, db *gorm.DB, authn authentication, appEnv env.Config, appLogger *slog.Logger) func() {
 	if appEnv.OIDC == nil {

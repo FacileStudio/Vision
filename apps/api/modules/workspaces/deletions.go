@@ -44,8 +44,8 @@ func (d *Deletions) Handler() http.Handler { return d.receiver.Handler() }
 // Run polls Registre's deletion list until ctx ends.
 func (d *Deletions) Run(ctx context.Context) { d.receiver.Run(ctx) }
 
-// RegisterDeletions mounts the push on directory.DeletionsPath. The client proxy strips
-// /api, so the API serves it without that prefix and Registre's deletion_uri keeps it.
+// RegisterDeletions mounts the push on directory.DeletionsPath, Registre's deletion_uri.
+// router is the /api router, so the path is registered without its /api prefix.
 func RegisterDeletions(router chi.Router, d *Deletions) {
 	router.Method(http.MethodPost, strings.TrimPrefix(directory.DeletionsPath, "/api"), d.Handler())
 }
