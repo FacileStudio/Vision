@@ -1,12 +1,12 @@
 module github.com/FacileStudio/Vision/apps/api
 
-go 1.26
+go 1.26.10
 
 require (
 	github.com/FacileStudio/Journal/sdk/journal v0.0.0-20260708221941-db985ad2b1ba
-	github.com/FacileStudio/porte v0.13.0
-	github.com/FacileStudio/porte/directory v0.3.0
-	github.com/FacileStudio/tronc v0.17.1
+	github.com/FacileStudio/porte v0.18.3
+	github.com/FacileStudio/porte/directory v0.4.0
+	github.com/FacileStudio/tronc v0.21.0
 	github.com/FacileStudio/tronc/testdb v0.1.1
 	github.com/go-chi/chi/v5 v5.3.1
 	gorm.io/driver/postgres v1.6.0
@@ -24,5 +24,5 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 )
