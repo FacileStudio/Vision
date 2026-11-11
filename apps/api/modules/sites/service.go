@@ -206,3 +206,39 @@ func toResponse(record *schemas.Site) *SiteResponse {
 		UpdatedAt:   record.UpdatedAt,
 	}
 }
+
+// List is GET /sites for userID: one workspace's sites when workspaceID is set, the sites
+// userID owns otherwise.
+func (s *Service) List(ctx context.Context, userID string, workspaceID int64) ([]SiteResponse, error) {
+	return s.controller.list(ctx, userID, workspaceID)
+}
+
+// Get is GET /sites/{id}: a site of a workspace userID belongs to.
+func (s *Service) Get(ctx context.Context, userID, siteID string) (*SiteResponse, error) {
+	return s.controller.get(ctx, userID, siteID)
+}
+
+// Create is POST /sites, with the same validation.
+func (s *Service) Create(ctx context.Context, userID string, req *CreateRequest) (*SiteResponse, error) {
+	return s.controller.create(ctx, userID, req)
+}
+
+// Update is PUT /sites/{id}, with the same validation and write access.
+func (s *Service) Update(ctx context.Context, userID, siteID string, req *UpdateRequest) (*SiteResponse, error) {
+	return s.controller.update(ctx, userID, siteID, req)
+}
+
+// Delete is DELETE /sites/{id}.
+func (s *Service) Delete(ctx context.Context, userID, siteID string) error {
+	return s.controller.delete(ctx, userID, siteID)
+}
+
+// Share is POST /sites/{id}/share: a fresh public link token.
+func (s *Service) Share(ctx context.Context, userID, siteID string) (*SiteResponse, error) {
+	return s.controller.generateShare(ctx, userID, siteID)
+}
+
+// Unshare is DELETE /sites/{id}/share: the public link stops working.
+func (s *Service) Unshare(ctx context.Context, userID, siteID string) error {
+	return s.controller.revokeShare(ctx, userID, siteID)
+}

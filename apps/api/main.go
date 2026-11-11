@@ -19,6 +19,7 @@ import (
 	"github.com/FacileStudio/Vision/apps/api/modules/auth"
 	"github.com/FacileStudio/Vision/apps/api/modules/events"
 	"github.com/FacileStudio/Vision/apps/api/modules/goals"
+	"github.com/FacileStudio/Vision/apps/api/modules/mcp"
 	"github.com/FacileStudio/Vision/apps/api/modules/sites"
 	"github.com/FacileStudio/Vision/apps/api/modules/webhooks"
 	"github.com/FacileStudio/porte/directory"
@@ -123,6 +124,14 @@ func run() int {
 	goalService := goals.NewService(db)
 	apiKeyService := apikeys.NewService(db)
 	middleware.SetAPIKeyAuthenticator(apiKeyService)
+	mcpService, err := newMCP(context.Background(), appEnv, authn, mcp.Deps{
+		Workspaces: workspaceService, Sites: siteService, Analytics: analyticsService, Goals: goalService,
+		Live: activeTracker, Accounts: authn.users, DB: db,
+	}, appLogger)
+	if err != nil {
+		appLogger.Error("failed to build the mcp server", slog.Any("error", err))
+		return 1
+	}
 	router := httpx.NewRouter(httpx.Config{
 		TrustedProxies: appEnv.TrustedProxies,
 		CDNProxies:     appEnv.CDNProxies,
@@ -136,6 +145,9 @@ func run() int {
 	health.Mount(router, health.DB(sqlDB))
 	apiref.Mount(router, referenceConfig())
 	router.Method(http.MethodGet, "/profile", http.RedirectHandler("/settings", http.StatusPermanentRedirect))
+	if mcpService != nil {
+		mcp.RegisterRoutes(router, mcpService)
+	}
 
 	api := chi.NewRouter()
 	api.Get("/version", versionHandler)
@@ -154,6 +166,9 @@ func run() int {
 	goals.RegisterRoutes(api, goalService, authService)
 	apikeys.RegisterRoutes(api, apiKeyService, authService)
 	webhooks.RegisterRoutes(api, webhooks.NewService(db), analyticsService, authService)
+	if mcpService != nil {
+		mcp.RegisterPendingRoutes(api, mcpService, authService)
+	}
 	router.Mount("/api", api)
 	webhooks.StartScheduler(db, analyticsService)
 
@@ -242,6 +257,7 @@ func referenceConfig() apiref.Config {
 			goals.Documentation,
 			apikeys.Documentation,
 			webhooks.Documentation,
+			mcp.Documentation,
 		}},
 	}
 }

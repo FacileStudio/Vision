@@ -6,6 +6,28 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A remote MCP server at `POST /mcp` (spec 2026-07-28, stateless, on `tronc/mcp` v0.22.1 and
+  `porte/mcpauth` v0.2.1), authorized by Registre tokens bound to
+  `https://vision.facile.studio/mcp` with the scopes `vision.read` and `vision.write`. Twelve
+  tools: `vision_list_spaces`, `vision_list_sites`, `vision_get_stats`, `vision_list_goals`,
+  `vision_create_site`, `vision_update_site`, `vision_unshare_site`, `vision_create_goal`,
+  `vision_update_goal`, and the confirmed `vision_delete_site`, `vision_share_site` and
+  `vision_delete_goal`. Each calls the service of the matching REST route, so roles hold as in
+  the web app. MCP is free on every plan, and a person's first call creates their account.
+- `/pending`, where the signed-in person confirms or dismisses what an MCP client that cannot
+  ask them asked for, backed by `GET /api/mcp/pending` and its confirm and dismiss routes.
+  Only the person's own browser session can confirm.
+- `MCP_RESOURCE` (Compose default `https://vision.facile.studio/mcp`) mounts the server when
+  SSO is on.
+
+### Changed
+
+- The boot migration creates the `mcp_actions` table (additive). Erasing a person also deletes
+  their pending MCP actions.
+- tronc v0.22.1, porte v0.18.4.
+
 ## [0.4.1] - 2026-11-11
 
 ### Security

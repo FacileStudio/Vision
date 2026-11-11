@@ -1,6 +1,9 @@
 package schemas
 
-import "gorm.io/gorm"
+import (
+	mcpkit "github.com/FacileStudio/tronc/mcp"
+	"gorm.io/gorm"
+)
 
 // Migrate brings the schema up to date and then hands authentication to
 // porte. AdoptPorte runs last because it repoints foreign keys at users(id)
@@ -22,6 +25,9 @@ func MigrateWithIssuer(db *gorm.DB, issuer string) error {
 		return err
 	}
 	if err := db.Exec(deletionStateTable).Error; err != nil {
+		return err
+	}
+	if err := db.Exec(mcpkit.PendingSchema).Error; err != nil {
 		return err
 	}
 	if err := normalizeOIDCPictureURL(db); err != nil {
