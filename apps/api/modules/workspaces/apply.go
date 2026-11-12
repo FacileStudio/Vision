@@ -100,8 +100,12 @@ func linkWorkspace(tx *gorm.DB, space directory.Space) (*schemas.Workspace, erro
 // The porte identity under this issuer is the key. Failing that, a user with the same
 // email is linked to it. Failing that, the user is pre-provisioned with the identity
 // row already in place, so their first sign-in lands on the account that already holds
-// their workspaces. A member with neither subject nor email resolves to 0 and is skipped.
+// their workspaces. A member with neither subject nor email, or one Vision already
+// erased, resolves to 0 and is skipped.
 func (d *Directory) resolveMember(tx *gorm.DB, member directory.Member) (int64, error) {
+	if erased, err := d.isErased(tx.Statement.Context, member.Subject); err != nil || erased {
+		return 0, err
+	}
 	var userIDs []int64
 	if err := tx.Raw(`SELECT user_id FROM porte_identities WHERE provider = ? AND subject = ?`,
 		d.issuer, member.Subject).Scan(&userIDs).Error; err != nil || len(userIDs) > 0 {
@@ -123,6 +127,14 @@ func (d *Directory) resolveMember(tx *gorm.DB, member directory.Member) (int64, 
 	}
 	return user.ID, tx.Exec(`INSERT INTO porte_identities (user_id, provider, subject) VALUES (?, ?, ?)
 		ON CONFLICT (provider, subject) DO NOTHING`, user.ID, d.issuer, member.Subject).Error
+}
+
+// isErased asks the deletion receiver whether subject was erased under this issuer.
+func (d *Directory) isErased(ctx context.Context, subject string) (bool, error) {
+	if d.erased == nil || subject == "" {
+		return false, nil
+	}
+	return d.erased.Erased(ctx, d.issuer, subject)
 }
 
 // firstOrZero is the first id, or 0 for none.

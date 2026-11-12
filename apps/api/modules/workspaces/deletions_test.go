@@ -2,14 +2,17 @@ package workspaces
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/FacileStudio/Vision/apps/api/modules/auth"
 	"github.com/FacileStudio/Vision/apps/api/schemas"
 	"github.com/FacileStudio/porte/directory"
+	portepg "github.com/FacileStudio/porte/pg"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -25,7 +28,7 @@ func (f *fixture) deletions() *Deletions {
 	f.must(err)
 	users, err := auth.NewStore(context.Background(), sqlDB, EraseData)
 	f.must(err)
-	return NewDeletions(f.db, directory.Client{Issuer: testIssuer}, users.EraseAccount, nil, slog.New(slog.DiscardHandler))
+	return NewDeletions(f.db, directory.Client{Issuer: testIssuer}, Erasers{Account: users.EraseAccount}, slog.New(slog.DiscardHandler))
 }
 
 func (d *Deletions) eraseSubject(ctx context.Context, provider, subject string) error {
@@ -147,5 +150,58 @@ func TestDeletionStateRoundTrips(t *testing.T) {
 	}
 	if got, _ := state.Load(context.Background()); string(got) != `{"a":2}` {
 		t.Errorf("loaded %q", got)
+	}
+}
+
+// An account re-created for an erased subject, by a sign-in racing the erasure, is erased
+// again by the next poll of the same receiver; the guard porte/oidc consults answers true
+// for that subject only; and a snapshot taken before the erasure cannot pre-provision the
+// person again.
+func TestARecreatedAccountForAnErasedSubjectIsErasedAgain(t *testing.T) {
+	f := newFixture(t)
+	registre := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"deleted": []directory.Deleted{{Subject: "sub-zed", DeletedAt: time.Now().Add(-time.Minute)}}})
+	}))
+	defer registre.Close()
+	sqlDB, err := f.db.DB()
+	f.must(err)
+	users, err := auth.NewStore(context.Background(), sqlDB, EraseData)
+	f.must(err)
+	identities := portepg.New(sqlDB)
+	d := NewDeletions(f.db, directory.Client{Issuer: registre.URL, ClientID: "vision", ClientSecret: "secret"},
+		Erasers{Account: users.EraseAccount, Identity: identities.EraseIdentity, Holds: identities.HoldsIdentity},
+		slog.New(slog.DiscardHandler))
+	seedZed := func() {
+		user := schemas.User{Email: "zed@facile.test", Name: "zed"}
+		f.must(f.db.Create(&user).Error)
+		f.must(f.db.Exec(`INSERT INTO porte_identities (user_id, provider, subject) VALUES (?, ?, 'sub-zed')`, user.ID, registre.URL).Error)
+	}
+	ctx := context.Background()
+	others := f.count("users", "email <> 'zed@facile.test'")
+
+	seedZed()
+	f.must(d.receiver.Poll(ctx))
+	if erased, err := d.Erased(ctx, registre.URL, "sub-zed"); err != nil || !erased {
+		t.Fatalf("Erased(sub-zed) = %v, %v; want true: sign-in and provisioning would not be refused", erased, err)
+	}
+	if erased, err := d.Erased(ctx, registre.URL, "sub-alice"); err != nil || erased {
+		t.Fatalf("Erased(sub-alice) = %v, %v; want false", erased, err)
+	}
+
+	seedZed()
+	f.must(d.receiver.Poll(ctx))
+	if n := f.count("users", "email = 'zed@facile.test'"); n != 0 {
+		t.Fatalf("the re-created account survived the next poll: %d rows", n)
+	}
+
+	dir := NewDirectory(f.db, registre.URL, "vision", "secret", slog.New(slog.DiscardHandler))
+	dir.RefuseErased(d)
+	zed := directory.Member{Subject: "sub-zed", Email: "zed@facile.test", Role: directory.RoleMember}
+	f.must(dir.Apply(ctx, directory.Snapshot{Version: 1, Spaces: []directory.Space{{ID: "s-zed", Name: "Zed", Members: []directory.Member{zed}}}}))
+	if n := f.count("users", "email = 'zed@facile.test'") + f.count("porte_identities", "subject = 'sub-zed'"); n != 0 {
+		t.Fatalf("the directory sync pre-provisioned an erased person: %d rows", n)
+	}
+	if n := f.count("users", "email <> 'zed@facile.test'"); n != others {
+		t.Fatalf("other accounts were touched: %d, want %d", n, others)
 	}
 }
