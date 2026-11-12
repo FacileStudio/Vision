@@ -108,7 +108,7 @@ func run() int {
 		}
 	}()
 
-	authn, err := buildAuth(context.Background(), sqlDB, appEnv, appLogger)
+	authn, err := buildAuth(context.Background(), db, appEnv, appLogger)
 	if err != nil {
 		appLogger.Error("failed to build authentication", slog.Any("error", err))
 		return 1
@@ -226,13 +226,14 @@ func startDirectory(router chi.Router, db *gorm.DB, authn authentication, appEnv
 	}
 	oidcEnv := appEnv.OIDC
 	registre := workspaces.NewDirectory(db, oidcEnv.Issuer, oidcEnv.ClientID, oidcEnv.ClientSecret, appLogger)
+	registre.RefuseErased(authn.deletions)
 	workspaces.RegisterDirectory(router, registre)
 
 	client := directory.Client{Issuer: oidcEnv.Issuer, ClientID: oidcEnv.ClientID, ClientSecret: oidcEnv.ClientSecret}
 	if err := mountInvitations(router, authn, client, appLogger); err != nil {
 		appLogger.Error("invitations not mounted", slog.Any("error", err))
 	}
-	deletions := workspaces.NewDeletions(db, client, authn.users.EraseAccount, authn.porte.EraseIdentity, appLogger)
+	deletions := authn.deletions
 	workspaces.RegisterDeletions(router, deletions)
 
 	ctx, cancel := context.WithCancel(context.Background())

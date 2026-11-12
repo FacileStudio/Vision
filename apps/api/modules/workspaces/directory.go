@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/FacileStudio/Vision/apps/api/schemas"
+	"github.com/FacileStudio/porte"
 	"github.com/FacileStudio/porte/directory"
 	"github.com/FacileStudio/tronc/errors"
 
@@ -26,6 +27,7 @@ type Directory struct {
 	client     directory.Client
 	syncer     *directory.Syncer
 	logger     *slog.Logger
+	erased     porte.ErasedSubjects
 	minBackoff time.Duration
 	maxBackoff time.Duration
 }
@@ -43,6 +45,15 @@ func NewDirectory(orm *gorm.DB, issuer, clientID, clientSecret string, logger *s
 	}
 	d.syncer = &directory.Syncer{Client: d.client, Apply: d.Apply, Logger: logger}
 	return d
+}
+
+// RefuseErased makes the sync skip any member whose subject erased answers for, so a
+// snapshot taken before Registre's erasure cannot pre-provision that person again. A nil
+// deletions receiver leaves the sync unguarded.
+func (d *Directory) RefuseErased(deletions *Deletions) {
+	if deletions != nil {
+		d.erased = deletions
+	}
 }
 
 // Handler answers Registre's nudge. It takes no credentials because a nudge only makes

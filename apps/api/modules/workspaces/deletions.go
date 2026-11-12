@@ -24,17 +24,34 @@ type Deletions struct {
 	receiver *directory.Deletions
 }
 
-// NewDeletions returns the receiver for the Registre behind client. eraseAccount removes
-// Vision's account and its data; erase is porte's own erasure (pg.Store.EraseIdentity),
-// which runs after it.
-func NewDeletions(orm *gorm.DB, client directory.Client, eraseAccount, erase func(context.Context, string, string) error, logger *slog.Logger) *Deletions {
+// Erasers are what the receiver erases through. Account removes Vision's account and its
+// data (porte/kit's EraseAccount); Identity is porte's own erasure (pg.Store.EraseIdentity),
+// which runs after it; Holds reports whether a handled subject owns an identity again
+// (pg.Store.HoldsIdentity), so a re-created account is erased again without a restart.
+type Erasers struct {
+	Account  func(ctx context.Context, provider, subject string) error
+	Identity func(ctx context.Context, provider, subject string) error
+	Holds    func(ctx context.Context, provider, subject string) (bool, error)
+}
+
+// NewDeletions returns the receiver for the Registre behind client.
+func NewDeletions(orm *gorm.DB, client directory.Client, erasers Erasers, logger *slog.Logger) *Deletions {
 	return &Deletions{receiver: &directory.Deletions{
 		Client:          client,
-		OnPersonDeleted: eraseAccount,
-		Erase:           erase,
+		OnPersonDeleted: erasers.Account,
+		Erase:           erasers.Identity,
+		Holds:           erasers.Holds,
 		State:           deletionState{orm: orm},
 		Logger:          logger,
 	}}
+}
+
+// Erased reports whether Vision already erased the person behind (provider, subject).
+// porte/oidc asks it before a sign-in, a first MCP call or a profile sync gives that
+// identity an account again, and the directory sync asks it before pre-provisioning a
+// member: porte.ErasedSubjects.
+func (d *Deletions) Erased(ctx context.Context, provider, subject string) (bool, error) {
+	return d.receiver.Erased(ctx, provider, subject)
 }
 
 // Handler answers Registre's signed user.deleted push. It is mounted outside the session

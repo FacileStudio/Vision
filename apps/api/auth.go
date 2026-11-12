@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log/slog"
 
 	"github.com/FacileStudio/Vision/apps/api/internal/env"
@@ -14,15 +13,17 @@ import (
 	portepg "github.com/FacileStudio/porte/pg"
 	"github.com/FacileStudio/porte/session"
 	"github.com/go-chi/chi/v5"
+	"gorm.io/gorm"
 )
 
 // authentication is what buildAuth assembles: porte's session manager, its OIDC kit,
 // porte's identity tables, and porte/kit's account store over Vision's users table.
 type authentication struct {
-	sessions *session.Manager
-	oidc     *oidc.Kit
-	porte    *portepg.Store
-	users    *kit.Store
+	sessions  *session.Manager
+	oidc      *oidc.Kit
+	porte     *portepg.Store
+	users     *kit.Store
+	deletions *workspaces.Deletions
 }
 
 // buildAuth constructs porte: one session manager, the OIDC kit, and porte/kit's account
@@ -35,7 +36,11 @@ type authentication struct {
 //
 // ConfigExtra keeps the two keys this app's client reads off /auth/config.
 // porte owns that route and writes sso_only and oidc_enabled itself.
-func buildAuth(ctx context.Context, sqlDB *sql.DB, appEnv env.Config, appLogger *slog.Logger) (authentication, error) {
+func buildAuth(ctx context.Context, db *gorm.DB, appEnv env.Config, appLogger *slog.Logger) (authentication, error) {
+	sqlDB, err := db.DB()
+	if err != nil {
+		return authentication{}, err
+	}
 	store, err := newPorteStore(sqlDB)
 	if err != nil {
 		return authentication{}, err
@@ -52,7 +57,8 @@ func buildAuth(ctx context.Context, sqlDB *sql.DB, appEnv env.Config, appLogger 
 	if err != nil {
 		return authentication{}, err
 	}
-	oidcKit, err := oidc.New(ctx, cfg, oidc.Deps{
+	deletions := newDeletions(db, store, users, appEnv, appLogger)
+	deps := oidc.Deps{
 		Users:      users,
 		Identities: store.Identities(),
 		Sessions:   sessions,
@@ -67,11 +73,31 @@ func buildAuth(ctx context.Context, sqlDB *sql.DB, appEnv env.Config, appLogger 
 				"oidc_issuer":       appEnv.OIDC.Issuer,
 			}
 		},
-	})
+	}
+	if deletions != nil {
+		deps.Erased = deletions
+	}
+	oidcKit, err := oidc.New(ctx, cfg, deps)
 	if err != nil {
 		return authentication{}, err
 	}
-	return authentication{sessions: sessions, oidc: oidcKit, porte: store, users: users}, nil
+	return authentication{sessions: sessions, oidc: oidcKit, porte: store, users: users, deletions: deletions}, nil
+}
+
+// newDeletions builds the receiver for Registre's erasures when Vision signs in through
+// Registre, and nil otherwise. It exists before the OIDC kit so the kit can refuse a
+// subject Vision already erased, and its Client.Issuer is OIDC_ISSUER, the provider
+// porte/oidc files identities under, so the re-check after a race matches them.
+func newDeletions(db *gorm.DB, store *portepg.Store, users *kit.Store, appEnv env.Config, appLogger *slog.Logger) *workspaces.Deletions {
+	if appEnv.OIDC == nil {
+		return nil
+	}
+	client := directory.Client{Issuer: appEnv.OIDC.Issuer, ClientID: appEnv.OIDC.ClientID, ClientSecret: appEnv.OIDC.ClientSecret}
+	return workspaces.NewDeletions(db, client, workspaces.Erasers{
+		Account:  users.EraseAccount,
+		Identity: store.EraseIdentity,
+		Holds:    store.HoldsIdentity,
+	}, appLogger)
 }
 
 // backfillPictures gives every SSO account the picture URL its next sign-in would store,
