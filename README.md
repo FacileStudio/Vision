@@ -59,6 +59,9 @@ Add the site in the dashboard, then put this on the pages you want measured:
 
 The script derives its collection endpoint from its own `src`, so self-hosting under another
 hostname needs no configuration. `window.vision.track(name, props)` sends a custom event.
+It sends nothing from `localhost`, `127.0.0.1`, `*.localhost` or a non-http(s) page. Add
+`data-mask` to the tag to replace identifier path segments (digits, UUIDs, anything with an
+`@`, 16+ characters with a digit) with `:id` and to strip referrers to origin plus masked path.
 
 ## Configuration
 

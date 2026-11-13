@@ -58,11 +58,12 @@ pg_dump --schema-only --no-owner --no-privileges --no-comments --no-tablespaces 
 
 ## Testing the tracker locally
 
-The tracker resolves its endpoint from its own `src`, so serving a test page from the dev
-server is enough:
+The tracker resolves its endpoint from its own `src`, but it stays silent on `localhost`,
+`127.0.0.1` and `*.localhost`. Load the test page under another name, such as `127.0.0.2` or
+a hosts-file entry, and point it at the dev server:
 
 ```html
-<script defer src="http://localhost:5173/s.js"></script>
+<script defer src="http://127.0.0.2:5173/s.js"></script>
 ```
 
 Create a site in the dashboard whose domain matches the hostname you load that page from,

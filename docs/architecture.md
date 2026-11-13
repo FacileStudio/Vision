@@ -59,7 +59,13 @@ That is the opposite of the suite convention, where a missing `DATABASE_URL` exi
 
 The tracker served to browsers is `apps/client/static/s.js`. It derives its endpoint from
 its own `document.currentScript.src`, replacing `/s.js` with `/api/e`, so the same file works
-from any hostname without configuration.
+from any hostname without configuration. It returns before doing anything on `localhost`,
+`127.0.0.1`, `*.localhost` and non-http(s) pages. With a `data-mask` attribute on the script
+tag it rewrites every path it sends (pageview, performance, events, SPA navigations): a
+segment that is all digits, a UUID, contains `@`, or is 16+ characters with a digit becomes
+`:id`. A same-origin referrer is cut to origin plus masked path, a cross-origin one to its
+origin. Without `data-mask` the payloads are unchanged. `apps/client/src/lib/tracker.test.ts`
+runs the served file against a fake page.
 
 Every call is a `new Image()` GET with the payload JSON-encoded into a `data` query
 parameter, answered with a 43-byte transparent GIF. No `fetch`, no `sendBeacon`, no CORS

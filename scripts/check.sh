@@ -3,6 +3,7 @@
 # The repository quality gate. Reports, never rewrites (except --format).
 #
 #   sh scripts/check.sh             gofmt + vet + test on every Go module, then the client
+#                                   type-check and its bun tests (tracker masking included)
 #   sh scripts/check.sh --go-only   Go modules only
 #   sh scripts/check.sh --format    rewrite Go sources in place
 #
@@ -106,7 +107,10 @@ if [ "$mode" = "all" ]; then
       exit 0
     fi
     [ -d node_modules ] || bun install --frozen-lockfile >/dev/null
-    bun run check
+    s=0
+    bun run check || s=1
+    bun run test || s=1
+    exit "$s"
   ) || status=1
 fi
 

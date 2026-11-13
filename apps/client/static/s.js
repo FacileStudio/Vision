@@ -1,5 +1,11 @@
 (function () {
-  var base = document.currentScript.src.replace(/\/s\.js.*$/, "/api/e");
+  if (location.protocol !== "http:" && location.protocol !== "https:") return;
+  var host = location.hostname;
+  if (host === "localhost" || host === "127.0.0.1" || /\.localhost$/.test(host)) return;
+
+  var script = document.currentScript;
+  var mask = script.hasAttribute("data-mask");
+  var base = script.src.replace(/\/s\.js.*$/, "/api/e");
   var endpoint = base + "/p";
   var heartbeatEndpoint = base + "/h";
 
@@ -10,6 +16,31 @@
     id = Math.random().toString(36).substring(2) + Date.now().toString(36);
     try { localStorage.setItem(key, id); } catch (e) {}
     return id;
+  }
+
+  var uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  function isIdentifier(segment) {
+    var plain = segment;
+    try { plain = decodeURIComponent(segment); } catch (e) {}
+    if (/^\d+$/.test(plain) || uuid.test(plain) || plain.indexOf("@") !== -1) return true;
+    return plain.length >= 16 && /\d/.test(plain);
+  }
+
+  function cleanPath(path) {
+    if (!mask) return path;
+    return path.split("/").map(function (segment) {
+      return segment && isIdentifier(segment) ? ":id" : segment;
+    }).join("/");
+  }
+
+  function cleanReferrer(referrer) {
+    if (!mask || !referrer) return referrer;
+    try {
+      var url = new URL(referrer);
+      if (url.origin !== location.origin) return url.origin;
+      return url.origin + cleanPath(url.pathname);
+    } catch (e) { return ""; }
   }
 
   function getUTM() {
@@ -27,8 +58,8 @@
     var utm = getUTM();
     var data = {
       hostname: location.hostname,
-      path: path || location.pathname,
-      referrer: document.referrer || "",
+      path: cleanPath(path || location.pathname),
+      referrer: cleanReferrer(document.referrer || ""),
       language: navigator.language || "",
       screen_width: window.innerWidth,
       visitor_id: visitorId(),
@@ -85,7 +116,7 @@
     if (!perf || perf.page_load <= 0) return;
     var data = {
       hostname: location.hostname,
-      path: location.pathname,
+      path: cleanPath(location.pathname),
       visitor_id: visitorId(),
       performance: perf
     };
@@ -97,7 +128,7 @@
     track: function (name, props) {
       var data = {
         hostname: location.hostname,
-        path: location.pathname,
+        path: cleanPath(location.pathname),
         visitor_id: visitorId(),
         event_name: name,
         event_props: props || {}
