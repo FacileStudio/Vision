@@ -6,6 +6,21 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-13
+
+### Added
+
+- `GET /api/analytics/summary?space=all|<id>&from=&to=`: every site in the caller's workspaces with visitors, pageviews, previous-window counts, live visitors and a zero-filled hourly (up to 48 h) or daily pageview series, from three grouped queries. A space the caller is not a member of answers an empty list. Existing routes are unchanged.
+- `/sites` is a cross-space stats overview: `?space=` filter (all by default) and `?period=` (24h, 7d, 30d), totals for visitors, pageviews and live visitors, then one row per site with its space, change against the previous period and a sparkline, busiest first.
+- Tracker: a `data-mask` attribute on the `s.js` tag replaces identifier path segments with `:id` and cuts referrers to origin plus masked path (cross-origin: origin only). Without it the payloads are unchanged.
+- Vision counts its own production traffic through the masked tracker (`app.html`, only on `vision.facile.studio`).
+
+### Changed
+
+- The sidebar space switcher is gone. The add-site drawer picks the space, and API keys and webhooks in settings get a space picker when the person can write to more than one space.
+- Tracker: `s.js` sends nothing from `localhost`, `127.0.0.1`, `*.localhost` or a non-http(s) page.
+- `scripts/check.sh` runs the client's bun tests, including a check that runs the served `s.js` against a fake page.
+
 ## [0.7.1] - 2026-11-13
 
 ### Changed
