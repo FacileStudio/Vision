@@ -108,6 +108,7 @@ updated_at }`.
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
+| GET | `/analytics/summary` | yes | `?space=all\|<id>&from=&to=` (RFC 3339 or YYYY-MM-DD). Every site in the caller's workspaces: visitors, pageviews, previous-window counts, live, zero-filled hourly (window up to 48 h) or daily series. A space the caller is not in answers `sites: []` |
 | GET | `/analytics/{siteId}/overview` | yes | The dashboard payload |
 | GET | `/analytics/{siteId}/realtime` | yes | `{ "visitors": n }` from the in-memory tracker |
 | GET | `/analytics/{siteId}/export` | yes | `?format=csv` for CSV, otherwise JSON. Both sent as an attachment |

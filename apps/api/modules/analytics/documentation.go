@@ -9,6 +9,19 @@ var Documentation = documentation.Module{
 	Description: "Analytics and aggregated statistics for tracked sites.",
 	Routes: []documentation.Route{
 		{
+			Method:      "GET",
+			Path:        "/analytics/summary",
+			Summary:     "Every readable site's headline numbers",
+			Description: "Lists every site in the workspaces the caller belongs to, sorted by unique visitors: visitors, pageviews, the same counts for the window of equal length right before, live visitors, and a zero-filled pageview series bucketed by hour (windows of two days or less) or by day. A space the caller is not a member of answers an empty list.",
+			Auth:        "bearer",
+			QueryParams: []documentation.Field{
+				{Name: "space", Type: "string", Description: "all (default) or a workspace ID"},
+				{Name: "from", Type: "string", Description: "Start, RFC 3339 or YYYY-MM-DD (default 30 days ago)"},
+				{Name: "to", Type: "string", Description: "End, RFC 3339 or YYYY-MM-DD (default now)"},
+			},
+			ResponseBody: SummaryResponse{},
+		},
+		{
 			Method:       "GET",
 			Path:         "/analytics/{siteId}/overview",
 			Summary:      "Site analytics overview",

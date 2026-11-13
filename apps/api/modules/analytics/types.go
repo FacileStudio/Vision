@@ -1,5 +1,7 @@
 package analytics
 
+import "time"
+
 // Filters narrows an analytics query by dimension.
 type Filters struct {
 	Country  string
@@ -117,4 +119,29 @@ type HourStat struct {
 type UTMStat struct {
 	Value string `json:"value"`
 	Count int64  `json:"count"`
+}
+
+// SiteSummary is one site's headline numbers on the cross-space overview.
+type SiteSummary struct {
+	SiteID             int64     `json:"site_id"`
+	Name               string    `json:"name"`
+	Domain             string    `json:"domain"`
+	WorkspaceID        int64     `json:"workspace_id"`
+	WorkspaceName      string    `json:"workspace_name"`
+	UniqueVisitors     int64     `json:"unique_visitors"`
+	Pageviews          int64     `json:"pageviews"`
+	PrevUniqueVisitors int64     `json:"prev_unique_visitors"`
+	PrevPageviews      int64     `json:"prev_pageviews"`
+	Live               int64     `json:"live"`
+	Series             []DayStat `json:"series" gorm:"-"`
+}
+
+// SummaryResponse lists every site the caller can read, with the window it covers.
+// Granularity is "hour" for windows of two days or less and "day" otherwise; it names
+// the bucket of every Series point.
+type SummaryResponse struct {
+	From        time.Time     `json:"from"`
+	To          time.Time     `json:"to"`
+	Granularity string        `json:"granularity"`
+	Sites       []SiteSummary `json:"sites"`
 }

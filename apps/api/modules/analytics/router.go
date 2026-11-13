@@ -66,6 +66,8 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 	router.Route("/analytics", func(router chi.Router) {
 		router.Use(middleware.RequireAuth(authService))
 
+		router.Get("/summary", summaryHandler(service, tracker))
+
 		router.Get("/{siteId}/overview", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			siteID, err := strconv.ParseInt(chi.URLParam(request, "siteId"), 10, 64)
