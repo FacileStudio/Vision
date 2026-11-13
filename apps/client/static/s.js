@@ -5,6 +5,9 @@
 
   var script = document.currentScript;
   var mask = script.hasAttribute("data-mask");
+  var excludes = (script.getAttribute("data-exclude") || "").split(",").map(function (prefix) {
+    return prefix.trim();
+  }).filter(Boolean);
   var base = script.src.replace(/\/s\.js.*$/, "/api/e");
   var endpoint = base + "/p";
   var heartbeatEndpoint = base + "/h";
@@ -43,6 +46,14 @@
     } catch (e) { return ""; }
   }
 
+  function excluded() {
+    var path = location.pathname;
+    for (var i = 0; i < excludes.length; i++) {
+      if (path.indexOf(excludes[i]) === 0) return true;
+    }
+    return false;
+  }
+
   function getUTM() {
     var params = new URLSearchParams(location.search);
     return {
@@ -55,6 +66,7 @@
   }
 
   function send(path) {
+    if (excluded()) return;
     var utm = getUTM();
     var data = {
       hostname: location.hostname,
@@ -74,6 +86,7 @@
   }
 
   function heartbeat() {
+    if (excluded()) return;
     var data = {
       hostname: location.hostname,
       visitor_id: visitorId()
@@ -112,6 +125,7 @@
   }
 
   function sendPerformance() {
+    if (excluded()) return;
     var perf = getPerformance();
     if (!perf || perf.page_load <= 0) return;
     var data = {
@@ -126,6 +140,7 @@
 
   window.vision = {
     track: function (name, props) {
+      if (excluded()) return;
       var data = {
         hostname: location.hostname,
         path: cleanPath(location.pathname),

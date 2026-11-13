@@ -62,6 +62,8 @@ hostname needs no configuration. `window.vision.track(name, props)` sends a cust
 It sends nothing from `localhost`, `127.0.0.1`, `*.localhost` or a non-http(s) page. Add
 `data-mask` to the tag to replace identifier path segments (digits, UUIDs, anything with an
 `@`, 16+ characters with a digit) with `:id` and to strip referrers to origin plus masked path.
+`data-exclude="/room/,/share/"` sends nothing (pageview, performance, events, heartbeats) while
+the raw path starts with one of those prefixes, on first load and after every navigation.
 
 ## Configuration
 

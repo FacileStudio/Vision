@@ -3,13 +3,18 @@ import { readFileSync } from 'node:fs';
 
 const source = readFileSync(new URL('../../static/s.js', import.meta.url), 'utf8');
 
-type Run = { sent: string[]; navigate: (path: string) => void; track: (name: string) => void };
+type Run = {
+	sent: string[];
+	navigate: (path: string) => void;
+	replace: (path: string) => void;
+	track: (name: string) => void;
+};
 
 /**
  * Runs the served tracker against a fake page and returns every beacon URL it built.
  * Timers are inert, so only the pageview, SPA navigations and custom events show up.
  */
-function runTracker(href: string, opts: { mask?: boolean; referrer?: string } = {}): Run {
+function runTracker(href: string, opts: { mask?: boolean; exclude?: string; referrer?: string } = {}): Run {
 	const sent: string[] = [];
 	const location = new URL(href);
 	const store = new Map<string, string>([['_vs_id', 'visitor']]);
@@ -17,12 +22,16 @@ function runTracker(href: string, opts: { mask?: boolean; referrer?: string } = 
 	const history = {
 		pushState(_state: unknown, _title: string, path: string) {
 			location.pathname = path;
+		},
+		replaceState(_state: unknown, _title: string, path: string) {
+			location.pathname = path;
 		}
 	};
 	const document = {
 		currentScript: {
 			src: 'https://vision.test/s.js',
-			hasAttribute: (name: string) => name === 'data-mask' && !!opts.mask
+			hasAttribute: (name: string) => name === 'data-mask' && !!opts.mask,
+			getAttribute: (name: string) => (name === 'data-exclude' ? (opts.exclude ?? null) : null)
 		},
 		referrer: opts.referrer ?? '',
 		readyState: 'loading',
@@ -63,6 +72,7 @@ function runTracker(href: string, opts: { mask?: boolean; referrer?: string } = 
 	return {
 		sent,
 		navigate: (path) => history.pushState(null, '', path),
+		replace: (path) => history.replaceState(null, '', path),
 		track: (name) => vision?.track(name)
 	};
 }
@@ -73,6 +83,8 @@ function payload(url: string): Record<string, unknown> {
 }
 
 const pageviews = (run: Run) => run.sent.filter((u) => u.includes('/api/e/p?')).map(payload);
+
+const beacons = (run: Run, kind: 'p' | 'h' | 't') => run.sent.filter((u) => u.includes(`/api/e/${kind}?`));
 
 describe('s.js', () => {
 	it('stays silent on local and non-web pages', () => {
@@ -126,5 +138,28 @@ describe('s.js', () => {
 			referrer: 'https://search.test/q/someone@mail.test?x=1'
 		});
 		expect(pageviews(run)[0].referrer).toBe('https://search.test');
+	});
+
+	it('sends nothing for paths under a data-exclude prefix, on load and on navigation', () => {
+		const run = runTracker('https://field.test/room/abc1234', { exclude: ' /room/ ,/share/' });
+		run.track('joined');
+		expect(run.sent).toEqual([]);
+		run.navigate('/room/xyz9876');
+		run.track('joined');
+		expect(run.sent).toEqual([]);
+		run.navigate('/dashboard');
+		expect(pageviews(run).map((p) => p.path)).toEqual(['/dashboard']);
+		run.replace('/share/token');
+		run.track('opened');
+		expect(beacons(run, 't')).toEqual([]);
+		run.replace('/rooms');
+		run.track('listed');
+		expect(beacons(run, 't').map((u) => payload(u).path)).toEqual(['/rooms']);
+	});
+
+	it('still sends the first pageview and heartbeat outside excluded prefixes', () => {
+		const run = runTracker('https://field.test/', { exclude: '/room/' });
+		expect(beacons(run, 'p')).toHaveLength(1);
+		expect(beacons(run, 'h')).toHaveLength(1);
 	});
 });
