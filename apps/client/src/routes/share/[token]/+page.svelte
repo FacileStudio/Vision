@@ -46,6 +46,7 @@
 	);
 
 	const token = $derived((page.params as Record<string, string>).token);
+	const embedded = $derived(page.url.searchParams.get('embed') === '1');
 	const granularity = $derived(defaultGranularity(selectedRange));
 	const dateRangeLabel = $derived.by(() => {
 		const { from, to } = rangeDates(selectedRange);
@@ -181,7 +182,11 @@
 <svelte:head><title>{siteName ? `${siteName} — Vision` : 'Vision'}</title></svelte:head>
 
 <div class="min-h-dvh bg-fc-page">
-	<div class="mx-auto flex max-w-fc-xl flex-col gap-10 px-4 py-8 sm:px-6 md:px-10 md:py-10">
+	<div
+		class="mx-auto flex max-w-fc-xl flex-col gap-10 {embedded
+			? 'p-4'
+			: 'px-4 py-8 sm:px-6 md:px-10 md:py-10'}"
+	>
 		{#if loading}
 			<Skeleton class="h-16 w-full rounded-fc-md" />
 			<Skeleton class="h-64 w-full rounded-fc-md" />
@@ -193,13 +198,15 @@
 				<p class="max-w-sm text-fc-sm text-fc-fg-muted">{t('public.notFoundText')}</p>
 			</div>
 		{:else if overview}
-			<div class="flex flex-wrap items-start justify-between gap-4">
-				<div class="flex min-w-0 flex-col gap-2">
-					<h1 class="truncate text-fc-2xl font-semibold text-fc-fg">{siteName}</h1>
-					<p class="truncate text-fc-sm text-fc-fg-muted">{siteDomain}</p>
+			{#if !embedded}
+				<div class="flex flex-wrap items-start justify-between gap-4">
+					<div class="flex min-w-0 flex-col gap-2">
+						<h1 class="truncate text-fc-2xl font-semibold text-fc-fg">{siteName}</h1>
+						<p class="truncate text-fc-sm text-fc-fg-muted">{siteDomain}</p>
+					</div>
+					<StatusDot tone="success" label={t('site.live')} pulse />
 				</div>
-				<StatusDot tone="success" label={t('site.live')} pulse />
-			</div>
+			{/if}
 
 			<section class="flex flex-col gap-4">
 				<div class="flex flex-wrap items-center gap-3">
@@ -296,10 +303,12 @@
 				</div>
 			</section>
 
-			<p class="flex items-center justify-center gap-1.5 py-6 text-fc-xs text-fc-fg-muted">
-				<iconify-icon icon={icons.dashboard} width="14" height="14" class="block"></iconify-icon>
-				{t('public.powered')}
-			</p>
+			{#if !embedded}
+				<p class="flex items-center justify-center gap-1.5 py-6 text-fc-xs text-fc-fg-muted">
+					<iconify-icon icon={icons.dashboard} width="14" height="14" class="block"></iconify-icon>
+					{t('public.powered')}
+				</p>
+			{/if}
 		{/if}
 	</div>
 </div>
