@@ -48,5 +48,12 @@ export const settings = {
 		'Lecture et écriture : consulter et modifier les données',
 		'Lectura y escritura: consultar y modificar datos',
 		'Lesen und Schreiben – Daten abrufen und ändern'
+	],
+	'settings.space.title': ['Space', 'Espace', 'Espacio', 'Bereich'],
+	'settings.space.text': [
+		'API keys and webhooks belong to one space. Pick the one to manage.',
+		'Les clés d’API et les webhooks appartiennent à un espace. Choisissez celui à gérer.',
+		'Las claves de API y los webhooks pertenecen a un espacio. Elige cuál gestionar.',
+		'API-Schlüssel und Webhooks gehören zu einem Bereich. Wählen Sie den zu verwaltenden.'
 	]
 } satisfies Record<string, Row>;

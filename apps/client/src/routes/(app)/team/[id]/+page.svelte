@@ -98,7 +98,6 @@
 			const updated = await api.workspaces.update(wsId, wsName.trim());
 			workspace = updated;
 			workspaceStore.all = workspaceStore.all.map((w) => (w.id === updated.id ? updated : w));
-			if (workspaceStore.current?.id === updated.id) workspaceStore.current = updated;
 			editingName = false;
 			toast.success(t('space.renamed'));
 		} catch (e) {
@@ -146,9 +145,6 @@
 
 	function forgetSpace() {
 		workspaceStore.all = workspaceStore.all.filter((w) => w.id !== wsId);
-		if (workspaceStore.current?.id === wsId) {
-			workspaceStore.current = workspaceStore.all[0] ?? null;
-		}
 		goto('/team');
 	}
 

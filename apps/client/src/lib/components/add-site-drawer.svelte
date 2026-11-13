@@ -1,15 +1,18 @@
 <script lang="ts">
 	import { api } from '$lib';
 	import type { Site } from '$lib';
-	import { Alert, Button, Drawer, Field, Input, Select, Spinner, icons } from '@facile/muse';
+	import { Alert, Button, Drawer, Field, Input, Spinner, icons } from '@facile/muse';
+	import SpaceSelect from '$lib/components/space-select.svelte';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 
 	let {
 		open = $bindable(false),
+		space = '',
 		onCreated
 	}: {
 		open?: boolean;
+		space?: string;
 		onCreated: (site: Site) => void;
 	} = $props();
 
@@ -25,9 +28,8 @@
 			name = '';
 			domain = '';
 			error = '';
-			return;
+			workspaceId = '';
 		}
-		if (workspaceStore.current) workspaceId = String(workspaceStore.current.id);
 	});
 
 	async function addSite(e: Event) {
@@ -53,15 +55,11 @@
 
 <Drawer bind:open title={t('addSite.title')} description={t('addSite.description')} showClose>
 	<form id="add-site" class="flex flex-col gap-4" onsubmit={addSite}>
-		{#if workspaceStore.all.length > 1}
+		<div class={workspaceStore.writable.length > 1 ? 'contents' : 'hidden'}>
 			<Field label={t('addSite.space')} helper={t('addSite.spaceHelper')}>
-				<Select bind:value={workspaceId} disabled={submitting}>
-					{#each workspaceStore.all as ws (ws.id)}
-						<option value={String(ws.id)}>{ws.name}</option>
-					{/each}
-				</Select>
+				<SpaceSelect bind:value={workspaceId} preferred={space} disabled={submitting} />
 			</Field>
-		{/if}
+		</div>
 
 		<Field label={t('common.name')} helper={t('addSite.nameHelper')}>
 			<Input bind:value={name} placeholder={t('addSite.namePlaceholder')} required disabled={submitting} />

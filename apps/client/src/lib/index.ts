@@ -5,6 +5,8 @@ export type {
 	Workspace,
 	WorkspaceMember,
 	AnalyticsOverview,
+	SiteSummary,
+	SummaryResponse,
 	Webhook,
 	Goal,
 	GoalConversionsResponse,

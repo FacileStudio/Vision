@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { api } from '$lib';
 	import type { Webhook } from '$lib';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
+	import SpaceSelect from '$lib/components/space-select.svelte';
 	import { formatDate } from '$lib/i18n/format';
 	import { t } from '$lib/i18n/index.svelte';
 	import {
@@ -17,6 +17,7 @@
 		SecretField,
 		Select,
 		SettingsRow,
+		SettingsSection,
 		Spinner,
 		StatusDot,
 		Switch,
@@ -25,6 +26,7 @@
 	} from '@facile/muse';
 
 	let webhooks = $state<Webhook[]>([]);
+	let spaceId = $state('');
 	let loading = $state(true);
 
 	let formOpen = $state(false);
@@ -67,7 +69,7 @@
 	async function load() {
 		loading = true;
 		try {
-			webhooks = await api.webhooks.list(workspaceStore.current?.id);
+			webhooks = await api.webhooks.list(Number(spaceId) || undefined);
 		} catch (e) {
 			toast.danger(e instanceof Error ? e.message : t('webhooks.loadFailed'));
 		} finally {
@@ -75,11 +77,8 @@
 		}
 	}
 
-	onMount(load);
-
 	$effect(() => {
-		workspaceStore.current;
-		load();
+		if (spaceId || workspaceStore.writable.length === 0) load();
 	});
 
 	function openCreate() {
@@ -123,7 +122,7 @@
 					url: url.trim(),
 					secret,
 					interval_hours: intervalHours,
-					workspace_id: workspaceStore.current?.id
+					workspace_id: Number(spaceId) || undefined
 				});
 			}
 			formOpen = false;
@@ -171,6 +170,11 @@
 </script>
 
 <div class="flex flex-col gap-10">
+	<div class={workspaceStore.writable.length > 1 ? 'contents' : 'hidden'}>
+		<SettingsSection title={t('settings.space.title')} description={t('settings.space.text')}>
+			<SpaceSelect bind:value={spaceId} />
+		</SettingsSection>
+	</div>
 	<NotificationsSection title={t('webhooks.title')} description={t('webhooks.text')}>
 		{#snippet actions()}
 			<Button icon={icons.plus} onclick={openCreate}>{t('webhooks.new')}</Button>

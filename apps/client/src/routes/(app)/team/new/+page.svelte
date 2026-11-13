@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { api } from '$lib';
 	import { Alert, Button, Card, Field, Input, Spinner, icons, toast } from '@facile/muse';
+	import { workspaceStore } from '$lib/stores/workspace.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 
 	let name = $state('');
@@ -21,6 +22,7 @@
 		error = '';
 		try {
 			const ws = await api.workspaces.create(trimmed);
+			workspaceStore.all = [...workspaceStore.all, ws];
 			toast.success(t('newSpace.ready', { name: ws.name }));
 			goto(`/team/${ws.id}`);
 		} catch (e) {

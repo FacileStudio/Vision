@@ -1,14 +1,15 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { api } from '$lib';
 	import type { APIKeyItem } from '$lib';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
+	import SpaceSelect from '$lib/components/space-select.svelte';
 	import { formatDate } from '$lib/i18n/format';
 	import { t } from '$lib/i18n/index.svelte';
 	import { SecretField, SettingsSection, TokensSection, toast, type TokenDraft, type TokenItem } from '@facile/muse';
 
 	let keys = $state<APIKeyItem[]>([]);
+	let spaceId = $state('');
 
 	const endpoint = $derived(`${page.url.origin}/api`);
 
@@ -30,24 +31,21 @@
 
 	async function load() {
 		try {
-			keys = await api.apiKeys.list(workspaceStore.current?.id);
+			keys = await api.apiKeys.list(Number(spaceId) || undefined);
 		} catch (e) {
 			toast.danger(e instanceof Error ? e.message : t('apiKeys.loadFailed'));
 		}
 	}
 
-	onMount(load);
-
 	$effect(() => {
-		workspaceStore.current;
-		load();
+		if (spaceId || workspaceStore.writable.length === 0) load();
 	});
 
 	async function create(draft: Omit<TokenDraft, 'days'>): Promise<string> {
 		const resp = await api.apiKeys.create({
 			name: draft.name,
 			scopes: draft.scope ?? 'read',
-			workspace_id: workspaceStore.current?.id
+			workspace_id: Number(spaceId) || undefined
 		});
 		await load();
 		return resp.key;
@@ -60,8 +58,15 @@
 	}
 </script>
 
-<TokensSection tokens={items} {scopes} expiry={false} onCreate={create} onRevoke={revoke}>
-	<SettingsSection title={t('apiKeys.endpointTitle')} description={t('apiKeys.endpointText')}>
-		<SecretField value={endpoint} sensitive={false} label={t('apiKeys.baseUrl')} />
-	</SettingsSection>
-</TokensSection>
+<div class="flex flex-col gap-10">
+	<div class={workspaceStore.writable.length > 1 ? 'contents' : 'hidden'}>
+		<SettingsSection title={t('settings.space.title')} description={t('settings.space.text')}>
+			<SpaceSelect bind:value={spaceId} />
+		</SettingsSection>
+	</div>
+	<TokensSection tokens={items} {scopes} expiry={false} onCreate={create} onRevoke={revoke}>
+		<SettingsSection title={t('apiKeys.endpointTitle')} description={t('apiKeys.endpointText')}>
+			<SecretField value={endpoint} sensitive={false} label={t('apiKeys.baseUrl')} />
+		</SettingsSection>
+	</TokensSection>
+</div>

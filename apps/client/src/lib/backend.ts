@@ -116,7 +116,9 @@ export const api = {
 		realtime: {
 			visitors: (siteId: number) =>
 				request<{ visitors: number }>('GET', `/analytics/${siteId}/realtime`)
-		}
+		},
+		summary: (space: string, from: string, to: string) =>
+			request<SummaryResponse>('GET', `/analytics/summary?${new URLSearchParams({ space, from, to })}`)
 	},
 	share: {
 		overview: async (token: string, from?: string, to?: string, granularity?: string) => {
@@ -325,6 +327,27 @@ export interface CreateAPIKeyRequest {
 export interface CreateAPIKeyResponse {
 	key: string;
 	api_key: APIKeyItem;
+}
+
+export interface SiteSummary {
+	site_id: number;
+	name: string;
+	domain: string;
+	workspace_id: number;
+	workspace_name: string;
+	unique_visitors: number;
+	pageviews: number;
+	prev_unique_visitors: number;
+	prev_pageviews: number;
+	live: number;
+	series: { date: string; count: number }[];
+}
+
+export interface SummaryResponse {
+	from: string;
+	to: string;
+	granularity: 'hour' | 'day';
+	sites: SiteSummary[];
 }
 
 export interface AnalyticsOverview {

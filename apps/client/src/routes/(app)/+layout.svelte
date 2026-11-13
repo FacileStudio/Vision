@@ -3,14 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { api, currentUser, logout } from '$lib';
-	import {
-		MobileNav,
-		PageTransition,
-		SideBar,
-		SpaceSwitcher,
-		Topbar,
-		icons
-	} from '@facile/muse';
+	import { MobileNav, PageTransition, SideBar, icons } from '@facile/muse';
 	import { userStore } from '$lib/stores/user.svelte';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
 	import { rememberLocale, setSessionLocale, t } from '$lib/i18n/index.svelte';
@@ -124,20 +117,6 @@
 		onLocaleChange: rememberLocale,
 		invitations
 	});
-
-	const spaces = $derived(workspaceStore.all.map((w) => ({ id: String(w.id), name: w.name })));
-	const activeSpaceId = $derived(
-		workspaceStore.current ? String(workspaceStore.current.id) : null
-	);
-
-	/* Vision has no personal scope: sites.workspace_id is NOT NULL and the migration mints a
-	   real per-user workspace instead, so `null` is not a space this app can be in. Both
-	   switchers are therefore passed a null label, which removes the row rather than leaving
-	   one whose click this function silently drops. */
-	function selectSpace(id: string | null) {
-		const next = workspaceStore.all.find((w) => String(w.id) === id);
-		if (next) workspaceStore.switchTo(next);
-	}
 </script>
 
 <div class="flex h-dvh w-full overflow-hidden bg-fc-page">
@@ -147,11 +126,6 @@
 			title="Vision"
 			bind:collapsed
 			pages={navPages}
-			{spaces}
-			{activeSpaceId}
-			onSpaceSelect={selectSpace}
-			personalSpaceLabel={null as any}
-			manageSpacesHref="/team"
 			{user}
 			userHref="/settings"
 			userActive={onSettings}
@@ -167,21 +141,6 @@
 		bind:this={scroller}
 		class="min-w-0 flex-1 overflow-auto overscroll-contain pb-28 md:pb-0"
 	>
-		<!-- Spaces live in the rail, and the rail is desktop-only — without this header there
-		     is no way to switch space on a phone at all. -->
-		<Topbar class="md:hidden">
-			<span class="text-fc-md font-semibold text-fc-fg">Vision</span>
-			<div class="min-w-0 max-w-56 flex-1">
-				<SpaceSwitcher
-					{spaces}
-					activeId={activeSpaceId}
-					onSelect={selectSpace}
-					personalLabel={null as any}
-					manageHref="/team"
-				/>
-			</div>
-		</Topbar>
-
 		<div class="mx-auto flex max-w-fc-xl flex-col gap-8 px-4 py-8 sm:px-6 md:px-10 md:py-10">
 			<PageTransition key={page.url.pathname}>
 				{@render children()}

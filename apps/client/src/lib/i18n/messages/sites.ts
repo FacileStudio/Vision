@@ -5,12 +5,11 @@ export const sites = {
 	'sites.pageTitle': ['Sites — Vision', 'Sites — Vision', 'Sitios — Vision', 'Websites — Vision'],
 	'sites.heading': ['Sites', 'Sites', 'Sitios', 'Websites'],
 	'sites.subtitle': [
-		'Everything {space} is tracking.',
-		'Tout ce que suit {space}.',
-		'Todo lo que sigue {space}.',
-		'Alles, was {space} verfolgt.'
+		'How every site you can read is doing.',
+		'L’état de tous les sites que vous pouvez consulter.',
+		'Cómo van todos los sitios que puedes consultar.',
+		'So laufen alle Websites, die Sie einsehen können.'
 	],
-	'sites.thisSpace': ['this space', 'cet espace', 'este espacio', 'dieser Bereich'],
 	'sites.add': ['Add site', 'Ajouter un site', 'Añadir sitio', 'Website hinzufügen'],
 	'sites.loadFailed': [
 		'Could not load your sites.',
@@ -98,5 +97,17 @@ export const sites = {
 		'Rien ne correspond à « {query} ».',
 		'Nada coincide con «{query}».',
 		'Nichts passt zu „{query}“.'
-	]
+	],
+	'sites.vsPrevious': ['vs previous period', 'vs période précédente', 'vs periodo anterior', 'ggü. Vorperiode'],
+	'sites.live': ['{count} live', '{count} en direct', '{count} en directo', '{count} live'],
+	'sites.trendAria': [
+		'Pageviews for {name} over the period',
+		'Pages vues de {name} sur la période',
+		'Visitas de {name} en el periodo',
+		'Seitenaufrufe von {name} im Zeitraum'
+	],
+	'sites.noTraffic': ['No traffic', 'Aucun trafic', 'Sin tráfico', 'Kein Traffic'],
+	'range.24h': ['24h', '24 h', '24 h', '24 Std.'],
+	'spaceFilter.all': ['All spaces', 'Tous les espaces', 'Todos los espacios', 'Alle Bereiche'],
+	'spaceFilter.label': ['Space', 'Espace', 'Espacio', 'Bereich']
 } satisfies Record<string, Row>;
