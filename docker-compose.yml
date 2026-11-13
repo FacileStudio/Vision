@@ -29,9 +29,11 @@ services:
       - db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 5s
+      interval: 30s
       timeout: 5s
-      retries: 10
+      retries: 5
+      start_period: 30s
+      start_interval: 1s
 
   vision:
     restart: unless-stopped
@@ -46,10 +48,11 @@ services:
     healthcheck:
       # Distroless has no shell, no curl and no wget: the binary probes itself.
       test: ["CMD", "/api", "healthcheck"]
-      interval: 10s
+      interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 60s
+      start_interval: 1s
     environment:
       # Set explicitly because two defaults disagree: the app falls back to
       # 4000 and tronc's `healthcheck` subcommand falls back to 8080, so with
