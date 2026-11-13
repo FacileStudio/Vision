@@ -6,6 +6,12 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-13
+
+### Added
+
+- Tracker: `data-exclude="/room/,/share/"` on the `s.js` tag sends nothing (pageview, performance, custom events, heartbeats) while the raw path starts with one of the prefixes, on first load and after every `pushState`, `replaceState` or `popstate` navigation.
+
 ## [0.8.0] - 2026-11-13
 
 ### Added
