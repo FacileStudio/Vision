@@ -6,6 +6,12 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-11-13
+
+### Changed
+
+- muse v0.21.0: icon buttons (map zoom and reset, webhook test and edit, team rename) show their label as a muse tooltip on hover and keyboard focus.
+
 ## [0.8.1] - 2026-11-13
 
 ### Added
