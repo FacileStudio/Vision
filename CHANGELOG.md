@@ -6,6 +6,20 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-13
+
+### Changed
+
+- Database: the schema is ordered goose SQL under `apps/api/migrations/`, applied at boot by `tronc/migrate` v0.1.1 behind a Postgres advisory lock. A failed migration stops the boot with exit code 1. GORM `AutoMigrate` and the hand-written `CREATE TABLE IF NOT EXISTS` (porte's tables, `directory_deletion_state`, `mcp.PendingSchema`) are gone from the boot path; the GORM structs stay as the query layer. `TestGORMModelsMatchTheMigratedSchema` fails when a struct names a column the migrations do not create, two drift tests fail when `porte/pg.Schema` or `mcp.PendingSchema` changes a table Vision keeps, and `scripts/check.sh` fails on an `.AutoMigrate(` call outside a test file.
+- Database: `00001_baseline.sql` is production's schema as `pg_dump --schema-only` printed it on 2026-11-13, orphan `*_id` columns and the two foreign keys included. A database built before this release (Vision's tables, no applied migration) is stamped at version 1 on its first boot, so the baseline is recorded without running. A database built from the migrations dumps identical to production. `apps/api/schema.sql` is the normalized dump of the whole set.
+- Boot: the data steps that ran at every boot still run at every boot, after the migrations and in the same order (`schemas.Reconcile`): the placeholder picture cleanup, the personal workspace seed, and the porte credential adoption (identity re-key, legacy session carry-over, passwords, OIDC subjects).
+- build: `github.com/FacileStudio/tronc/migrate` v0.1.1 with `pressly/goose/v3` v3.27.3; goose raises `segmentio/asm` from v1.1.3 to v1.2.1.
+
+### Added
+
+- `docker run <image> migrate status` (also `up`, `version`, `baseline <n>`) answers without a shell.
+- Database: `00002_column_defaults.sql` gives every `created_at` and `updated_at` a `now()` default, and the users columns porte/kit does not write the values `fillNewAccount` writes (`''` and `0001-01-01 00:00:00+00`), so a row inserted outside GORM no longer gets NULL there. It has a Down. Rolling back to v0.5.x drops these defaults again, because AutoMigrate removes a default its struct tags do not declare, while the ledger still records version 2: before deploying this release again after such a rollback, run `DELETE FROM goose_db_version WHERE version_id = 2`.
+
 ## [0.5.3] - 2026-11-12
 
 ### Fixed
