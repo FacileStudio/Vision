@@ -6,6 +6,13 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-13
+
+### Added
+
+- Public shared dashboards (`/share/<token>`) may be framed by `https://docs.facile.studio`: that route alone extends the chassis CSP to `frame-ancestors 'self' https://docs.facile.studio` and drops `X-Frame-Options`. Every other page keeps `frame-ancestors 'none'` and `X-Frame-Options: DENY`; `TestOnlySharePagesCanBeFramedByDocs` pins both.
+- `?embed=1` on a shared dashboard hides the site title, live dot and "powered by" footer and tightens the padding, so Docs shows only the dashboard.
+
 ## [0.6.0] - 2026-11-13
 
 ### Changed

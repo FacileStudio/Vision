@@ -184,7 +184,7 @@ func run() int {
 	webhooks.StartScheduler(db, analyticsService)
 
 	if clientDir := spa.DirFromEnv(); spa.Available(clientDir) {
-		router.Handle("/*", spa.Handler(spa.Config{Dir: clientDir}))
+		mountClient(router, spa.Handler(spa.Config{Dir: clientDir}))
 		appLogger.Info("serving client", slog.String("dir", clientDir))
 	}
 
