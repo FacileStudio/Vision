@@ -100,7 +100,8 @@ or, since `EventSource` cannot set headers, in a `?token=` query parameter.
 
 ## Data model
 
-Eleven tables, `int64` primary keys, migrated by GORM `AutoMigrate` at every boot.
+Eleven tables, `int64` primary keys, built by the goose SQL under `apps/api/migrations/`,
+which `tronc/migrate` applies at every boot.
 
 | Table | Key columns | Notes |
 |---|---|---|
@@ -116,7 +117,7 @@ Eleven tables, `int64` primary keys, migrated by GORM `AutoMigrate` at every boo
 | `api_keys` | `key_hash` unique, `prefix`, `key_hint`, `scopes`, `is_active`, `expires_at` | Optionally scoped to a site or workspace |
 | `webhooks` | `owner_id`, `workspace_id`, `url`, `secret`, `interval_hours`, `enabled`, `last_sent_at` | |
 
-`Migrate` also runs `seedPersonalWorkspaces`, a backfill that predates workspaces: it
+`schemas.Reconcile` runs `seedPersonalWorkspaces` after the migrations, a backfill that predates workspaces: it
 assigns orphan sites to their owner's workspace and creates a personal workspace, owned by
 that user, for anyone who has none. It runs on every boot and is a no-op once everyone has
 one.

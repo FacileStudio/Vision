@@ -148,8 +148,7 @@ func TestProfileUpdateCannotChangeTheEmail(t *testing.T) {
 
 func TestTheColumnsTheKitLeavesOutArePinned(t *testing.T) {
 	store, _ := openStore(t)
-	want := []string{"avatar_source", "avatar_url", "oidc_access_token", "oidc_refresh_token",
-		"oidc_subject", "oidc_token_expiry", "password_hash", "profile_synced_at"}
+	want := []string{"oidc_subject"}
 	if got := slices.Sorted(slices.Values(store.Unwritten())); !slices.Equal(got, want) {
 		t.Fatalf("unwritten = %v, want %v: fill a new column in fillNewAccount or accept it here", got, want)
 	}

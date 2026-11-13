@@ -42,9 +42,19 @@ Vite proxies `/api` and `/docs` to `http://127.0.0.1:4000`, so the browser only 
 its `http://localhost:5173` default so anything that does hit the API cross-origin is
 allowed.
 
-Migrations run on every API start through `schemas.Migrate` — GORM `AutoMigrate` plus the
-`seedPersonalWorkspaces` backfill. There is no migration file to write and no down
-migration.
+Migrations run on every API start through `schemas.MigrateWithIssuer`: the goose SQL under
+`apps/api/migrations/`, then the boot data steps in `schemas.Reconcile`. To change the schema,
+add the next numbered file under `apps/api/migrations/` with both `-- +goose Up` and
+`-- +goose Down`, update the struct in `schemas/` by hand, and regenerate `apps/api/schema.sql`:
+
+```sh
+pg_dump --schema-only --no-owner --no-privileges --no-comments --no-tablespaces --schema=public \
+  --exclude-table=goose_db_version --exclude-table=goose_db_version_id_seq "$DATABASE_URL" \
+  | grep -vE '^(SET |SELECT pg_catalog\.set_config|\\restrict|\\unrestrict|--|CREATE SCHEMA)' | cat -s
+```
+
+`go run . migrate status` lists what is applied. `scripts/check.sh` fails on any
+`.AutoMigrate(` outside a test file.
 
 ## Testing the tracker locally
 

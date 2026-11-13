@@ -14,9 +14,10 @@ type EraseData func(ctx context.Context, tx *sql.Tx, userID int64) error
 // NewStore builds porte/kit's account store over Vision's users table. The picture lives in
 // oidc_picture_url, and Vision has no admin flag: roles live in workspace_members.
 //
-// GORM created the table, so the text and timestamp columns the kit does not name have no
-// database default. fillNewAccount writes into them what GORM wrote, so an account the kit
-// creates reads like every older one.
+// GORM created the table, and the text and timestamp columns the kit does not name have had a
+// database default only since migration 00002. fillNewAccount writes into them what GORM
+// wrote, so an account the kit creates reads like every older one even on a database rolled
+// back to a release that dropped those defaults.
 func NewStore(ctx context.Context, sqlDB *sql.DB, erase EraseData) (*kit.Store, error) {
 	return kit.NewStore(ctx, kit.Store{
 		DB:        sqlDB,

@@ -10,22 +10,20 @@ import (
 
 const testIssuer = "https://porte.test/application/o/vision/"
 
-// seedPrePorte rebuilds the shape production is in before this deploy: the old
+// seedPrePorte rebuilds the rows production held before porte: the old
 // sessions table, a federated identity recorded on the user row, and a local
 // password hash in users.password_hash.
 //
 // The legacy sessions table is created here in SQL because the model is gone.
-// That is the point: after this migration it exists only in databases that
-// predate it, and the only thing that still has to understand it is AdoptPorte.
-//
-// api_keys is created too, empty, so the test can assert the migration leaves
-// it standing — it is a scoped analytics credential, not a session.
+// That is the point: it exists only in databases that predate porte, and the
+// only thing that still has to understand it is AdoptPorte. api_keys comes
+// from the baseline, so the test can assert the adoption leaves it standing:
+// it is a scoped analytics credential, not a session.
 func seedPrePorte(t *testing.T, db *gorm.DB) {
 	t.Helper()
 	statements := []string{
 		`DROP TABLE IF EXISTS sessions`,
 		`CREATE TABLE sessions (token text PRIMARY KEY, user_id bigint NOT NULL, expires_at timestamptz, created_at timestamptz)`,
-		`CREATE TABLE IF NOT EXISTS api_keys (id bigserial PRIMARY KEY, user_id bigint NOT NULL, site_id bigint, scopes text)`,
 		`INSERT INTO users (id, email, name, oidc_subject, oidc_access_token, oidc_refresh_token, profile_synced_at, password_hash, created_at)
 		 VALUES (1, 'camille@facile.studio', 'Camille', 'sub-1', 'ciphertext', 'ciphertext', now(), '', now())`,
 		`INSERT INTO users (id, email, name, oidc_subject, password_hash, created_at)
@@ -41,8 +39,6 @@ func seedPrePorte(t *testing.T, db *gorm.DB) {
 	}
 	t.Cleanup(func() {
 		db.Exec(`DROP TABLE IF EXISTS sessions`)
-		db.Exec(`DROP TABLE IF EXISTS api_keys`)
-		db.Exec(`DELETE FROM users`)
 	})
 }
 
@@ -275,28 +271,16 @@ func TestAdoptPorteWithoutAnIssuerStillMovesTheCredentials(t *testing.T) {
 	}
 }
 
-// porte v0.10.0 binds a login code to its identity, so a database that predates the
-// columns must gain them, and porte v0.12.0's EraseIdentity needs porte_magic_links to
-// exist. Running the adoption twice proves both statements are idempotent.
-func TestAdoptPorteAddsTheLoginCodeBindingAndErasesAnIdentity(t *testing.T) {
+// porte v0.12.0's EraseIdentity deletes from porte_magic_links, which no Vision
+// route writes, so the table has to exist for an erasure to succeed. Running
+// the adoption twice proves its data steps are idempotent.
+func TestAdoptPorteIsIdempotentAndPorteErasesAnIdentity(t *testing.T) {
 	db := openTestDatabase(t)
 	seedPrePorte(t, db)
-	old := `CREATE TABLE porte_login_codes (code_hash text PRIMARY KEY, user_id bigint NOT NULL REFERENCES users(id),
-		expires_at timestamptz NOT NULL, consumed_at timestamptz)`
-	if err := db.Exec(old).Error; err != nil {
-		t.Fatalf("old table: %v", err)
-	}
 	for range 2 {
 		if err := AdoptPorte(db, testIssuer); err != nil {
 			t.Fatalf("adopt: %v", err)
 		}
-	}
-
-	var columns int64
-	db.Raw(`SELECT count(*) FROM information_schema.columns WHERE table_schema = current_schema()
-		AND table_name = 'porte_login_codes' AND column_name IN ('provider', 'subject')`).Scan(&columns)
-	if columns != 2 {
-		t.Fatalf("porte_login_codes has %d of the 2 binding columns", columns)
 	}
 
 	sqlDB, err := db.DB()

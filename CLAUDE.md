@@ -6,7 +6,7 @@ Self-hosted web analytics platform. Go API + SvelteKit dashboard + PostgreSQL.
 
 - **API**: Go 1.26, Chi router, GORM (Postgres driver), OIDC auth support
 - **Client**: SvelteKit (Svelte 5 runes), TypeScript, Tailwind CSS v4, shadcn-svelte (nova style), Vite
-- **Database**: PostgreSQL 16 (auto-migrated via GORM)
+- **Database**: PostgreSQL 16, schema in goose SQL migrations applied at boot by `tronc/migrate`
 - **Runtime**: Bun (client build only), Go (API and the built client)
 - **Infra**: Docker Compose (2 services: `vision-db`, and `vision`, one Go binary serving `/api/*` and the SPA), one root `Dockerfile`
 
@@ -63,7 +63,8 @@ Vision/
         events/               # pageview/event ingestion, SSE hub, active tracker
         sites/                # site CRUD
         webhooks/             # periodic webhook reports + scheduler
-      schemas/                # GORM models + migration
+      migrations/             # ordered goose SQL, embedded and applied at boot
+      schemas/                # GORM models (query layer) + boot data steps
       tracker/                # tracker.js (client-side snippet)
     client/                   # SvelteKit frontend
       src/
@@ -81,7 +82,7 @@ Vision/
 ## Architecture Notes
 
 - One container, the suite shape: `main.go` mounts every module on the `/api` router, `/docs`, `/health` and `/ready` at the root, and `tronc/spa` last as the catch-all. The client is a static SPA (`ssr = false`) and calls `/api`, relative. Vite proxies `/api` and `/docs` to `:4000` in dev. `events.Preflight` wraps the router and answers `OPTIONS /api/e/*` for any origin before tronc's CORS middleware, which would 403 a third-party preflight. The `/e` group sets `Access-Control-Allow-Origin: *`, `Cache-Control: no-cache, no-store` and a JSON default content type, and rate limits per client address (300 burst, 60/s). Routing lives in the Dokploy domain (service `vision`, port 4000), not in compose labels. `GET /profile` is a Go 308 to `/settings`.
-- Database migrations run automatically on API startup via `schemas.Migrate()` (GORM AutoMigrate).
+- Database migrations run automatically on API startup via `schemas.MigrateWithIssuer`: the goose SQL in `apps/api/migrations/` through `tronc/migrate`, then the idempotent data steps in `schemas.Reconcile`. A schema change is a new numbered migration plus a hand edit of the struct; `scripts/check.sh` fails on `.AutoMigrate(` outside tests.
 - The API has a self-documenting `/docs` endpoint built from per-module `Documentation` structs.
 - Tracker script lives in two places: `apps/api/tracker/tracker.js` (source) and `apps/client/static/s.js` (served to browsers). The path is intentionally short/renamed to resist ad blockers.
 - Real-time active visitors use in-memory heartbeat tracking (30s pings, 60s expiry window).

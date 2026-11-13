@@ -1,40 +1,56 @@
 package schemas
 
 import (
-	"os"
+	"context"
+	"log/slog"
+	"sync"
 	"testing"
 
-	"gorm.io/driver/postgres"
+	"github.com/FacileStudio/Vision/apps/api/migrations"
+	"github.com/FacileStudio/tronc/testdb"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
-// openTestDatabase returns a connection to a throwaway database, or skips.
+const testBootstrap = "createdb vision_test"
+
+var (
+	testDBOnce sync.Once
+	testDB     *gorm.DB
+	testDBErr  error
+	testDBCfg  = testdb.Config{Prefix: "vision_schemas_test", Migrate: applyMigrations}
+)
+
+// applyMigrations builds the schema from the SQL migrations alone, without
+// Reconcile, so each case drives the boot data steps itself.
+func applyMigrations(db *gorm.DB) error {
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	return migrations.Up(context.Background(), migrations.Config(sqlDB, slog.New(slog.DiscardHandler)))
+}
+
+// openTestDatabase hands the test a migrated Postgres schema, emptied per case,
+// or skips.
 //
 // PostgreSQL and nothing else: AdoptPorte is a DO block, to_regclass and
 // ON CONFLICT, so a SQLite run would build a different schema from the struct
-// tags and then agree with itself about it. It is also the one piece of this
-// migration that can sign every user out, which makes an untested version
-// worse than no version.
-//
-// The schema is reset per test and only User is migrated, so each case starts
-// from the shape production is in *before* the deploy and drives the migration
-// itself rather than inheriting whatever a previous case left behind.
+// tags and then agree with itself about it. It is also the one piece of the
+// boot that can sign every user out, which makes an untested version worse
+// than no version.
 func openTestDatabase(t *testing.T) *gorm.DB {
 	t.Helper()
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("TEST_DATABASE_URL is unset — createdb vision_test, or point at any scratch database")
+	url, ok := testdb.URL()
+	if !ok {
+		testdb.Announce(testBootstrap)
+		t.Skip(testdb.SkipReason(testBootstrap))
 	}
-	db, err := gorm.Open(postgres.Open(url), &gorm.Config{Logger: logger.Discard, TranslateError: true})
-	if err != nil {
-		t.Fatalf("open: %v", err)
+	testDBOnce.Do(func() { testDB, testDBErr = testdb.Open(url, testDBCfg) })
+	if testDBErr != nil {
+		t.Fatalf("test database: %v", testDBErr)
 	}
-	if err := db.Exec("DROP SCHEMA public CASCADE; CREATE SCHEMA public").Error; err != nil {
-		t.Fatalf("reset the schema: %v", err)
+	if err := testdb.Truncate(testDB, testDBCfg); err != nil {
+		t.Fatalf("reset the test database: %v", err)
 	}
-	if err := db.AutoMigrate(&User{}); err != nil {
-		t.Fatalf("migrate users: %v", err)
-	}
-	return db
+	return testDB
 }

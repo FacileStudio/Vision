@@ -8,6 +8,7 @@ require (
 	github.com/FacileStudio/porte/directory v0.5.0
 	github.com/FacileStudio/porte/mcpauth v0.2.1
 	github.com/FacileStudio/tronc v0.22.1
+	github.com/FacileStudio/tronc/migrate v0.1.1
 	github.com/FacileStudio/tronc/testdb v0.1.1
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
@@ -18,7 +19,7 @@ require (
 require (
 	github.com/FacileStudio/porte/forfait v0.1.1 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
-	github.com/segmentio/asm v1.1.3 // indirect
+	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/sys v0.49.0 // indirect
@@ -34,6 +35,10 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/mfridman/interpolate v0.0.2 // indirect
+	github.com/pressly/goose/v3 v3.27.3 // indirect
+	github.com/sethvargo/go-retry v0.4.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/text v0.43.0 // indirect

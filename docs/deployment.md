@@ -63,12 +63,25 @@ in `main` for exactly that.
 
 ## Migrations
 
-There is no migration step. `schemas.Migrate` runs GORM `AutoMigrate` on every boot, then
-`seedPersonalWorkspaces`, which assigns orphan sites to their owner's workspace and creates a
-personal workspace for any user without one. Both are idempotent.
+The schema is ordered goose SQL in `apps/api/migrations/`, embedded in the binary and applied
+at every boot by `tronc/migrate`, behind a Postgres advisory lock. A failed migration stops the
+boot with a non-zero exit. `00001_baseline.sql` is production's schema as GORM `AutoMigrate`
+built it. A database that predates v0.6.0 (Vision's tables, no applied migration) is stamped at
+version 1 on its first boot, so the baseline is recorded without running.
 
-- Adding a struct field adds a column. Removing one leaves the column behind, unread.
-- Two instances booting at once both migrate. Deploy one at a time.
+After the migrations, `schemas.Reconcile` runs the data steps every boot ran before, in the same
+order: it empties placeholder pictures, runs `seedPersonalWorkspaces` (orphan sites go to their
+owner's workspace, and any user without a workspace gets a personal one), and moves legacy
+credentials onto porte's tables. All of them are idempotent.
+
+`docker run <image> migrate status` (also `up`, `version` and `baseline <n>`) answers without a
+shell.
+
+- Adding a struct field needs a migration. `TestGORMModelsMatchTheMigratedSchema` fails until
+  the column exists.
+- Rolling back to v0.5.x runs `AutoMigrate` again, which drops the defaults `00002` added while
+  the ledger still records version 2. Before deploying v0.6.0 or later again after such a
+  rollback, run `DELETE FROM goose_db_version WHERE version_id = 2`.
 - There are no `OnDelete` constraints on any relation, so deleting a site does not cascade
   to its pageviews at the database level. Application code is the only thing preventing
   orphan rows.
