@@ -6,6 +6,18 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-14
+
+### Added
+
+- Landing: an animated dashboard demo under the hero (mise-en-scene v0.2.2). Visitors and pageviews roll, the live count climbs and the current hour's bar grows. Phones get a compact layout, and reduced motion shows a still frame.
+- Landing: a fourth feature block, goals with `vision.track`.
+
+### Changed
+
+- Landing: the hero and its demo sit left-aligned in one column, and every landing string is shorter in en, fr, es and de.
+- muse v0.23.0: Magnetik is the typeface for titles and body, and the landing footer starts at the left edge on phones.
+
 ## [0.8.2] - 2026-11-13
 
 ### Changed
