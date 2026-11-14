@@ -6,6 +6,12 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-11-14
+
+### Fixed
+
+- Confirm page: the sign-in-again notice shows only for porte's own-session refusal. Any other 403, such as lost write access to the site, now shows the server's message.
+
 ## [0.10.0] - 2026-11-14
 
 ### Security
