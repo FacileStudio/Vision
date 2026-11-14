@@ -6,6 +6,8 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-14
+
 ### Security
 
 - MCP confirm page: only the person's own browser session confirms a pending action (porte v0.20.1 `mcpauth.RequireOwnSession`). A CLI session, a bearer next to the cookie or a delegated token gets 403; an API key gets 401. A cookie from before this release is refused too: `/pending` then shows a sign-in-again notice in en, fr, es and de instead of the raw error. Sign in once in the browser to confirm again.
