@@ -6,6 +6,12 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.11.3] - 2026-11-14
+
+### Fixed
+
+- Landing pricing: "Commencer gratuitement" and every "Choisir" button open the Facile sign-up page in the visitor's language (`https://sso.facile.studio/signup?lang=…`) instead of the Spaces page, which asked a signed-out visitor to sign in. muse v0.26.0.
+
 ## [0.11.2] - 2026-11-14
 
 ### Fixed
