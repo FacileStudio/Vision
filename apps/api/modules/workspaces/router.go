@@ -17,7 +17,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 	router.Route("/workspaces", func(r chi.Router) {
 		r.Use(middleware.RequireAuth(authService))
 
-		r.Post("/", func(w http.ResponseWriter, req *http.Request) {
+		r.With(middleware.RefuseKeys).Post("/", func(w http.ResponseWriter, req *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(req.Context())
 			var body CreateRequest
 			if err := httpjson.DecodeJSON(w, req, &body); err != nil {
@@ -52,7 +52,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			httpjson.WriteJSON(w, http.StatusOK, resp)
 		})
 
-		r.Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
+		r.With(middleware.RefuseKeys).Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(req.Context())
 			var body UpdateRequest
 			if err := httpjson.DecodeJSON(w, req, &body); err != nil {
@@ -67,7 +67,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			httpjson.WriteJSON(w, http.StatusOK, resp)
 		})
 
-		r.Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
+		r.With(middleware.RefuseKeys).Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(req.Context())
 			if err := service.controller.delete(req.Context(), identity.UserID, chi.URLParam(req, "id")); err != nil {
 				httpjson.WriteError(w, err)
@@ -76,7 +76,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			w.WriteHeader(http.StatusNoContent)
 		})
 
-		r.Get("/{id}/members", func(w http.ResponseWriter, req *http.Request) {
+		r.With(middleware.RefuseKeys).Get("/{id}/members", func(w http.ResponseWriter, req *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(req.Context())
 			resp, err := service.controller.listMembers(req.Context(), identity.UserID, chi.URLParam(req, "id"))
 			if err != nil {
@@ -86,7 +86,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			httpjson.WriteJSON(w, http.StatusOK, resp)
 		})
 
-		r.Post("/{id}/members", func(w http.ResponseWriter, req *http.Request) {
+		r.With(middleware.RefuseKeys).Post("/{id}/members", func(w http.ResponseWriter, req *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(req.Context())
 			var body AddMemberRequest
 			if err := httpjson.DecodeJSON(w, req, &body); err != nil {
@@ -101,7 +101,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			httpjson.WriteJSON(w, http.StatusCreated, resp)
 		})
 
-		r.Put("/{id}/members/{userId}", func(w http.ResponseWriter, req *http.Request) {
+		r.With(middleware.RefuseKeys).Put("/{id}/members/{userId}", func(w http.ResponseWriter, req *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(req.Context())
 			var body UpdateMemberRequest
 			if err := httpjson.DecodeJSON(w, req, &body); err != nil {
@@ -115,7 +115,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			w.WriteHeader(http.StatusNoContent)
 		})
 
-		r.Delete("/{id}/members/{userId}", func(w http.ResponseWriter, req *http.Request) {
+		r.With(middleware.RefuseKeys).Delete("/{id}/members/{userId}", func(w http.ResponseWriter, req *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(req.Context())
 			if err := service.controller.removeMember(req.Context(), identity.UserID, chi.URLParam(req, "id"), chi.URLParam(req, "userId")); err != nil {
 				httpjson.WriteError(w, err)
@@ -124,7 +124,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			w.WriteHeader(http.StatusNoContent)
 		})
 
-		r.Post("/{id}/leave", func(w http.ResponseWriter, req *http.Request) {
+		r.With(middleware.RefuseKeys).Post("/{id}/leave", func(w http.ResponseWriter, req *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(req.Context())
 			if err := service.controller.leave(req.Context(), identity.UserID, chi.URLParam(req, "id")); err != nil {
 				httpjson.WriteError(w, err)

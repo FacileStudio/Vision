@@ -170,6 +170,22 @@ when it fails.
 key is returned exactly once, at creation; the database stores a SHA-256 hash plus a
 four-character `key_hint`. A key can be scoped to one site or one workspace.
 
+A scoped key is enforced on every request, not only when it is created:
+
+- A site key reaches that one site. Another site answers 403 on a site URL (`/sites/{id}`,
+  `/analytics/{siteId}/*`, `/goals/{siteId}/conversions`) and 404 elsewhere. `GET /sites` and
+  `GET /analytics/summary` list only that site, and `GET /workspaces` is empty.
+- A workspace key reaches the sites of that workspace. Sites, summaries and spaces of any other
+  workspace are refused or left out of the listing.
+- A `read` key (`vis_ro`) gets 403 on every `POST`, `PUT`, `PATCH` and `DELETE`.
+- A `read,write` key can edit the sites and goals inside its scope. A site key cannot create
+  sites, and a workspace key creates sites only in its own workspace.
+- No key can reach `/api-keys`, `/webhooks`, `/workspaces/{id}/members` or any space write: a
+  key cannot mint a wider key or change who belongs to a space. A key owner's account
+  (`PUT /auth/me`) is also off limits.
+- An unscoped key sees what its owner sees. A cookie session is never scoped.
+- Creating a key for a workspace needs membership of that workspace.
+
 ## Webhooks
 
 | Method | Path | Auth | Notes |

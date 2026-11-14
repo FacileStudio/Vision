@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/FacileStudio/Vision/apps/api/internal/siteaccess"
 	"github.com/FacileStudio/Vision/apps/api/schemas"
 	"github.com/FacileStudio/tronc/errors"
 
@@ -80,9 +81,11 @@ func (s *Service) listWorkspaces(ctx context.Context, userID string) ([]Workspac
 		Where("user_id = ?", uid).Find(&members).Error; err != nil {
 		return nil, errors.Internal("failed to list spaces", err)
 	}
-	out := make([]WorkspaceResponse, len(members))
-	for i, m := range members {
-		out[i] = s.response(ctx, m.Workspace, m.Role)
+	out := make([]WorkspaceResponse, 0, len(members))
+	for _, m := range members {
+		if siteaccess.KeyAllowsWorkspace(ctx, m.WorkspaceID) {
+			out = append(out, s.response(ctx, m.Workspace, m.Role))
+		}
 	}
 	return out, nil
 }
@@ -109,6 +112,9 @@ func (s *Service) ensurePersonal(ctx context.Context, uid int64) error {
 }
 
 func (s *Service) getWorkspace(ctx context.Context, userID string, wsID string) (*WorkspaceResponse, error) {
+	if id, _ := strconv.ParseInt(wsID, 10, 64); !siteaccess.KeyAllowsWorkspace(ctx, id) {
+		return nil, errors.Forbidden("api key is not scoped to this space")
+	}
 	member, err := s.findMembership(ctx, userID, wsID)
 	if err != nil {
 		return nil, err

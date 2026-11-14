@@ -7,6 +7,7 @@ import (
 	stderrors "errors"
 	"strconv"
 
+	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
 	"github.com/FacileStudio/Vision/apps/api/internal/siteaccess"
 	"github.com/FacileStudio/Vision/apps/api/schemas"
 	"github.com/FacileStudio/tronc/errors"
@@ -29,6 +30,10 @@ func NewService(orm *gorm.DB) *Service {
 
 func (s *Service) createSite(ctx context.Context, ownerID string, name string, domain string, workspaceID int64) (*SiteResponse, error) {
 	uid, _ := strconv.ParseInt(ownerID, 10, 64)
+
+	if key := authcontext.KeyFromContext(ctx); key != nil && (!key.Write || key.SiteID != nil || !siteaccess.KeyAllowsWorkspace(ctx, workspaceID)) {
+		return nil, errors.Forbidden("api key is not scoped to this space")
+	}
 
 	var count int64
 	s.orm.WithContext(ctx).Model(&schemas.WorkspaceMember{}).
@@ -67,7 +72,7 @@ func (s *Service) listSites(ctx context.Context, userID string, workspaceID int6
 		}
 
 		var records []schemas.Site
-		if err := s.orm.WithContext(ctx).Where("workspace_id = ?", workspaceID).
+		if err := siteaccess.Restrict(ctx, s.orm.WithContext(ctx).Where("workspace_id = ?", workspaceID)).
 			Order("created_at desc").Find(&records).Error; err != nil {
 			return nil, errors.Internal("failed to list sites", err)
 		}
@@ -80,7 +85,7 @@ func (s *Service) listSites(ctx context.Context, userID string, workspaceID int6
 	}
 
 	var records []schemas.Site
-	if err := s.orm.WithContext(ctx).Where("owner_id = ?", uid).
+	if err := siteaccess.Restrict(ctx, s.orm.WithContext(ctx).Where("owner_id = ?", uid)).
 		Order("created_at desc").Find(&records).Error; err != nil {
 		return nil, errors.Internal("failed to list sites", err)
 	}

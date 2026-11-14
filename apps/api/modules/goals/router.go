@@ -6,14 +6,16 @@ import (
 
 	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
 	"github.com/FacileStudio/Vision/apps/api/internal/middleware"
+	"github.com/FacileStudio/Vision/apps/api/internal/siteaccess"
 	"github.com/FacileStudio/tronc/errors"
 	"github.com/FacileStudio/tronc/httpjson"
 
 	"github.com/go-chi/chi/v5"
+	"gorm.io/gorm"
 )
 
 // RegisterRoutes mounts the goals CRUD and conversions routes behind auth.
-func RegisterRoutes(router chi.Router, service *Service, authService middleware.Authenticator) {
+func RegisterRoutes(router chi.Router, service *Service, orm *gorm.DB, authService middleware.Authenticator) {
 	router.Route("/goals", func(router chi.Router) {
 		router.Use(middleware.RequireAuth(authService))
 
@@ -72,7 +74,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			w.WriteHeader(http.StatusNoContent)
 		})
 
-		router.Get("/{siteId}/conversions", func(w http.ResponseWriter, request *http.Request) {
+		router.With(siteaccess.KeyGuard(orm, "siteId")).Get("/{siteId}/conversions", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			siteID := chi.URLParam(request, "siteId")
 

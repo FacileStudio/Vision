@@ -29,8 +29,9 @@ type Authenticator interface {
 // APIKeyAuthenticator resolves a scoped API key to an identity, for
 // machine-to-machine access.
 type APIKeyAuthenticator interface {
-	// AuthenticateKey returns the identity carried by a scoped API key.
-	AuthenticateKey(ctx context.Context, rawKey string) (userID string, email string, err error)
+	// AuthenticateKey returns the identity carried by a scoped API key, with the key's
+	// scope on Identity.Key.
+	AuthenticateKey(ctx context.Context, rawKey string) (authcontext.Identity, error)
 }
 
 var apiKeyAuth APIKeyAuthenticator
@@ -50,15 +51,16 @@ func RequireAuth(authService Authenticator) func(http.Handler) http.Handler {
 
 			if apiKeyAuth != nil && isAPIKey(authorization, request) {
 				key := extractAPIKey(authorization, request)
-				userID, email, err := apiKeyAuth.AuthenticateKey(request.Context(), key)
+				identity, err := apiKeyAuth.AuthenticateKey(request.Context(), key)
 				if err != nil {
 					httpjson.WriteError(w, err)
 					return
 				}
-				authContext := authcontext.WithIdentity(request.Context(), authcontext.Identity{
-					UserID: userID,
-					Email:  email,
-				})
+				if !identity.Key.Write && !safeMethod(request.Method) {
+					httpjson.WriteError(w, errors.Forbidden("api key is read-only"))
+					return
+				}
+				authContext := authcontext.WithIdentity(request.Context(), identity)
 				next.ServeHTTP(w, request.WithContext(authContext))
 				return
 			}
@@ -107,4 +109,20 @@ func extractAPIKey(authorization string, r *http.Request) string {
 		return strings.TrimPrefix(authorization, "Bearer ")
 	}
 	return ""
+}
+
+func safeMethod(method string) bool {
+	return method == http.MethodGet || method == http.MethodHead || method == http.MethodOptions
+}
+
+// RefuseKeys answers 403 to an API key. It guards the routes that manage accounts, keys,
+// members and webhooks, which a key never needs to reach.
+func RefuseKeys(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		if authcontext.KeyFromContext(request.Context()) != nil {
+			httpjson.WriteError(w, errors.Forbidden("api keys cannot use this route"))
+			return
+		}
+		next.ServeHTTP(w, request)
+	})
 }

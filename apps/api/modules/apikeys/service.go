@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
 	"github.com/FacileStudio/Vision/apps/api/internal/siteaccess"
 	"github.com/FacileStudio/Vision/apps/api/schemas"
 	"github.com/FacileStudio/tronc/errors"
@@ -38,6 +39,15 @@ func (s *Service) createKey(ctx context.Context, ownerID string, name string, sc
 	if siteID != nil {
 		if !siteaccess.CanAccess(ctx, s.orm, uid, *siteID) {
 			return nil, errors.NotFound("site not found")
+		}
+	}
+
+	if workspaceID != nil {
+		var member int64
+		s.orm.WithContext(ctx).Table("workspace_members").
+			Where("workspace_id = ? AND user_id = ?", *workspaceID, uid).Count(&member)
+		if member == 0 {
+			return nil, errors.NotFound("space not found")
 		}
 	}
 
@@ -123,20 +133,21 @@ func (s *Service) revokeKey(ctx context.Context, ownerID string, keyID string) e
 	return nil
 }
 
-func (s *Service) AuthenticateKey(ctx context.Context, rawKey string) (userID string, email string, err error) {
+// AuthenticateKey resolves a presented key to its owner and the scope it is limited to.
+func (s *Service) AuthenticateKey(ctx context.Context, rawKey string) (authcontext.Identity, error) {
 	hash := hashKey(rawKey)
 
 	var record schemas.APIKey
 	dbErr := s.orm.WithContext(ctx).Where("key_hash = ? AND is_active = ?", hash, true).First(&record).Error
 	if stderrors.Is(dbErr, gorm.ErrRecordNotFound) {
-		return "", "", errors.Unauthorized("invalid api key")
+		return authcontext.Identity{}, errors.Unauthorized("invalid api key")
 	}
 	if dbErr != nil {
-		return "", "", errors.Internal("failed to validate api key", dbErr)
+		return authcontext.Identity{}, errors.Internal("failed to validate api key", dbErr)
 	}
 
 	if record.ExpiresAt != nil && time.Now().After(*record.ExpiresAt) {
-		return "", "", errors.Unauthorized("api key expired")
+		return authcontext.Identity{}, errors.Unauthorized("api key expired")
 	}
 
 	go func() {
@@ -146,10 +157,18 @@ func (s *Service) AuthenticateKey(ctx context.Context, rawKey string) (userID st
 
 	var user schemas.User
 	if dbErr := s.orm.Where("id = ?", record.UserID).First(&user).Error; dbErr != nil {
-		return "", "", errors.Internal("failed to load user", dbErr)
+		return authcontext.Identity{}, errors.Internal("failed to load user", dbErr)
 	}
 
-	return fmt.Sprintf("%d", record.UserID), user.Email, nil
+	return authcontext.Identity{
+		UserID: fmt.Sprintf("%d", record.UserID),
+		Email:  user.Email,
+		Key: &authcontext.KeyScope{
+			SiteID:      record.SiteID,
+			WorkspaceID: record.WorkspaceID,
+			Write:       record.Scopes == "read,write",
+		},
+	}, nil
 }
 
 func generateKey() (string, error) {

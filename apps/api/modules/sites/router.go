@@ -6,13 +6,15 @@ import (
 
 	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
 	"github.com/FacileStudio/Vision/apps/api/internal/middleware"
+	"github.com/FacileStudio/Vision/apps/api/internal/siteaccess"
 	"github.com/FacileStudio/tronc/httpjson"
 
 	"github.com/go-chi/chi/v5"
+	"gorm.io/gorm"
 )
 
 // RegisterRoutes mounts the sites CRUD and share routes behind auth.
-func RegisterRoutes(router chi.Router, service *Service, authService middleware.Authenticator) {
+func RegisterRoutes(router chi.Router, service *Service, orm *gorm.DB, authService middleware.Authenticator) {
 	router.Route("/sites", func(router chi.Router) {
 		router.Use(middleware.RequireAuth(authService))
 
@@ -45,7 +47,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			httpjson.WriteJSON(w, http.StatusOK, resp)
 		})
 
-		router.Get("/{id}", func(w http.ResponseWriter, request *http.Request) {
+		router.With(siteaccess.KeyGuard(orm, "id")).Get("/{id}", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			resp, err := service.controller.get(request.Context(), identity.UserID, chi.URLParam(request, "id"))
 			if err != nil {
@@ -55,7 +57,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			httpjson.WriteJSON(w, http.StatusOK, resp)
 		})
 
-		router.Put("/{id}", func(w http.ResponseWriter, request *http.Request) {
+		router.With(siteaccess.KeyGuard(orm, "id")).Put("/{id}", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			var req UpdateRequest
 			if err := httpjson.DecodeJSON(w, request, &req); err != nil {
@@ -70,7 +72,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			httpjson.WriteJSON(w, http.StatusOK, resp)
 		})
 
-		router.Delete("/{id}", func(w http.ResponseWriter, request *http.Request) {
+		router.With(siteaccess.KeyGuard(orm, "id")).Delete("/{id}", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			err := service.controller.delete(request.Context(), identity.UserID, chi.URLParam(request, "id"))
 			if err != nil {
@@ -80,7 +82,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			w.WriteHeader(http.StatusNoContent)
 		})
 
-		router.Post("/{id}/share", func(w http.ResponseWriter, request *http.Request) {
+		router.With(siteaccess.KeyGuard(orm, "id")).Post("/{id}/share", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			resp, err := service.controller.generateShare(request.Context(), identity.UserID, chi.URLParam(request, "id"))
 			if err != nil {
@@ -90,7 +92,7 @@ func RegisterRoutes(router chi.Router, service *Service, authService middleware.
 			httpjson.WriteJSON(w, http.StatusOK, resp)
 		})
 
-		router.Delete("/{id}/share", func(w http.ResponseWriter, request *http.Request) {
+		router.With(siteaccess.KeyGuard(orm, "id")).Delete("/{id}/share", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			err := service.controller.revokeShare(request.Context(), identity.UserID, chi.URLParam(request, "id"))
 			if err != nil {
