@@ -9,7 +9,7 @@ mock.module('$app/navigation', () => ({
 }));
 Object.assign(globalThis, { window: { location: { pathname: '/sites', search: '' } } });
 
-const { api, currentUser, forgetStoredToken, logout } = await import('./backend');
+const { api, currentUser, forgetStoredToken, logout, notOwnSession } = await import('./backend');
 
 const originalFetch = globalThis.fetch;
 
@@ -93,4 +93,16 @@ test('invitations reach the user menu only with an href, and a failure is no row
 	respondWith(401, { error: { message: 'missing auth' } });
 	expect(await api.me.invitations()).toBeNull();
 	expect(visits).toEqual([]);
+});
+
+test('only porte own-session refusal asks the person to sign in again', async () => {
+	const refusal = { code: 'permission_denied', message: "only the person's own session can confirm actions" };
+	respondWith(403, { error: refusal });
+	expect(notOwnSession(await api.pending.confirm('a').catch((err) => err))).toBe(true);
+	respondWith(403, { error: { code: 'permission_denied', message: 'access denied' } });
+	const lost = await api.pending.confirm('a').catch((err) => err);
+	expect(notOwnSession(lost)).toBe(false);
+	expect(lost.message).toBe('access denied');
+	respondWith(403, { error: { code: 'csrf_failed', message: refusal.message } });
+	expect(notOwnSession(await api.pending.confirm('a').catch((err) => err))).toBe(false);
 });
