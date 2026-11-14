@@ -6,6 +6,17 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-11-14
+
+### Fixed
+
+- Link preview: the og:image no longer says "GDPR compliant by design, hosted on your server". It shows "Your stats, without cookies." and the catalog description, regenerated from muse v0.25.1.
+- The web manifest description now matches the meta description.
+
+### Changed
+
+- muse v0.25.1: the pricing note every plan shares renders once under the cards, and long developer commands wrap instead of scrolling.
+
 ## [0.11.1] - 2026-11-14
 
 ### Changed
