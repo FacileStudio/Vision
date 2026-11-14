@@ -29,10 +29,10 @@ export const shell = {
 
 	'login.title': ['Log in — Vision', 'Connexion — Vision', 'Iniciar sesión — Vision', 'Anmelden — Vision'],
 	'login.tagline': [
-		'Your site’s visitors, with no cookie banner.',
-		'Les visites de votre site, sans bandeau cookies.',
-		'Las visitas de tu web, sin banner de cookies.',
-		'Die Besucher Ihrer Website, ohne Cookie-Banner.'
+		'Your site’s visitors, without cookies.',
+		'Les visites de votre site, sans cookies.',
+		'Las visitas de tu sitio, sin cookies.',
+		'Die Besuche Ihrer Website, ohne Cookies.'
 	],
 	'login.failedTitle': ['Sign-in failed', 'Connexion impossible', 'No se pudo iniciar sesión', 'Anmeldung fehlgeschlagen'],
 	'login.failed': [

@@ -3,28 +3,28 @@ import type { Row } from '../row';
 /** Strings for the signed-out landing page and its demos. */
 export const landing = {
 	'landing.title': [
-		'Vision · Your stats, no cookie banner',
-		'Vision · Vos statistiques, sans bandeau cookies',
-		'Vision · Tus estadísticas, sin banner de cookies',
-		'Vision · Ihre Statistiken, ohne Cookie-Banner'
+		'Vision · Your stats, without cookies',
+		'Vision · Vos statistiques, sans cookies',
+		'Vision · Tus estadísticas, sin cookies',
+		'Vision · Ihre Statistiken, ohne Cookies'
 	],
 	'landing.description': [
-		'See who visits your site and where they come from. Vision uses no cookies, so you have no consent banner to show. Free to start.',
-		'Voyez qui visite votre site et d’où il vient. Vision n’utilise aucun cookie, vous n’avez donc pas de bandeau à afficher. Gratuit pour commencer.',
-		'Mira quién visita tu web y de dónde viene. Vision no usa cookies, así que no tienes que mostrar ningún banner. Gratis para empezar.',
-		'Sehen Sie, wer Ihre Website besucht und woher. Vision setzt keine Cookies, also brauchen Sie kein Banner. Kostenlos starten.'
+		'See who visits your site and where they come from. Vision uses no cookies. Free to start.',
+		'Voyez qui visite votre site et d’où il vient. Vision n’utilise aucun cookie. Gratuit pour commencer.',
+		'Mira quién visita tu sitio y de dónde viene. Vision no usa ninguna cookie. Gratis para empezar.',
+		'Sehen Sie, wer Ihre Website besucht und woher. Vision verwendet keine Cookies. Kostenlos starten.'
 	],
 	'landing.heroTitle': [
-		'Your stats, no cookie banner.',
-		'Vos statistiques, sans bandeau cookies.',
-		'Tus estadísticas, sin banner de cookies.',
-		'Ihre Statistiken, ohne Cookie-Banner.'
+		'Your stats, without cookies.',
+		'Vos statistiques, sans cookies.',
+		'Tus estadísticas, sin cookies.',
+		'Ihre Statistiken, ohne Cookies.'
 	],
 	'landing.heroText': [
-		'See who visits your site and where they come from. Vision uses no cookies, so you have no consent banner to show.',
-		'Voyez qui visite votre site et d’où il vient. Vision n’utilise aucun cookie, vous n’avez donc pas de bandeau à afficher.',
-		'Mira quién visita tu web y de dónde viene. Vision no usa cookies, así que no tienes que mostrar ningún banner.',
-		'Sehen Sie, wer Ihre Website besucht und woher. Vision setzt keine Cookies, also brauchen Sie kein Banner.'
+		'See who visits your site and where they come from. Vision uses no cookies.',
+		'Voyez qui visite votre site et d’où il vient. Vision n’utilise aucun cookie.',
+		'Mira quién visita tu sitio y de dónde viene. Vision no usa ninguna cookie.',
+		'Sehen Sie, wer Ihre Website besucht und woher. Vision verwendet keine Cookies.'
 	],
 	'landing.demo': [
 		'A Vision dashboard: visitors arrive, the counters roll and the lists of sources and pages fill in.',
@@ -33,12 +33,12 @@ export const landing = {
 		'Ein Vision-Dashboard. Besucher kommen, die Zähler laufen und die Listen der Quellen und Seiten füllen sich.'
 	],
 	'landing.cards.title': ['What you get', 'Ce que vous y gagnez', 'Lo que ganas', 'Was Sie davon haben'],
-	'landing.card.banner.title': ['No cookies, so no banner', 'Aucun cookie, donc pas de bandeau', 'Sin cookies, así que sin banner', 'Keine Cookies, also kein Banner'],
-	'landing.card.banner.text': [
-		'Your visitors read your page right away, with nothing to click first.',
-		'Vos visiteurs lisent votre page tout de suite, sans rien à cliquer avant.',
-		'Tus visitantes leen tu página enseguida, sin nada que pulsar antes.',
-		'Ihre Besucher lesen Ihre Seite sofort, ohne vorher etwas anzuklicken.'
+	'landing.card.cookie.title': ['No cookies set', 'Aucun cookie déposé', 'Ninguna cookie instalada', 'Keine Cookies gesetzt'],
+	'landing.card.cookie.text': [
+		'Vision counts visits without setting a single cookie on your visitors.',
+		'Vision compte les visites sans déposer un seul cookie chez vos visiteurs.',
+		'Vision cuenta las visitas sin instalar ni una cookie a tus visitantes.',
+		'Vision zählt Besuche, ohne bei Ihren Besuchern ein einziges Cookie zu setzen.'
 	],
 	'landing.card.sources.title': ['Where visitors come from', 'D’où viennent vos visiteurs', 'De dónde vienen tus visitantes', 'Woher Ihre Besucher kommen'],
 	'landing.card.sources.text': [
@@ -54,9 +54,8 @@ export const landing = {
 		'Elige tu página de agradecimiento como objetivo y Vision cuenta cada visita.',
 		'Wählen Sie Ihre Dankeseite als Ziel, Vision zählt jeden Besuch.'
 	],
-	'landing.demo.consent': ['This site uses cookies.', 'Ce site utilise des cookies.', 'Este sitio usa cookies.', 'Diese Website verwendet Cookies.'],
-	'landing.demo.accept': ['Accept', 'Accepter', 'Aceptar', 'Akzeptieren'],
-	'landing.demo.decline': ['Decline', 'Refuser', 'Rechazar', 'Ablehnen'],
+	'landing.demo.cookies': ['0 cookies', '0 cookie', '0 cookies', '0 Cookies'],
+	'landing.demo.adTrackers': ['0 ad trackers', '0 traceur publicitaire', '0 rastreadores publicitarios', '0 Werbe-Tracker'],
 	'landing.demo.noCookie': ['No cookies', 'Aucun cookie', 'Sin cookies', 'Keine Cookies'],
 	'landing.demo.sources': ['Sources', 'Sources', 'Fuentes', 'Quellen'],
 	'landing.demo.pages': ['Pages', 'Pages', 'Páginas', 'Seiten'],
@@ -144,10 +143,10 @@ export const landing = {
 		'Erstellen Sie Ihr kostenloses Konto und fügen Sie Ihre erste Website hinzu.'
 	],
 	'landing.tagline': [
-		'Your site’s visitors, with no cookie banner.',
-		'Les visites de votre site, sans bandeau cookies.',
-		'Las visitas de tu web, sin banner de cookies.',
-		'Die Besucher Ihrer Website, ohne Cookie-Banner.'
+		'Your site’s visitors, without cookies.',
+		'Les visites de votre site, sans cookies.',
+		'Las visitas de tu sitio, sin cookies.',
+		'Die Besuche Ihrer Website, ohne Cookies.'
 	],
 	'landing.dev.line': [
 		'One tag to paste, vision.track for your goals and an MCP server. Open source, and you can run it yourself.',

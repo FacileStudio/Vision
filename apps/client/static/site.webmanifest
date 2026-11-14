@@ -1,7 +1,7 @@
 {
   "name": "Vision",
   "short_name": "Vision",
-  "description": "See who visits your site and where they come from, with no cookie banner.",
+  "description": "See who visits your site and where they come from, without cookies.",
   "icons": [
     {
       "src": "/icon-192.png",

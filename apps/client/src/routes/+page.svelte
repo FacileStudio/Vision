@@ -17,13 +17,16 @@
 		type FeatureItem,
 		type WorksWithApp
 	} from '@facile/muse';
-	import { rememberLocale, t } from '$lib/i18n/index.svelte';
+	import { locale, rememberLocale, t } from '$lib/i18n/index.svelte';
 	import DashboardDemo from '$lib/components/landing/dashboard-demo.svelte';
 	import LandingCards from '$lib/components/landing/landing-cards.svelte';
 
 	const logo = 'solar:panorama-bold-duotone';
 	const signInHref = '/api/auth/oidc';
 	const repo = 'https://github.com/FacileStudio/Vision';
+	const selfHostHref = $derived(
+		`https://suite.facile.studio/${locale() === 'fr' ? '' : `${locale()}/`}auto-hebergement`
+	);
 	const width = 'mx-auto w-full max-w-5xl px-4 sm:px-6';
 
 	let redirecting = $state(true);
@@ -124,7 +127,7 @@
 			</section>
 
 			<div class="{width} pb-20">
-				<ForDevelopers rows={devRows} description={t('landing.dev.line')} />
+				<ForDevelopers rows={devRows} description={t('landing.dev.line')} {selfHostHref} />
 			</div>
 		</main>
 
