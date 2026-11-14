@@ -50,18 +50,7 @@ func RequireAuth(authService Authenticator) func(http.Handler) http.Handler {
 			authorization := request.Header.Get("Authorization")
 
 			if apiKeyAuth != nil && isAPIKey(authorization, request) {
-				key := extractAPIKey(authorization, request)
-				identity, err := apiKeyAuth.AuthenticateKey(request.Context(), key)
-				if err != nil {
-					httpjson.WriteError(w, err)
-					return
-				}
-				if !identity.Key.Write && !safeMethod(request.Method) {
-					httpjson.WriteError(w, errors.Forbidden("api key is read-only"))
-					return
-				}
-				authContext := authcontext.WithIdentity(request.Context(), identity)
-				next.ServeHTTP(w, request.WithContext(authContext))
+				serveKey(w, request, next, extractAPIKey(authorization, request))
 				return
 			}
 
@@ -80,6 +69,19 @@ func RequireAuth(authService Authenticator) func(http.Handler) http.Handler {
 			session.ServeHTTP(w, request)
 		})
 	}
+}
+
+func serveKey(w http.ResponseWriter, request *http.Request, next http.Handler, rawKey string) {
+	identity, err := apiKeyAuth.AuthenticateKey(request.Context(), rawKey)
+	if err != nil {
+		httpjson.WriteError(w, err)
+		return
+	}
+	if !identity.Key.Write && !safeMethod(request.Method) {
+		httpjson.WriteError(w, errors.Forbidden("api key is read-only"))
+		return
+	}
+	next.ServeHTTP(w, request.WithContext(authcontext.WithIdentity(request.Context(), identity)))
 }
 
 // isAPIKey and extractAPIKey read the two transports the API reference
