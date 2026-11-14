@@ -5,27 +5,21 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
-	"github.com/FacileStudio/porte"
-	"github.com/FacileStudio/tronc/errors"
+	"github.com/FacileStudio/porte/mcpauth"
 	mcpkit "github.com/FacileStudio/tronc/mcp"
 )
 
 const webActor = "vision-web"
 
 // pendingUser is the signed-in person of a confirm page request. Only the person's own
-// browser session passes: an API key or a delegated token must never confirm what an
-// agent asked for.
+// browser session passes: an API key, a bearer, a CLI session or a delegated token must
+// never confirm what an agent asked for.
 func pendingUser(r *http.Request) (string, error) {
-	authenticated, ok := porte.From(r.Context())
-	identity, found := authcontext.IdentityFromContext(r.Context())
-	if !ok || !found {
-		return "", errors.Unauthorized("missing auth")
+	identity, err := mcpauth.RequireOwnSession(r)
+	if err != nil {
+		return "", err
 	}
-	if authenticated.SessionID == 0 || authenticated.Actor != "" {
-		return "", mcpkit.ErrDelegated
-	}
-	return identity.UserID, nil
+	return strconv.FormatInt(identity.UserID, 10), nil
 }
 
 // describe adds the targeted site or goal, as it is now, to a confirm page item.

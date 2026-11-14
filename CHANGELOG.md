@@ -6,6 +6,16 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- MCP confirm page: only the person's own browser session confirms a pending action (porte v0.20.1 `mcpauth.RequireOwnSession`). A CLI session, a bearer next to the cookie or a delegated token gets 403; an API key gets 401. A cookie from before this release is refused too: `/pending` then shows a sign-in-again notice in en, fr, es and de instead of the raw error. Sign in once in the browser to confirm again.
+- tronc v0.23.1: an open confirmation is reused only for the same OAuth client.
+
+### Changed
+
+- tronc v0.23.1, porte v0.20.1, porte/mcpauth v0.3.1, porte/forfait v0.1.3, tronc/testdb v0.1.2.
+- MCP: the state key, the confirm page routes, the account check and the waiting and declined texts come from tronc and porte instead of Vision's own copies. Pending actions resolved or expired more than 30 days ago are pruned every hour.
+
 ## [0.9.0] - 2026-11-14
 
 ### Added

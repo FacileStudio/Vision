@@ -12,9 +12,6 @@ import (
 const (
 	statusDeleted = "deleted"
 	statusShared  = "shared"
-	waiting       = "Nothing happened yet: your client cannot ask the user to confirm. Give the user confirm_url and " +
-		"ask them to confirm there. Do not call this tool again for the same target; the request stays open for 7 days."
-	declined = "The user declined. Nothing happened."
 )
 
 // deleteSite is vision_delete_site: the site goes once the user confirms.
@@ -48,7 +45,7 @@ func (t *toolset) askSite(ctx context.Context, req *sdk.CallToolRequest, in site
 	if result != nil {
 		return result, siteOutput{}, nil
 	}
-	return nil, siteOutput{Status: outcome.Status, SiteID: site.ID, ConfirmURL: outcome.ConfirmURL, Message: waiting}, nil
+	return nil, siteOutput{Status: outcome.Status, SiteID: site.ID, ConfirmURL: outcome.ConfirmURL, Message: outcome.Message}, nil
 }
 
 // resumeSite handles the retry that carries the user's answer about a site.
@@ -58,7 +55,7 @@ func (t *toolset) resumeSite(ctx context.Context, req *sdk.CallToolRequest, user
 		return nil, siteOutput{}, mcpkit.Failure(err, "Call the tool again to ask the user afresh.")
 	}
 	if outcome.Status == mcpkit.StatusDeclined {
-		return nil, siteOutput{Status: mcpkit.StatusDeclined, Message: declined}, nil
+		return nil, siteOutput{Status: mcpkit.StatusDeclined, Message: outcome.Message}, nil
 	}
 	_, siteID, _ := refOf(outcome.Action)
 	id, _ := strconv.ParseInt(siteID, 10, 64)
@@ -94,7 +91,7 @@ func (t *toolset) deleteGoal(ctx context.Context, req *sdk.CallToolRequest, in g
 	if result != nil {
 		return result, goalOutput{}, nil
 	}
-	return nil, goalOutput{Status: outcome.Status, GoalID: goal.ID, ConfirmURL: outcome.ConfirmURL, Message: waiting}, nil
+	return nil, goalOutput{Status: outcome.Status, GoalID: goal.ID, ConfirmURL: outcome.ConfirmURL, Message: outcome.Message}, nil
 }
 
 // resumeGoal handles the retry that carries the user's answer about a goal.
@@ -104,7 +101,7 @@ func (t *toolset) resumeGoal(ctx context.Context, req *sdk.CallToolRequest) (*sd
 		return nil, goalOutput{}, mcpkit.Failure(err, "Call vision_delete_goal again to ask the user afresh.")
 	}
 	if outcome.Status == mcpkit.StatusDeclined {
-		return nil, goalOutput{Status: mcpkit.StatusDeclined, Message: declined}, nil
+		return nil, goalOutput{Status: mcpkit.StatusDeclined, Message: outcome.Message}, nil
 	}
 	_, goalID, _ := refOf(outcome.Action)
 	id, _ := strconv.ParseInt(goalID, 10, 64)

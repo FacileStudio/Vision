@@ -34,6 +34,12 @@ func (f *fixture) page(t *testing.T, method, path, user, actor string, out any) 
 	if actor != "" {
 		req.Header.Set("X-Test-Actor", actor)
 	}
+	return f.send(t, req, out)
+}
+
+// send runs a confirm page request and decodes a 200 body into out.
+func (f *fixture) send(t *testing.T, req *http.Request, out any) int {
+	t.Helper()
 	resp, err := http.DefaultClient.Do(req)
 	must(t, err)
 	defer func() { _ = resp.Body.Close() }()
@@ -104,5 +110,34 @@ func TestPendingPageRefusesAChangedSite(t *testing.T) {
 	}
 	if f.count("sites", "id = ?", f.site.ID) != 1 {
 		t.Fatal("the site must stay")
+	}
+}
+
+// TestPendingPageConfirmsOnlyFromTheBrowserSession refuses the owner's CLI session and a
+// cookie sent next to a bearer, then lets the owner's browser session confirm.
+func TestPendingPageConfirmsOnlyFromTheBrowserSession(t *testing.T) {
+	f := newFixture(t)
+	session := f.connect(t, "owner", mcptest.ClientOptions{})
+	var asked siteResult
+	call(t, session, "vision_delete_site", map[string]any{"site_id": f.site.ID}, &asked)
+	var list pendingList
+	f.page(t, http.MethodGet, "/", "owner", "", &list)
+	if len(list.Actions) != 1 {
+		t.Fatalf("want one action, got %+v", list)
+	}
+	confirm := strings.TrimSuffix(f.resource, "/mcp") + "/api/mcp/pending/" + list.Actions[0].ID + "/confirm"
+	for header, value := range map[string]string{"X-Test-Session": "cli", "Authorization": "Bearer agent-token"} {
+		req, _ := http.NewRequest(http.MethodPost, confirm, strings.NewReader("{}"))
+		req.Header.Set("X-Test-User", strconv.FormatInt(f.users["owner"], 10))
+		req.Header.Set(header, value)
+		if code := f.send(t, req, nil); code != http.StatusForbidden {
+			t.Fatalf("%s must not confirm, got %d", header, code)
+		}
+	}
+	if f.count("sites", "id = ?", f.site.ID) != 1 {
+		t.Fatal("nothing is deleted before the browser session confirms")
+	}
+	if code := f.page(t, http.MethodPost, "/"+list.Actions[0].ID+"/confirm", "owner", "", nil); code != http.StatusOK {
+		t.Fatalf("the browser session confirms, got %d", code)
 	}
 }

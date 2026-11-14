@@ -214,7 +214,8 @@ func must(t testing.TB, err error) {
 }
 
 // sessions stands in for porte on the confirm page: X-Test-User is the signed-in user,
-// and X-Test-Actor makes the request a delegated token.
+// X-Test-Actor makes the request a delegated token, and X-Test-Session: cli a session a
+// CLI login minted, which carries no browser mark.
 type sessions struct{}
 
 // RequireAuth attaches the test identity, as porte/kit's middleware does.
@@ -225,9 +226,12 @@ func (sessions) RequireAuth(next http.Handler) http.Handler {
 			http.Error(w, "unauthenticated", http.StatusUnauthorized)
 			return
 		}
-		identity := porte.Identity{UserID: id, SessionID: 1, Actor: r.Header.Get("X-Test-Actor")}
+		identity := porte.Identity{UserID: id, SessionID: 1, Actor: r.Header.Get("X-Test-Actor"), BrowserSession: true}
 		if identity.Actor != "" {
-			identity.SessionID = 0
+			identity.SessionID, identity.BrowserSession = 0, false
+		}
+		if r.Header.Get("X-Test-Session") == "cli" {
+			identity.BrowserSession = false
 		}
 		ctx := kit.WithIdentity(porte.WithIdentity(r.Context(), identity), kit.Identity{UserID: id})
 		next.ServeHTTP(w, r.WithContext(ctx))
