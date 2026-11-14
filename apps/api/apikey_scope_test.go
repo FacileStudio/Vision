@@ -43,17 +43,17 @@ func (sessionStub) AuthenticateToken(http.ResponseWriter, *http.Request, string)
 }
 
 type scopeFixture struct {
-	router           http.Handler
-	acme, beta       int64
-	siteA1, siteA2   int64
-	siteB            int64
-	goalB            int64
-	session, siteKey string
-	roWorkspaceKey   string
-	rwWorkspaceKey   string
-	rwSiteKey        string
-	roWideKey        string
-	rwWideKey        string
+	router         http.Handler
+	acme, beta     int64
+	siteA1, siteA2 int64
+	siteB          int64
+	goalB          int64
+	siteKey        string
+	roWorkspaceKey string
+	rwWorkspaceKey string
+	rwSiteKey      string
+	roWideKey      string
+	rwWideKey      string
 }
 
 func newScopeFixture(t *testing.T) *scopeFixture {
