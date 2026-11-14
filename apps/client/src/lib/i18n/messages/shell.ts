@@ -49,44 +49,57 @@ export const shell = {
 		'Sehen Sie Ihren Traffic.|Kennen Sie Ihr Publikum.'
 	],
 	'landing.heroText': [
-		'Vision is a lightweight, self-hosted analytics tracker for your projects. One script tag, zero config, full visibility.',
-		'Vision est un outil de statistiques léger et auto-hébergé pour vos projets. Une balise script, aucune configuration, une visibilité complète.',
-		'Vision es una herramienta de analítica ligera y autoalojada para tus proyectos. Una etiqueta script, cero configuración, visibilidad total.',
-		'Vision ist ein schlankes, selbst gehostetes Analyse-Tool für Ihre Projekte. Ein Script-Tag, keine Konfiguration, volle Transparenz.'
+		'Lightweight analytics for your sites. One script tag, live numbers.',
+		'Des statistiques légères pour vos sites. Une balise script, des chiffres en direct.',
+		'Analítica ligera para tus sitios. Una etiqueta script, cifras en directo.',
+		'Schlanke Webanalyse für Ihre Websites. Ein Script-Tag, Zahlen in Echtzeit.'
+	],
+	'landing.demo': [
+		'A Vision dashboard: visitors arrive, the counters roll and the current hour grows.',
+		'Un tableau de bord Vision. Les visiteurs arrivent, les compteurs défilent et l’heure en cours grandit.',
+		'Un panel de Vision. Llegan visitantes, los contadores suben y la hora actual crece.',
+		'Ein Vision-Dashboard. Besucher kommen, die Zähler laufen und die aktuelle Stunde wächst.'
 	],
 	'landing.feature.script.title': ['One script tag', 'Une seule balise script', 'Una sola etiqueta script', 'Ein einziges Script-Tag'],
 	'landing.feature.script.text': [
-		'Drop a single <script> tag on your site. No API keys, no config, nothing to maintain.',
-		'Ajoutez une seule balise <script> à votre site. Pas de clé d’API, pas de configuration, rien à maintenir.',
-		'Añade una sola etiqueta <script> a tu sitio. Sin claves de API, sin configuración, nada que mantener.',
-		'Fügen Sie Ihrer Website ein einziges <script>-Tag hinzu. Keine API-Schlüssel, keine Konfiguration, kein Wartungsaufwand.'
+		'Add one tag to your site. No keys, nothing to set up.',
+		'Ajoutez une balise à votre site. Pas de clé, rien à configurer.',
+		'Añade una etiqueta a tu sitio. Sin claves, nada que configurar.',
+		'Ein Tag auf Ihrer Website. Keine Schlüssel, nichts einzurichten.'
 	],
 	'landing.feature.realtime.title': ['Real-time analytics', 'Statistiques en temps réel', 'Analítica en tiempo real', 'Echtzeit-Analyse'],
 	'landing.feature.realtime.text': [
-		'Pageviews, visitors, entry and exit pages, referrers, devices and countries — one dashboard.',
-		'Pages vues, visiteurs, pages d’entrée et de sortie, sources, appareils et pays : un seul tableau de bord.',
-		'Visitas, visitantes, páginas de entrada y salida, fuentes, dispositivos y países: un solo panel.',
-		'Seitenaufrufe, Besucher, Ein- und Ausstiegsseiten, Quellen, Geräte und Länder: alles in einem Dashboard.'
+		'Visitors, pages, sources, devices and countries on one dashboard.',
+		'Visiteurs, pages, sources, appareils et pays sur un seul tableau de bord.',
+		'Visitantes, páginas, fuentes, dispositivos y países en un solo panel.',
+		'Besucher, Seiten, Quellen, Geräte und Länder in einem Dashboard.'
+	],
+	'landing.feature.goals.title': ['Goals', 'Objectifs', 'Objetivos', 'Ziele'],
+	'landing.feature.goals.text': [
+		'Count signups or purchases with one vision.track call.',
+		'Comptez inscriptions ou achats avec un appel à vision.track.',
+		'Cuenta registros o compras con una llamada a vision.track.',
+		'Zählen Sie Anmeldungen oder Käufe mit einem Aufruf von vision.track.'
 	],
 	'landing.feature.locked.title': ['Domain-locked', 'Verrouillé par domaine', 'Bloqueado por dominio', 'An die Domain gebunden'],
 	'landing.feature.locked.text': [
-		'Events are verified against the domains you registered, so nobody can inflate your numbers.',
-		'Les événements sont vérifiés par rapport aux domaines que vous avez déclarés : personne ne peut gonfler vos chiffres.',
-		'Los eventos se verifican con los dominios que registraste, así que nadie puede inflar tus cifras.',
-		'Ereignisse werden gegen die von Ihnen registrierten Domains geprüft, sodass niemand Ihre Zahlen verfälschen kann.'
+		'Vision checks each event against your domains, so nobody inflates your numbers.',
+		'Vision vérifie chaque événement selon vos domaines. Personne ne gonfle vos chiffres.',
+		'Vision comprueba cada evento con tus dominios, así nadie infla tus cifras.',
+		'Vision prüft jedes Ereignis gegen Ihre Domains, damit niemand Ihre Zahlen aufbläht.'
 	],
 	'landing.pricing': ['Pricing', 'Tarifs', 'Precios', 'Preise'],
 	'landing.tagline': [
-		'Privacy-friendly, self-hosted web analytics.',
-		'Des statistiques web respectueuses de la vie privée, auto-hébergées.',
-		'Analítica web autoalojada que respeta la privacidad.',
-		'Datenschutzfreundliche, selbst gehostete Webanalyse.'
+		'Privacy-friendly web analytics.',
+		'Des statistiques web respectueuses de la vie privée.',
+		'Analítica web que respeta la privacidad.',
+		'Datenschutzfreundliche Webanalyse.'
 	],
-	'landing.ctaTitle': ['Ready to sign in?', 'Prêt à vous connecter ?', '¿Listo para iniciar sesión?', 'Bereit zur Anmeldung?'],
+	'landing.ctaTitle': ['Start counting today', 'Commencez à compter aujourd’hui', 'Empieza a contar hoy', 'Starten Sie noch heute'],
 	'landing.ctaText': [
-		'Use your Facile account to reach Vision.',
-		'Utilisez votre compte Facile pour accéder à Vision.',
-		'Usa tu cuenta de Facile para acceder a Vision.',
-		'Nutzen Sie Ihr Facile-Konto, um Vision zu öffnen.'
+		'Sign in with your Facile account and add your first site.',
+		'Connectez-vous avec votre compte Facile et ajoutez votre premier site.',
+		'Inicia sesión con tu cuenta de Facile y añade tu primer sitio.',
+		'Melden Sie sich mit Ihrem Facile-Konto an und fügen Sie Ihre erste Website hinzu.'
 	]
 } satisfies Record<string, Row>;

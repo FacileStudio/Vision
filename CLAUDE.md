@@ -76,7 +76,7 @@ Vision/
           (app)/              # authenticated layout group (dashboard, sites, profile, settings)
           login/              # login page
           share/[token]/      # public shared dashboard
-      static/                 # favicon, fonts (Goga Test), tracker script (s.js)
+      static/                 # favicon, icons, tracker script (s.js)
 ```
 
 ## Architecture Notes
