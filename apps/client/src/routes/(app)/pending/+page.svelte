@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { Button, Card, EmptyState, Skeleton, icons, toast } from '@facile/muse';
-	import { api, type PendingAction } from '$lib/backend';
+	import { Alert, Button, Card, EmptyState, Skeleton, icons, toast } from '@facile/muse';
+	import { ApiError, api, type PendingAction } from '$lib/backend';
 	import PendingCard from '$lib/components/pending-card.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 
@@ -10,6 +10,7 @@
 	let loading = $state(true);
 	let busy = $state('');
 	let shared = $state('');
+	let signInAgain = $state(false);
 
 	const focused = $derived(page.url.searchParams.get('action') ?? '');
 	const ordered = $derived([
@@ -19,13 +20,19 @@
 
 	onMount(load);
 
+	/** Reports whether the API refused this session for confirming, and shows the sign-in prompt if so. */
+	function refusedSession(err: unknown): boolean {
+		signInAgain = err instanceof ApiError && err.status === 403;
+		return signInAgain;
+	}
+
 	/** Loads the open actions. */
 	async function load() {
 		loading = true;
 		try {
 			actions = (await api.pending.list()).actions;
-		} catch {
-			toast.danger(t('pending.loadFailed'));
+		} catch (err) {
+			if (!refusedSession(err)) toast.danger(t('pending.loadFailed'));
 		}
 		loading = false;
 	}
@@ -39,8 +46,10 @@
 			if (result.url) shared = result.url;
 			else toast.success(t('pending.done.deleted'));
 		} catch (err) {
-			toast.danger(err instanceof Error ? err.message : t('pending.failed'));
-			await load();
+			if (!refusedSession(err)) {
+				toast.danger(err instanceof Error ? err.message : t('pending.failed'));
+				await load();
+			}
 		}
 		busy = '';
 	}
@@ -53,7 +62,7 @@
 			toast.success(t('pending.dismissed'));
 			actions = actions.filter((item) => item.id !== action.id);
 		} catch (err) {
-			toast.danger(err instanceof Error ? err.message : t('pending.failed'));
+			if (!refusedSession(err)) toast.danger(err instanceof Error ? err.message : t('pending.failed'));
 		}
 		busy = '';
 	}
@@ -94,7 +103,14 @@
 		</Card>
 	{/if}
 
-	{#if loading}
+	{#if signInAgain}
+		<Alert tone="warning" title={t('pending.signInAgain.title')}>
+			<p>{t('pending.signInAgain.body')}</p>
+			<Button href="/api/auth/oidc" class="mt-3 w-full sm:w-auto [@media(pointer:coarse)]:h-11">
+				{t('pending.signInAgain.action')}
+			</Button>
+		</Alert>
+	{:else if loading}
 		{#each [0, 1] as row (row)}
 			<Skeleton class="h-40 w-full rounded-fc-md" />
 		{/each}
