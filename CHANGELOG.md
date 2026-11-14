@@ -6,6 +6,17 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-14
+
+### Changed
+
+- Landing page: the headline now reads "Vos statistiques, sans cookies" instead of claiming no cookie banner is needed, in en, fr, es and de, with the matching title, subtitle, meta description, web manifest, footer line and sign-in tagline. The tracker keeps a visitor id in localStorage with no expiry, so the no-consent-banner claim is not verified against the CNIL audience-measurement exemption yet.
+- Landing page: the first card is now "Aucun cookie déposé". Its demo shows the "Aucun cookie" badge and "0 cookie · 0 traceur publicitaire" instead of a consent banner sliding away.
+
+### Fixed
+
+- Landing page: the "for developers" block links to the suite self-hosting page (suite.facile.studio/auto-hebergement, localized for en, es and de).
+
 ## [0.11.0] - 2026-11-14
 
 ### Changed
