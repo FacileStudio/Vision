@@ -6,6 +6,21 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-14
+
+### Changed
+
+- Landing page: the headline now says what a site owner gets, "Vos statistiques, sans bandeau cookies", with the same title, subtitle, meta description and footer line in en, fr, es and de.
+- Landing page: "Créer un compte gratuit" is the main button, beside "Se connecter avec Facile" (muse v0.24.0 `LandingCta`).
+- Landing page: the hero demo now fills in the top sources and pages, and three animated cards show the missing cookie banner, where visitors come from, and goals counting sales and sign-ups.
+- Landing page: a feature list, a "works with" row for Bulle and Docs, a per-app plan note under pricing, and a "for developers" block at the bottom with the tracking tag, `vision.track`, the MCP server and the source code.
+- The current-hour bar in the demo animates with a transform instead of its height.
+- The sign-in page, the web manifest and the static meta tags drop "self-hosted", "hosted on your server" and "GDPR compliant".
+
+### Fixed
+
+- Icons: Vision bundles the Solar and MDI glyphs it uses (`bun run icons`) and registers them with muse, so muse's inline `Icon` never draws an empty box or calls api.iconify.design.
+
 ## [0.10.1] - 2026-11-14
 
 ### Fixed
