@@ -20,6 +20,13 @@
 
 	onMount(load);
 
+	/** Keeps this page for the tab so the layout reopens it once the new session is back. */
+	function keepReturn() {
+		try {
+			sessionStorage.setItem('vision.return', page.url.pathname + page.url.search);
+		} catch {}
+	}
+
 	/** Reports whether the API refused this session for confirming, and shows the sign-in prompt if so. */
 	function refusedSession(err: unknown): boolean {
 		signInAgain = err instanceof ApiError && err.status === 403;
@@ -106,7 +113,7 @@
 	{#if signInAgain}
 		<Alert tone="warning" title={t('pending.signInAgain.title')}>
 			<p>{t('pending.signInAgain.body')}</p>
-			<Button href="/api/auth/oidc" class="mt-3 w-full sm:w-auto [@media(pointer:coarse)]:h-11">
+			<Button href="/api/auth/oidc" onclick={keepReturn} class="mt-3 w-full sm:w-auto [@media(pointer:coarse)]:h-11">
 				{t('pending.signInAgain.action')}
 			</Button>
 		</Alert>

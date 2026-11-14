@@ -19,10 +19,6 @@ func newMCP(ctx context.Context, appEnv env.Config, authn authentication, deps m
 	if appEnv.OIDC == nil || appEnv.OIDC.MCPResource == "" {
 		return nil, nil
 	}
-	sqlDB, err := deps.DB.DB()
-	if err != nil {
-		return nil, err
-	}
 	verifier, err := mcpauth.Verifier(ctx, mcpauth.Config{
 		Issuer:      appEnv.OIDC.Issuer,
 		Resource:    appEnv.OIDC.MCPResource,
@@ -35,8 +31,10 @@ func newMCP(ctx context.Context, appEnv env.Config, authn authentication, deps m
 	if err != nil {
 		return nil, err
 	}
-	pending := mcpkit.PostgresPending{DB: sqlDB}
-	go mcpkit.KeepPruned(ctx, pending, 0, 0, appLogger)
+	pending, err := keepPending(ctx, deps, appLogger)
+	if err != nil {
+		return nil, err
+	}
 	appLogger.Info("mcp server on", slog.String("resource", appEnv.OIDC.MCPResource))
 	return mcp.NewService(deps, mcp.Config{
 		Resource: appEnv.OIDC.MCPResource,
@@ -48,4 +46,15 @@ func newMCP(ctx context.Context, appEnv env.Config, authn authentication, deps m
 		Pending:  pending,
 		Logger:   appLogger,
 	})
+}
+
+// keepPending returns the Postgres pending store and prunes it every hour until ctx ends.
+func keepPending(ctx context.Context, deps mcp.Deps, appLogger *slog.Logger) (mcpkit.PostgresPending, error) {
+	sqlDB, err := deps.DB.DB()
+	if err != nil {
+		return mcpkit.PostgresPending{}, err
+	}
+	pending := mcpkit.PostgresPending{DB: sqlDB}
+	go mcpkit.KeepPruned(ctx, pending, 0, 0, appLogger)
+	return pending, nil
 }
