@@ -13,7 +13,8 @@ import (
 // newMCP builds the MCP server over deps when SSO is on and MCP_RESOURCE is set, and
 // nothing otherwise. The verifier runs Registre discovery here, so a wrong issuer fails at
 // boot like the OIDC kit does. A person's first MCP call creates their account through
-// the OIDC kit, as a first web login would.
+// the OIDC kit, as a first web login would. Pending actions resolved or expired a month ago
+// are pruned every hour until ctx ends.
 func newMCP(ctx context.Context, appEnv env.Config, authn authentication, deps mcp.Deps, appLogger *slog.Logger) (*mcp.Service, error) {
 	if appEnv.OIDC == nil || appEnv.OIDC.MCPResource == "" {
 		return nil, nil
@@ -34,15 +35,17 @@ func newMCP(ctx context.Context, appEnv env.Config, authn authentication, deps m
 	if err != nil {
 		return nil, err
 	}
+	pending := mcpkit.PostgresPending{DB: sqlDB}
+	go mcpkit.KeepPruned(ctx, pending, 0, 0, appLogger)
 	appLogger.Info("mcp server on", slog.String("resource", appEnv.OIDC.MCPResource))
 	return mcp.NewService(deps, mcp.Config{
 		Resource: appEnv.OIDC.MCPResource,
 		Issuer:   appEnv.OIDC.Issuer,
 		Version:  version,
 		Origins:  []string{appEnv.Domain},
-		StateKey: appEnv.OIDC.MCPStateKey(),
+		StateKey: mcpkit.StateKey("vision", appEnv.OIDC.ClientSecret),
 		Verifier: verifier,
-		Pending:  mcpkit.PostgresPending{DB: sqlDB},
+		Pending:  pending,
 		Logger:   appLogger,
 	})
 }

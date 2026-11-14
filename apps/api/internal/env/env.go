@@ -4,7 +4,6 @@ import (
 	"github.com/FacileStudio/porte"
 	troncenv "github.com/FacileStudio/tronc/env"
 
-	"crypto/sha256"
 	"fmt"
 	"net/netip"
 	"strconv"
@@ -23,13 +22,6 @@ type OIDCConfig struct {
 	// https://vision.facile.studio/mcp in production, and the RFC 8707 resource
 	// Registre binds its tokens to, from MCP_RESOURCE. Empty leaves /mcp unmounted.
 	MCPResource string
-}
-
-// MCPStateKey derives the key that signs MCP confirmation state from the client
-// secret, which is secret, stable across restarts and set whenever OIDC is.
-func (o OIDCConfig) MCPStateKey() []byte {
-	sum := sha256.Sum256([]byte("vision-mcp-state:" + o.ClientSecret))
-	return sum[:]
 }
 
 // Config is the application's runtime configuration, loaded from the

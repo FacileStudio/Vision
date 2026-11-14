@@ -239,4 +239,8 @@ signed-in person confirms or dismisses it:
 | POST | `/mcp/pending/{id}/confirm` | session | Runs it once; 412 when the target changed since |
 | POST | `/mcp/pending/{id}/dismiss` | session | Closes it without running it |
 
-An API key or a delegated token cannot confirm: only the person's own browser session can.
+Only the person's own browser session can confirm (porte `mcpauth.RequireOwnSession`): the
+session cookie a browser sign-in minted, with no `Authorization` header. An API key, a bearer
+token, a CLI session or a delegated token gets 403, and so does a cookie issued before porte
+v0.20.0: the `/pending` page then asks the person to sign in again. Pending actions resolved or
+expired more than 30 days ago are pruned every hour.

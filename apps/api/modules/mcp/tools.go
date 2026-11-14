@@ -52,14 +52,11 @@ type toolset struct {
 // userOf reads the Vision user id from the verified token, in the decimal form the
 // services take, refused the way RequireAuth refuses it: a deleted account never acts.
 func (t *toolset) userOf(ctx context.Context, req *sdk.CallToolRequest) (string, error) {
-	identity, ok := mcpauth.Identity(req.Extra.TokenInfo)
-	if !ok {
+	account, err := mcpauth.AccountExists(ctx, req.Extra.TokenInfo, t.Accounts.Identity)
+	if err != nil {
 		return "", errNoCaller
 	}
-	if _, err := t.Accounts.Identity(ctx, identity.UserID); err != nil {
-		return "", errNoCaller
-	}
-	return strconv.FormatInt(identity.UserID, 10), nil
+	return strconv.FormatInt(account.UserID, 10), nil
 }
 
 // site reads a site the person can see, as GET /sites/{id} does.

@@ -135,7 +135,9 @@ func run() int {
 	goalService := goals.NewService(db)
 	apiKeyService := apikeys.NewService(db)
 	middleware.SetAPIKeyAuthenticator(apiKeyService)
-	mcpService, err := newMCP(context.Background(), appEnv, authn, mcp.Deps{
+	lifetime, endLifetime := context.WithCancel(context.Background())
+	defer endLifetime()
+	mcpService, err := newMCP(lifetime, appEnv, authn, mcp.Deps{
 		Workspaces: workspaceService, Sites: siteService, Analytics: analyticsService, Goals: goalService,
 		Live: activeTracker, Accounts: authn.users, DB: db,
 	}, appLogger)
