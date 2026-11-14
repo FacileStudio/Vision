@@ -3,28 +3,28 @@ import type { Row } from '../row';
 /** Strings for the signed-out landing page and its demos. */
 export const landing = {
 	'landing.title': [
-		'Vision · Your stats, without cookies',
-		'Vision · Vos statistiques, sans cookies',
-		'Vision · Tus estadísticas, sin cookies',
-		'Vision · Ihre Statistiken, ohne Cookies'
+		'Vision · Your stats, without tracking cookies',
+		'Vision · Vos statistiques, sans cookies de suivi',
+		'Vision · Tus estadísticas, sin cookies de seguimiento',
+		'Vision · Ihre Statistiken, ohne Tracking-Cookies'
 	],
 	'landing.description': [
-		'See who visits your site and where they come from. Vision uses no cookies. Free to start.',
-		'Voyez qui visite votre site et d’où il vient. Vision n’utilise aucun cookie. Gratuit pour commencer.',
-		'Mira quién visita tu sitio y de dónde viene. Vision no usa ninguna cookie. Gratis para empezar.',
-		'Sehen Sie, wer Ihre Website besucht und woher. Vision verwendet keine Cookies. Kostenlos starten.'
+		'See who visits your site and where they come from. Vision sets no tracking cookies and has no ad trackers. Free to start.',
+		'Voyez qui visite votre site et d’où il vient. Vision ne dépose aucun cookie de suivi et n’a aucun traceur publicitaire. Gratuit pour commencer.',
+		'Mira quién visita tu sitio y de dónde viene. Vision no instala cookies de seguimiento y no tiene rastreadores publicitarios. Gratis para empezar.',
+		'Sehen Sie, wer Ihre Website besucht und woher. Vision setzt keine Tracking-Cookies und hat keine Werbe-Tracker. Kostenlos starten.'
 	],
 	'landing.heroTitle': [
-		'Your stats, without cookies.',
-		'Vos statistiques, sans cookies.',
-		'Tus estadísticas, sin cookies.',
-		'Ihre Statistiken, ohne Cookies.'
+		'Your stats, without tracking cookies.',
+		'Vos statistiques, sans cookies de suivi.',
+		'Tus estadísticas, sin cookies de seguimiento.',
+		'Ihre Statistiken, ohne Tracking-Cookies.'
 	],
 	'landing.heroText': [
-		'See who visits your site and where they come from. Vision uses no cookies.',
-		'Voyez qui visite votre site et d’où il vient. Vision n’utilise aucun cookie.',
-		'Mira quién visita tu sitio y de dónde viene. Vision no usa ninguna cookie.',
-		'Sehen Sie, wer Ihre Website besucht und woher. Vision verwendet keine Cookies.'
+		'See who visits your site and where they come from. Vision sets no tracking cookies and has no ad trackers.',
+		'Voyez qui visite votre site et d’où il vient. Vision ne dépose aucun cookie de suivi et n’a aucun traceur publicitaire.',
+		'Mira quién visita tu sitio y de dónde viene. Vision no instala cookies de seguimiento y no tiene rastreadores publicitarios.',
+		'Sehen Sie, wer Ihre Website besucht und woher. Vision setzt keine Tracking-Cookies und hat keine Werbe-Tracker.'
 	],
 	'landing.demo': [
 		'A Vision dashboard: visitors arrive, the counters roll and the lists of sources and pages fill in.',
@@ -33,12 +33,12 @@ export const landing = {
 		'Ein Vision-Dashboard. Besucher kommen, die Zähler laufen und die Listen der Quellen und Seiten füllen sich.'
 	],
 	'landing.cards.title': ['What you get', 'Ce que vous y gagnez', 'Lo que ganas', 'Was Sie davon haben'],
-	'landing.card.cookie.title': ['No cookies set', 'Aucun cookie déposé', 'Ninguna cookie instalada', 'Keine Cookies gesetzt'],
+	'landing.card.cookie.title': ['No tracking cookies', 'Aucun cookie de suivi', 'Ninguna cookie de seguimiento', 'Keine Tracking-Cookies'],
 	'landing.card.cookie.text': [
-		'Vision counts visits without setting a single cookie on your visitors.',
-		'Vision compte les visites sans déposer un seul cookie chez vos visiteurs.',
-		'Vision cuenta las visitas sin instalar ni una cookie a tus visitantes.',
-		'Vision zählt Besuche, ohne bei Ihren Besuchern ein einziges Cookie zu setzen.'
+		'Vision counts visits with a random ID kept in the visitor’s browser. It sets no tracking cookie and sends nothing to ad networks.',
+		'Vision compte les visites avec un identifiant aléatoire gardé dans le navigateur du visiteur. Il ne dépose aucun cookie de suivi et n’envoie rien aux régies publicitaires.',
+		'Vision cuenta las visitas con un identificador aleatorio guardado en el navegador del visitante. No instala cookies de seguimiento ni envía nada a redes publicitarias.',
+		'Vision zählt Besuche mit einer zufälligen ID im Browser des Besuchers. Es setzt keine Tracking-Cookies und sendet nichts an Werbenetzwerke.'
 	],
 	'landing.card.sources.title': ['Where visitors come from', 'D’où viennent vos visiteurs', 'De dónde vienen tus visitantes', 'Woher Ihre Besucher kommen'],
 	'landing.card.sources.text': [
@@ -54,9 +54,9 @@ export const landing = {
 		'Elige tu página de agradecimiento como objetivo y Vision cuenta cada visita.',
 		'Wählen Sie Ihre Dankeseite als Ziel, Vision zählt jeden Besuch.'
 	],
-	'landing.demo.cookies': ['0 cookies', '0 cookie', '0 cookies', '0 Cookies'],
+	'landing.demo.cookies': ['0 tracking cookies', '0 cookie de suivi', '0 cookies de seguimiento', '0 Tracking-Cookies'],
 	'landing.demo.adTrackers': ['0 ad trackers', '0 traceur publicitaire', '0 rastreadores publicitarios', '0 Werbe-Tracker'],
-	'landing.demo.noCookie': ['No cookies', 'Aucun cookie', 'Sin cookies', 'Keine Cookies'],
+	'landing.demo.noCookie': ['No tracking cookies', 'Aucun cookie de suivi', 'Sin cookies de seguimiento', 'Keine Tracking-Cookies'],
 	'landing.demo.sources': ['Sources', 'Sources', 'Fuentes', 'Quellen'],
 	'landing.demo.pages': ['Pages', 'Pages', 'Páginas', 'Seiten'],
 	'landing.demo.goalSale': ['Purchase', 'Achat', 'Compra', 'Kauf'],
@@ -143,10 +143,10 @@ export const landing = {
 		'Erstellen Sie Ihr kostenloses Konto und fügen Sie Ihre erste Website hinzu.'
 	],
 	'landing.tagline': [
-		'Your site’s visitors, without cookies.',
-		'Les visites de votre site, sans cookies.',
-		'Las visitas de tu sitio, sin cookies.',
-		'Die Besuche Ihrer Website, ohne Cookies.'
+		'Your site’s visitors, without tracking cookies.',
+		'Les visites de votre site, sans cookies de suivi.',
+		'Las visitas de tu sitio, sin cookies de seguimiento.',
+		'Die Besuche Ihrer Website, ohne Tracking-Cookies.'
 	],
 	'landing.dev.line': [
 		'One tag to paste, vision.track for your goals and an MCP server. Open source, and you can run it yourself.',

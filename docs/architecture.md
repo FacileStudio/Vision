@@ -88,7 +88,7 @@ on the POST path, silently on the pixel paths, which still return the GIF so a
 misconfiguration never shows up as a broken image on someone's site.
 
 The visitor ID is a random string the tracker generates and keeps in `localStorage` under
-`_vs_id`. There are no cookies and the `pageviews` table has no IP column: country comes
+`_vs_id`. The tracker sets no cookies, and the `pageviews` table has no IP column: country comes
 from `CF-IPCountry` when Cloudflare supplies it, and is otherwise blank. Browser, OS and
 device are parsed from the user agent in `modules/events/useragent.go`.
 

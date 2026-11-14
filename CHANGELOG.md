@@ -6,6 +6,14 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- API keys are scoped on every request. A site key reaches only its site, a workspace key only the sites and space of that workspace, and `GET /sites`, `GET /analytics/summary` and `GET /workspaces` list only what the key covers. A `read` key can no longer write. No key can create keys, manage webhooks or members, or edit the owner's profile. Creating a key for a space needs membership of that space. Cookie sessions are unchanged.
+
+### Changed
+
+- Landing page, link preview, web manifest and sign-in line: "without cookies" becomes "without tracking cookies", in en, fr, es and de. The tracker keeps a random visitor id in localStorage, so the page no longer says Vision uses no cookies. The card now says what the id is and that nothing goes to ad networks. The og:image is regenerated.
+
 ## [0.11.3] - 2026-11-14
 
 ### Fixed
