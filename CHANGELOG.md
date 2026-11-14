@@ -6,6 +6,8 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-14
+
 ### Security
 
 - API keys are scoped on every request. A site key reaches only its site, a workspace key only the sites and space of that workspace, and `GET /sites`, `GET /analytics/summary` and `GET /workspaces` list only what the key covers. A `read` key can no longer write. No key can create keys, manage webhooks or members, or edit the owner's profile. Creating a key for a space needs membership of that space. Cookie sessions are unchanged.
