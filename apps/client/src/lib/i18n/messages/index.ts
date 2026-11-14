@@ -1,5 +1,6 @@
 import type { Catalogs, Message } from '@facile/muse';
 import { dashboard } from './dashboard';
+import { landing } from './landing';
 import { pending } from './pending';
 import { settings } from './settings';
 import { shell } from './shell';
@@ -10,6 +11,7 @@ import type { Row } from '../row';
 
 const rows = {
 	...shell,
+	...landing,
 	...sites,
 	...dashboard,
 	...team,

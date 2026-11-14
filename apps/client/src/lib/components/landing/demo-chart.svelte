@@ -19,13 +19,16 @@
 		{#each SHAPE.slice(SHAPE.length - count + 1) as height, i (i)}
 			<span class="vd-bar" style:height="{height}%"></span>
 		{/each}
-		<span bind:this={current} class="vd-bar vd-now" style:height="{Math.min(hour, 100)}%">
-			{#if tip}
-				<span class="vd-tip">
-					<b>{hourLabel(HOURS[HOURS.length - 1])}</b>
-					<span class="vd-tip-row">{t('stat.visitors')}<b class="tabular-nums">{fmt(hits)}</b></span>
-				</span>
-			{/if}
+		<span bind:this={current} class="vd-bar vd-now">
+			<span class="vd-fill" style:transform="scaleY({Math.min(hour, 100) / 100})"></span>
+			<span class="vd-track" style:transform="translateY({100 - Math.min(hour, 100)}%)">
+				{#if tip}
+					<span class="vd-tip">
+						<b>{hourLabel(HOURS[HOURS.length - 1])}</b>
+						<span class="vd-tip-row">{t('stat.visitors')}<b class="tabular-nums">{fmt(hits)}</b></span>
+					</span>
+				{/if}
+			</span>
 		</span>
 	</div>
 	<div class="vd-axis">
@@ -67,11 +70,23 @@
 		background: color-mix(in oklch, var(--color-fc-fg) 14%, transparent);
 	}
 	.vd-now {
+		align-self: stretch;
+		background: none;
+	}
+	.vd-fill,
+	.vd-track {
+		position: absolute;
+		inset: 0;
+		transition: transform 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+	}
+	.vd-fill {
+		border-radius: inherit;
 		background: var(--color-fc-accent);
-		transition: height 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+		transform-origin: bottom;
 	}
 	@media (prefers-reduced-motion: reduce) {
-		.vd-now {
+		.vd-fill,
+		.vd-track {
 			transition: none;
 		}
 	}

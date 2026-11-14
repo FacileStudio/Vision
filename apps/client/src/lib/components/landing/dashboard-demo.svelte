@@ -4,6 +4,8 @@
 	import { fmt } from '$lib/i18n/format';
 	import { t } from '$lib/i18n/index.svelte';
 	import DemoChart from './demo-chart.svelte';
+	import DemoLists from './demo-lists.svelte';
+	import DemoSidebar from './demo-sidebar.svelte';
 
 	const START = { visitors: 1284, pageviews: 3906, live: 7, hour: 18 };
 	const STEPS = [
@@ -20,6 +22,7 @@
 	let live = $state(START.live);
 	let hour = $state(START.hour);
 	let tip = $state(false);
+	let shown = $state(0);
 	let cursor = $state(cursorAt());
 	let current = $state<HTMLElement>();
 
@@ -29,6 +32,7 @@
 		live = START.live;
 		hour = START.hour;
 		tip = false;
+		shown = 0;
 		cursor.visible = false;
 	}
 
@@ -38,6 +42,7 @@
 		live = 21;
 		hour = 88;
 		tip = true;
+		shown = STEPS.length;
 	}
 
 	async function script(act: Act) {
@@ -47,15 +52,15 @@
 			pageviews += step.pageviews;
 			live = step.live;
 			hour += 12;
+			shown += 1;
 			await act.wait(900);
 		}
 		cursor.visible = true;
 		await act.move(cursor, act.point(current, 0.55, 0.35));
 		tip = true;
-		await act.wait(2200);
-		cursor.visible = false;
-		tip = false;
-		await act.wait(500);
+		await act.wait(2400);
+		reset();
+		await act.wait(700);
 	}
 </script>
 
@@ -80,20 +85,14 @@
 {/snippet}
 
 {#snippet sidebar()}
-	<div class="vd-nav">
-		<span class="vd-brand"><Icon icon="solar:panorama-bold-duotone" size={18} />Vision</span>
-		<span class="vd-nav-row vd-active"><Bar w="62%" /></span>
-		<span class="vd-nav-row"><Bar w="48%" /></span>
-		<span class="vd-nav-row"><Bar w="56%" /></span>
-		<span class="vd-nav-row"><Bar w="40%" /></span>
-	</div>
+	<DemoSidebar />
 {/snippet}
 
 <div class="vd-host">
 	<Stage
-		width={1152}
-		height={584}
-		compact={{ below: 640, width: 358, height: 500 }}
+		width={976}
+		height={640}
+		compact={{ below: 640, width: 358, height: 600 }}
 		{script}
 		{reset}
 		{poster}
@@ -101,7 +100,7 @@
 	>
 		{#snippet children({ compact })}
 			{#if compact}
-				<Window style="top:8px;left:8px;width:342px;height:454px">
+				<Window style="top:8px;left:8px;width:342px;height:556px">
 					<div class="vd-body vd-compact">
 						{@render header()}
 						<div class="vd-stats vd-two">
@@ -109,10 +108,11 @@
 							{@render stat(t('stat.activeNow'), live, true)}
 						</div>
 						<DemoChart count={7} {hour} {tip} hits={visitors - START.visitors + 96} bind:current />
+						<DemoLists {shown} compact />
 					</div>
 				</Window>
 			{:else}
-				<Window style="top:8px;left:12px;width:1128px;height:528px" {sidebar}>
+				<Window style="top:8px;left:12px;width:952px;height:584px" {sidebar}>
 					<div class="vd-body">
 						{@render header()}
 						<div class="vd-stats">
@@ -121,6 +121,7 @@
 							{@render stat(t('stat.activeNow'), live, true)}
 						</div>
 						<DemoChart count={12} {hour} {tip} hits={visitors - START.visitors + 96} bind:current />
+						<DemoLists {shown} />
 					</div>
 				</Window>
 			{/if}
@@ -146,31 +147,6 @@
 	.vd-compact {
 		gap: 12px;
 		padding: 14px;
-	}
-	.vd-nav {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		padding: 16px 12px;
-	}
-	.vd-brand {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 0 8px 12px;
-		font-family: var(--font-fc-title);
-		font-size: 14px;
-		font-weight: 700;
-	}
-	.vd-nav-row {
-		display: flex;
-		align-items: center;
-		height: 32px;
-		padding: 0 10px;
-		border-radius: 8px;
-	}
-	.vd-active {
-		background: var(--mes-w-body);
 	}
 	.vd-head {
 		display: flex;

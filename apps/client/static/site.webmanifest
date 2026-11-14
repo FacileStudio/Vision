@@ -1,7 +1,7 @@
 {
   "name": "Vision",
   "short_name": "Vision",
-  "description": "A lightweight script, no cookies and real-time numbers. GDPR compliant by design, hosted on your server.",
+  "description": "See who visits your site and where they come from, with no cookie banner.",
   "icons": [
     {
       "src": "/icon-192.png",

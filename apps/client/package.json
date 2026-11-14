@@ -8,6 +8,7 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
+		"icons": "bun run scripts/build-icons.ts",
 		"test": "bun test && bun run scripts/check-messages.ts",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -30,7 +31,7 @@
 	"dependencies": {
 		"@facile/client": "github:FacileStudio/facile-client#v0.2.0",
 		"@facile/mise-en-scene": "github:FacileStudio/mise-en-scene#v0.2.2",
-		"@facile/muse": "github:FacileStudio/muse#v0.23.0",
+		"@facile/muse": "github:FacileStudio/muse#v0.24.0",
 		"d3-geo": "^3.1.1",
 		"iconify-icon": "^3.0.2",
 		"topojson-client": "^3.1.0",
