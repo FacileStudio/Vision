@@ -68,7 +68,7 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 
 		router.Get("/summary", summaryHandler(service, tracker))
 
-		router.Get("/{siteId}/overview", func(w http.ResponseWriter, request *http.Request) {
+		router.With(siteaccess.KeyGuard(orm, "siteId")).Get("/{siteId}/overview", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			siteID, err := strconv.ParseInt(chi.URLParam(request, "siteId"), 10, 64)
 			if err != nil {
@@ -95,7 +95,7 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 			httpjson.WriteJSON(w, http.StatusOK, resp)
 		})
 
-		router.Get("/{siteId}/realtime", func(w http.ResponseWriter, request *http.Request) {
+		router.With(siteaccess.KeyGuard(orm, "siteId")).Get("/{siteId}/realtime", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			siteID, err := strconv.ParseInt(chi.URLParam(request, "siteId"), 10, 64)
 			if err != nil {
@@ -113,7 +113,7 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 			httpjson.WriteJSON(w, http.StatusOK, map[string]int64{"visitors": visitors})
 		})
 
-		router.Get("/{siteId}/export", func(w http.ResponseWriter, request *http.Request) {
+		router.With(siteaccess.KeyGuard(orm, "siteId")).Get("/{siteId}/export", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
 			siteID, err := strconv.ParseInt(chi.URLParam(request, "siteId"), 10, 64)
 			if err != nil {

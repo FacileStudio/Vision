@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/FacileStudio/Vision/apps/api/internal/siteaccess"
 	"github.com/FacileStudio/tronc/errors"
 )
 
@@ -57,13 +58,14 @@ func (s *Service) Summary(ctx context.Context, userID int64, workspaceID int64, 
 // readableSites loads the sites of every workspace userID is a member of, or of the one
 // workspace when workspaceID is positive and userID belongs to it.
 func (s *Service) readableSites(ctx context.Context, userID int64, workspaceID int64, into *[]SiteSummary) error {
+	scope, scopeArgs := siteaccess.ScopeSQL(ctx, "s.id", "s.workspace_id")
 	err := s.orm.WithContext(ctx).Raw(`
 		SELECT s.id AS site_id, s.name, s.domain, s.workspace_id, w.name AS workspace_name
 		FROM sites s
 		JOIN workspaces w ON w.id = s.workspace_id
 		WHERE EXISTS (SELECT 1 FROM workspace_members m WHERE m.workspace_id = s.workspace_id AND m.user_id = ?)
-		  AND (? = 0 OR s.workspace_id = ?)
-		ORDER BY s.id`, userID, workspaceID, workspaceID).Scan(into).Error
+		  AND (? = 0 OR s.workspace_id = ?)`+scope+`
+		ORDER BY s.id`, append([]any{userID, workspaceID, workspaceID}, scopeArgs...)...).Scan(into).Error
 	if err != nil {
 		return errors.Internal("failed to list sites", err)
 	}

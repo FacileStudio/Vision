@@ -27,7 +27,7 @@ func RegisterRoutes(router chi.Router, service *Service) {
 				httpjson.WriteJSON(w, http.StatusOK, resp)
 			})
 
-			router.Put("/me", func(w http.ResponseWriter, request *http.Request) {
+			router.With(middleware.RefuseKeys).Put("/me", func(w http.ResponseWriter, request *http.Request) {
 				identity, _ := authcontext.IdentityFromContext(request.Context())
 				var req UpdateProfileRequest
 				if err := httpjson.DecodeJSON(w, request, &req); err != nil {

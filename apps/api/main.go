@@ -173,10 +173,10 @@ func run() int {
 	workspaces.RegisterRoutes(api, workspaceService, authService)
 	stopDirectory := startDirectory(api, db, authn, appEnv, appLogger)
 	defer stopDirectory()
-	sites.RegisterRoutes(api, siteService, authService)
+	sites.RegisterRoutes(api, siteService, db, authService)
 	events.RegisterRoutes(api, eventService, eventHub, activeTracker, authService, db)
 	analytics.RegisterRoutes(api, analyticsService, activeTracker, db, authService)
-	goals.RegisterRoutes(api, goalService, authService)
+	goals.RegisterRoutes(api, goalService, db, authService)
 	apikeys.RegisterRoutes(api, apiKeyService, authService)
 	webhooks.RegisterRoutes(api, webhooks.NewService(db), analyticsService, authService)
 	if mcpService != nil {

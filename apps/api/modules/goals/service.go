@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FacileStudio/Vision/apps/api/internal/authcontext"
 	"github.com/FacileStudio/Vision/apps/api/internal/siteaccess"
 	"github.com/FacileStudio/Vision/apps/api/schemas"
 	"github.com/FacileStudio/tronc/errors"
@@ -192,7 +193,19 @@ func (s *Service) findOwned(ctx context.Context, ownerID string, goalID string) 
 	if err != nil {
 		return nil, errors.Internal("failed to read goal", err)
 	}
+	if !s.keyAllowsSite(ctx, record.SiteID) {
+		return nil, errors.NotFound("goal not found")
+	}
 	return &record, nil
+}
+
+func (s *Service) keyAllowsSite(ctx context.Context, siteID int64) bool {
+	if authcontext.KeyFromContext(ctx) == nil {
+		return true
+	}
+	var found []int64
+	s.orm.WithContext(ctx).Table("sites").Where("id = ?", siteID).Pluck("workspace_id", &found)
+	return len(found) > 0 && siteaccess.KeyAllowsSite(ctx, siteID, found[0])
 }
 
 func toResponse(record *schemas.Goal) *GoalResponse {
