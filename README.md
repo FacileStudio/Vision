@@ -1,9 +1,9 @@
 # Vision
 
-Self-hosted, cookie-free web analytics. Drop a 3.7 KB unminified script on a site, watch
+Self-hosted web analytics with no tracking cookies and no ad trackers. Drop a 3.7 KB unminified script on a site, watch
 pageviews, visitors, referrers and goals in a SvelteKit dashboard you own.
 
-Visitors are identified by a random ID in `localStorage`, not a cookie, and no IP address is
+Visitors are identified by a random ID in `localStorage`, not a tracking cookie, and no IP address is
 ever stored — country comes from Cloudflare's `CF-IPCountry` header when it is present.
 
 Live at [vision.facile.studio](https://vision.facile.studio).

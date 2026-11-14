@@ -1,7 +1,7 @@
 {
   "name": "Vision",
   "short_name": "Vision",
-  "description": "See who visits your site and where they come from. Vision uses no cookies. Free to start.",
+  "description": "See who visits your site and where they come from. Vision sets no tracking cookies and has no ad trackers. Free to start.",
   "icons": [
     {
       "src": "/icon-192.png",
