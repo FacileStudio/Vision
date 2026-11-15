@@ -17,7 +17,7 @@ require (
 )
 
 require (
-	github.com/FacileStudio/porte/forfait v0.1.3 // indirect
+	github.com/FacileStudio/porte/forfait v0.1.3
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect

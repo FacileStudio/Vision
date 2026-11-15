@@ -14,12 +14,14 @@ import (
 	documentation "github.com/FacileStudio/Vision/apps/api/internal/documentation"
 	"github.com/FacileStudio/Vision/apps/api/internal/env"
 	"github.com/FacileStudio/Vision/apps/api/internal/middleware"
+	"github.com/FacileStudio/Vision/apps/api/internal/plans"
 	"github.com/FacileStudio/Vision/apps/api/migrations"
 	"github.com/FacileStudio/Vision/apps/api/modules/analytics"
 	"github.com/FacileStudio/Vision/apps/api/modules/apikeys"
 	"github.com/FacileStudio/Vision/apps/api/modules/auth"
 	"github.com/FacileStudio/Vision/apps/api/modules/events"
 	"github.com/FacileStudio/Vision/apps/api/modules/goals"
+	"github.com/FacileStudio/Vision/apps/api/modules/ideas"
 	"github.com/FacileStudio/Vision/apps/api/modules/mcp"
 	"github.com/FacileStudio/Vision/apps/api/modules/sites"
 	"github.com/FacileStudio/Vision/apps/api/modules/webhooks"
@@ -145,6 +147,11 @@ func run() int {
 		appLogger.Error("failed to build the mcp server", slog.Any("error", err))
 		return 1
 	}
+	ideasService, plansGate, err := newIdeas(lifetime, db, appEnv, authn, analyticsService, appLogger)
+	if err != nil {
+		appLogger.Error("failed to set up bulle", slog.Any("error", err))
+		return 1
+	}
 	router := httpx.NewRouter(httpx.Config{
 		TrustedProxies: appEnv.TrustedProxies,
 		CDNProxies:     appEnv.CDNProxies,
@@ -171,7 +178,7 @@ func run() int {
 	}
 	auth.RegisterRoutes(api, authService)
 	workspaces.RegisterRoutes(api, workspaceService, authService)
-	stopDirectory := startDirectory(api, db, authn, appEnv, appLogger)
+	stopDirectory := startDirectory(api, db, authn, appEnv, plansGate, appLogger)
 	defer stopDirectory()
 	sites.RegisterRoutes(api, siteService, db, authService)
 	events.RegisterRoutes(api, eventService, eventHub, activeTracker, authService, db)
@@ -182,8 +189,15 @@ func run() int {
 	if mcpService != nil {
 		mcp.RegisterPendingRoutes(api, mcpService, authService)
 	}
+	if ideasService != nil {
+		if err := ideas.RegisterRoutes(api, ideasService, authService); err != nil {
+			appLogger.Error("failed to mount bulle", slog.Any("error", err))
+			return 1
+		}
+	}
 	router.Mount("/api", api)
 	webhooks.StartScheduler(db, analyticsService)
+	analyticsService.StartAnomalies(lifetime, appLogger)
 
 	if clientDir := spa.DirFromEnv(); spa.Available(clientDir) {
 		mountClient(router, spa.Handler(spa.Config{Dir: clientDir}))
@@ -233,13 +247,16 @@ func run() int {
 // background, when Vision signs in through Registre. The returned func stops both. Registre
 // being down or not serving the directory yet never fails the boot: each loop retries on its own while Vision keeps
 // serving what it has. Vision runs one replica, so this is the one deletion poller.
-func startDirectory(router chi.Router, db *gorm.DB, authn authentication, appEnv env.Config, appLogger *slog.Logger) func() {
+func startDirectory(router chi.Router, db *gorm.DB, authn authentication, appEnv env.Config, gate *plans.Gate, appLogger *slog.Logger) func() {
 	if appEnv.OIDC == nil {
 		return func() {}
 	}
 	oidcEnv := appEnv.OIDC
 	registre := workspaces.NewDirectory(db, oidcEnv.Issuer, oidcEnv.ClientID, oidcEnv.ClientSecret, appLogger)
 	registre.RefuseErased(authn.deletions)
+	if gate != nil {
+		registre.OnSnapshot(gate.Apply)
+	}
 	workspaces.RegisterDirectory(router, registre)
 
 	client := directory.Client{Issuer: oidcEnv.Issuer, ClientID: oidcEnv.ClientID, ClientSecret: oidcEnv.ClientSecret}
@@ -269,6 +286,7 @@ func referenceConfig() apiref.Config {
 			events.Documentation,
 			analytics.Documentation,
 			goals.Documentation,
+			ideas.Documentation,
 			apikeys.Documentation,
 			webhooks.Documentation,
 			mcp.Documentation,
