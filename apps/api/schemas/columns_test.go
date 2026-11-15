@@ -17,7 +17,7 @@ import (
 var queryModels = []any{
 	&User{}, &Workspace{}, &WorkspaceMember{},
 	&Site{}, &Pageview{}, &Webhook{}, &VisitorSession{},
-	&CustomEvent{}, &Goal{}, &APIKey{},
+	&CustomEvent{}, &Goal{}, &APIKey{}, &ForfaitState{},
 }
 
 var timeType = reflect.TypeFor[time.Time]()

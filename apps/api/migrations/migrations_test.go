@@ -88,8 +88,8 @@ func baselineUp(t *testing.T) string {
 
 func assertCurrent(t *testing.T, db *gorm.DB) {
 	t.Helper()
-	if got := appliedVersions(t, db); len(got) != 2 || got[0] != 1 || got[1] != 2 {
-		t.Fatalf("applied versions %v, want [1 2]", got)
+	if got := appliedVersions(t, db); len(got) != 4 || got[0] != 1 || got[1] != 2 || got[2] != 3 || got[3] != 4 {
+		t.Fatalf("applied versions %v, want [1 2 3 4]", got)
 	}
 	if got := columnDefault(t, db, "users", "created_at"); got != "now()" {
 		t.Fatalf("users.created_at default %q, want now()", got)
