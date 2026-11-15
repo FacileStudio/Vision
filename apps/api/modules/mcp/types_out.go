@@ -106,3 +106,16 @@ type goalOutput struct {
 	ConfirmURL string   `json:"confirm_url,omitempty"`
 	Message    string   `json:"message,omitempty"`
 }
+
+// anomaliesOutput answers vision_list_anomalies.
+type anomaliesOutput struct {
+	Site      siteOut             `json:"site"`
+	Range     rangeOut            `json:"range"`
+	Anomalies []analytics.Anomaly `json:"anomalies"`
+}
+
+// compareOutput answers vision_compare_periods.
+type compareOutput struct {
+	Site siteOut `json:"site"`
+	analytics.CompareResponse
+}

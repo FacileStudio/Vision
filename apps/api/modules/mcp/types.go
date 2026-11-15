@@ -74,3 +74,22 @@ type updateGoalInput struct {
 type goalInput struct {
 	GoalID int64 `json:"goal_id" jsonschema:"one of your own goals, from vision_list_goals"`
 }
+
+// anomaliesInput is vision_list_anomalies's input.
+type anomaliesInput struct {
+	SiteID int64  `json:"site_id" jsonschema:"the site, from vision_list_sites"`
+	From   string `json:"from,omitempty" jsonschema:"first day to include, such as 2026-11-01, in UTC. Default 30 days ago"`
+	To     string `json:"to,omitempty" jsonschema:"last day, included. Default today"`
+	Metric string `json:"metric,omitempty" jsonschema:"only this metric: visitors, pageviews, goal_conversions or top_referrer_share. Default all"`
+	Limit  int    `json:"limit,omitempty" jsonschema:"at most this many anomalies, newest day first. Default 50, maximum 200"`
+}
+
+// compareInput is vision_compare_periods's input.
+type compareInput struct {
+	SiteID      int64  `json:"site_id" jsonschema:"the site, from vision_list_sites"`
+	From        string `json:"from,omitempty" jsonschema:"first day of the period, such as 2026-11-01, in UTC. Default 30 days ago"`
+	To          string `json:"to,omitempty" jsonschema:"last day of the period, included. Default today"`
+	CompareFrom string `json:"compare_from,omitempty" jsonschema:"first day of the period to compare with. Pass it with compare_to, or neither to use the period of equal length right before"`
+	CompareTo   string `json:"compare_to,omitempty" jsonschema:"last day of the period to compare with, included"`
+	Limit       int    `json:"limit,omitempty" jsonschema:"values per dimension, biggest change first. Default 10, maximum 50"`
+}
