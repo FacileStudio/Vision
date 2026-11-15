@@ -6,6 +6,12 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Anomaly detection with no model. Each completed UTC day of a site is compared with the same weekday of the previous four to eight weeks (median and MAD) for visitors, pageviews, goal conversions and the top referrer's share, with a minimum volume. Findings are stored with their direction, size, baseline and the paths, referrers, countries and devices that moved most. `GET /api/analytics/{siteId}/anomalies` lists them and `GET /api/analytics/{siteId}/compare` sets two periods side by side. Migration `00003_anomalies.sql`.
+- MCP tools `vision_list_anomalies` and `vision_compare_periods`, read-only, typed parameters.
+- Bulle in the API when `BULLE_URL` is set and SSO is on: `/api/ideas*` through `tronc/bulle`, and `POST /api/anomalies/{id}/explain`, which asks Bulle for a schema-validated explanation of one anomaly. Both need the `ai.access` plan and answer 402 with an upgrade URL without it. The plan comes from Registre's directory snapshots (migration `00004_forfait_state.sql`).
+
 ## [0.12.0] - 2026-11-14
 
 ### Security
