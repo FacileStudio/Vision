@@ -1,4 +1,5 @@
-import { bulleApi, ApiError, type IdeasResponse } from './bulle';
+import type { IdeasResponse } from './bulle';
+import { bulleApi, ApiError } from './bulle-api';
 import { bulleErrorKey, planRefusal } from './bulle-errors';
 import type { AppKey } from '$lib/i18n/messages';
 import { isActive, type RunEntry } from '$lib/ideas';

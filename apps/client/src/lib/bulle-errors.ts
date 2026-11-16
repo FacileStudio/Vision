@@ -1,5 +1,5 @@
 import type { AppKey } from '$lib/i18n/messages';
-import { ApiError } from './bulle';
+import { ApiError } from './bulle-api';
 
 const STATUS_KEYS: Record<number, AppKey> = {
 	409: 'ideas.error.busy',

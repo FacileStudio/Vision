@@ -1,4 +1,4 @@
-import { ApiError, request } from './backend';
+/** Types and pure helpers for the Bulle panel. Nothing here may import SvelteKit or the session client, so bun test can load it. */
 
 /** The metrics Vision's detector tracks. */
 export type AnomalyMetric = 'visitors' | 'pageviews' | 'goal_conversions' | 'top_referrer_share';
@@ -95,37 +95,6 @@ export interface IdeaRunResponse extends BulleRun {
 	outputs?: { call_id: string; tool: string; url: string; preview: string }[];
 	pending_approvals?: { call_id: string; tool: string; args?: unknown; grantable?: boolean }[];
 }
-
-const quiet = <T>(method: string, path: string, body?: unknown) => request<T>(method, path, body, true);
-
-const spaceQuery = (spaceId: number | null) => (spaceId ? `?space_id=${spaceId}` : '');
-
-/** Vision's calls to its own Bulle routes. Every one is quiet: the callers show the failure themselves. */
-export const bulleApi = {
-	anomalies: (siteId: number, from?: string, to?: string) => {
-		const params = new URLSearchParams({ limit: '30' });
-		if (from) params.set('from', from);
-		if (to) params.set('to', to);
-		return quiet<{ anomalies: Anomaly[] }>('GET', `/analytics/${siteId}/anomalies?${params}`);
-	},
-	explain: (anomalyId: number, lang: string) => quiet<Explanation>('POST', `/anomalies/${anomalyId}/explain?lang=${lang}`),
-	profile: () => quiet<BulleProfile>('GET', '/bulle/profile'),
-	startRun: (spaceId: number | null, body: { title: string; prompt: string; page?: PageContext }) =>
-		quiet<{ run_id: string; session_id: string }>('POST', `/bulle/runs${spaceQuery(spaceId)}`, body),
-	run: (runId: string) => quiet<BulleRun>('GET', `/bulle/runs/${encodeURIComponent(runId)}`),
-	ideas: {
-		list: (spaceId: number | null) => quiet<IdeasResponse>('GET', `/ideas${spaceQuery(spaceId)}`),
-		generate: (spaceId: number | null) => quiet<{ batch_id: string }>('POST', `/ideas/generate${spaceQuery(spaceId)}`),
-		run: (id: string, spaceId: number | null) =>
-			quiet<{ run_id: string }>('POST', `/ideas/${encodeURIComponent(id)}/run${spaceQuery(spaceId)}`),
-		dismiss: (id: string) => quiet<void>('POST', `/ideas/${encodeURIComponent(id)}/dismiss`),
-		status: (runId: string) => quiet<IdeaRunResponse>('GET', `/ideas/runs/${encodeURIComponent(runId)}`),
-		decide: (runId: string, callId: string, approve: boolean) =>
-			quiet<void>('POST', `/ideas/runs/${encodeURIComponent(runId)}/approvals/${encodeURIComponent(callId)}`, { approve })
-	}
-};
-
-export { ApiError };
 
 /** A link the page may render: an absolute http(s) URL, or nothing. */
 export function safeHref(value: string | undefined | null): string | undefined {

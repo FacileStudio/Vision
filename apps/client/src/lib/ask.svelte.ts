@@ -1,4 +1,5 @@
-import { askPrompt, bulleApi, pageContext, runActive, type BulleRun } from './bulle';
+import { askPrompt, pageContext, runActive, type BulleRun } from './bulle';
+import { bulleApi } from './bulle-api';
 import { bulleErrorKey, planRefusal } from './bulle-errors';
 import type { AppKey } from '$lib/i18n/messages';
 

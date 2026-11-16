@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import { BulleButton, BullePanel, Drawer, Skeleton, Alert } from '@facile/muse';
-	import { bulleApi, upgradeLink, type Anomaly, type BulleProfile, type Explanation } from '$lib/bulle';
+	import { upgradeLink, type Anomaly, type BulleProfile, type Explanation } from '$lib/bulle';
+	import { bulleApi } from '$lib/bulle-api';
 	import { bulleErrorKey, planRefusal } from '$lib/bulle-errors';
 	import { AskRun } from '$lib/ask.svelte';
 	import { locale, t } from '$lib/i18n/index.svelte';
