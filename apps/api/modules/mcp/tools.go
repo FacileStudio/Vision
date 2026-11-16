@@ -19,6 +19,8 @@ const (
 	toolSites      = "vision_list_sites"
 	toolStats      = "vision_get_stats"
 	toolGoals      = "vision_list_goals"
+	toolAnomalies  = "vision_list_anomalies"
+	toolCompare    = "vision_compare_periods"
 	toolCreateSite = "vision_create_site"
 	toolUpdateSite = "vision_update_site"
 	toolDeleteSite = "vision_delete_site"

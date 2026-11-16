@@ -29,6 +29,7 @@
 	import WorldMap from '$lib/components/map/world-map.svelte';
 	import StatsDrawer from '$lib/components/stats-drawer.svelte';
 	import SiteFavicon from '$lib/components/site-favicon.svelte';
+	import SiteBulle from '$lib/components/bulle/site-bulle.svelte';
 	import BarList from '$lib/components/bar-list.svelte';
 	import {
 		type RangeKey,
@@ -454,6 +455,7 @@
 					label={live ? t('site.live') : t('site.reconnecting')}
 					pulse={!live}
 				/>
+				<SiteBulle {site} />
 				<Button variant="ghost" icon={icons.download} onclick={exportCSV}>{t('site.export')}</Button>
 			</div>
 		</div>

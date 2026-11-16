@@ -28,6 +28,7 @@ type Directory struct {
 	syncer     *directory.Syncer
 	logger     *slog.Logger
 	erased     porte.ErasedSubjects
+	extra      func(context.Context, directory.Snapshot) error
 	minBackoff time.Duration
 	maxBackoff time.Duration
 }
@@ -43,7 +44,7 @@ func NewDirectory(orm *gorm.DB, issuer, clientID, clientSecret string, logger *s
 		minBackoff: 10 * time.Second,
 		maxBackoff: 5 * time.Minute,
 	}
-	d.syncer = &directory.Syncer{Client: d.client, Apply: d.Apply, Logger: logger}
+	d.syncer = &directory.Syncer{Client: d.client, Apply: d.sync, Logger: logger}
 	return d
 }
 
@@ -54,6 +55,22 @@ func (d *Directory) RefuseErased(deletions *Deletions) {
 	if deletions != nil {
 		d.erased = deletions
 	}
+}
+
+// OnSnapshot runs fn on every snapshot before the workspaces are applied, so the plan
+// gate sees the entitlements even when the apply fails. It must be set before Run.
+func (d *Directory) OnSnapshot(fn func(context.Context, directory.Snapshot) error) {
+	d.extra = fn
+}
+
+// sync hands a snapshot to the OnSnapshot hook, then applies it.
+func (d *Directory) sync(ctx context.Context, snapshot directory.Snapshot) error {
+	if d.extra != nil {
+		if err := d.extra(ctx, snapshot); err != nil {
+			return err
+		}
+	}
+	return d.Apply(ctx, snapshot)
 }
 
 // Handler answers Registre's nudge. It takes no credentials because a nudge only makes

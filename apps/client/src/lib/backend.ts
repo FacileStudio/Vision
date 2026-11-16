@@ -37,7 +37,7 @@ export function forgetStoredToken() {
 
 const apiFetch = createApi({ base: '/api', onUnauthorized: redirectToLogin });
 
-function request<T>(method: string, path: string, body?: unknown, quiet = false): Promise<T> {
+export function request<T>(method: string, path: string, body?: unknown, quiet = false): Promise<T> {
 	return apiFetch<T>(path, { method, body: body ? JSON.stringify(body) : undefined }, { quiet });
 }
 

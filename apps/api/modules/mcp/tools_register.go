@@ -10,7 +10,7 @@ func (t *toolset) list() []mcpkit.Tool {
 	return append(append(t.reads(), t.writes()...), t.sensitive()...)
 }
 
-// reads are the four read-only tools.
+// reads are the six read-only tools.
 func (t *toolset) reads() []mcpkit.Tool {
 	return []mcpkit.Tool{
 		mcpkit.NewTool(mcpkit.ToolSpec{
@@ -43,6 +43,24 @@ func (t *toolset) reads() []mcpkit.Tool {
 				"matches a path; an event goal matches a custom event name.",
 			Annotations: &mcpkit.Annotations{ReadOnly: true, Idempotent: true, OpenWorld: true},
 		}, t.listGoals),
+		mcpkit.NewTool(mcpkit.ToolSpec{
+			Name: toolAnomalies, Title: "List traffic anomalies",
+			Description: "List the days one site's traffic left its usual range, newest first, for a range of whole UTC " +
+				"days (default the last 30). Detection runs on its own, with no model: each day is compared with the same " +
+				"weekday of the previous four to eight weeks (median and MAD) and needs a minimum volume. Metrics are " +
+				"visitors, pageviews, goal_conversions (with the goal) and top_referrer_share. Each anomaly has its " +
+				"direction, value, baseline, change in percent, score, and a breakdown of the paths, referrers, countries " +
+				"and devices that moved most, as pageview counts against the baseline average.",
+			Annotations: &mcpkit.Annotations{ReadOnly: true, Idempotent: true, OpenWorld: true},
+		}, t.listAnomalies),
+		mcpkit.NewTool(mcpkit.ToolSpec{
+			Name: toolCompare, Title: "Compare two periods",
+			Description: "Set one period of whole UTC days (default the last 30) against another (default the period of " +
+				"equal length right before): pageviews, visitors, each goal's conversions, and for paths, referrers, " +
+				"countries and devices the values whose pageviews moved most, with the change in percent. Use it to find " +
+				"what changed behind an anomaly.",
+			Annotations: &mcpkit.Annotations{ReadOnly: true, Idempotent: true, OpenWorld: true},
+		}, t.comparePeriods),
 	}
 }
 

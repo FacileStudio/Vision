@@ -3,6 +3,7 @@ package analytics
 import (
 	"context"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,7 +13,12 @@ import (
 	"gorm.io/gorm"
 )
 
-var testConfig = testdb.Config{Prefix: "vision_analytics_test", Migrate: schemas.Migrate}
+var (
+	testConfig = testdb.Config{Prefix: "vision_analytics_test", Migrate: schemas.Migrate}
+	openOnce   sync.Once
+	sharedDB   *gorm.DB
+	openErr    error
+)
 
 // openSummaryDB hands the test a migrated, emptied Postgres schema, or skips.
 func openSummaryDB(t *testing.T) *gorm.DB {
@@ -21,10 +27,11 @@ func openSummaryDB(t *testing.T) *gorm.DB {
 	if !ok {
 		t.Skip(testdb.SkipReason("createdb vision_test"))
 	}
-	db, err := testdb.Open(url, testConfig)
-	if err != nil {
-		t.Fatalf("open the test database: %v", err)
+	openOnce.Do(func() { sharedDB, openErr = testdb.Open(url, testConfig) })
+	if openErr != nil {
+		t.Fatalf("open the test database: %v", openErr)
 	}
+	db := sharedDB
 	if err := testdb.Truncate(db, testConfig); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}

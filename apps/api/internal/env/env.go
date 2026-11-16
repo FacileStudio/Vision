@@ -41,6 +41,10 @@ type Config struct {
 	OIDC         *OIDCConfig
 	JournalURL   string
 	JournalToken string
+
+	// BulleURL is Bulle's origin, https://bulle.facile.studio in production, from
+	// BULLE_URL. Empty leaves the Ideas routes and the anomaly explanation off.
+	BulleURL string
 }
 
 // Load reads the environment into a Config, validating the port, log level and
@@ -60,6 +64,7 @@ func Load() (Config, error) {
 		Port:           valueOrDefault("PORT", "4000"),
 		Domain:         valueOrDefault("DOMAIN", "http://localhost:5173"),
 		LogLevel:       valueOrDefault("LOG_LEVEL", "info"),
+		BulleURL:       envGet("BULLE_URL"),
 	}
 
 	port, err := strconv.Atoi(env.Port)

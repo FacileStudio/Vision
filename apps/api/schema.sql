@@ -1,3 +1,29 @@
+CREATE TABLE public.anomalies (
+    id bigint NOT NULL,
+    site_id bigint NOT NULL,
+    metric text NOT NULL,
+    goal_id bigint DEFAULT 0 NOT NULL,
+    day timestamp with time zone NOT NULL,
+    direction text NOT NULL,
+    value double precision NOT NULL,
+    baseline double precision NOT NULL,
+    mad double precision NOT NULL,
+    score double precision NOT NULL,
+    change_pct double precision,
+    weeks integer NOT NULL,
+    breakdown text DEFAULT '{}'::text NOT NULL,
+    detected_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.anomalies ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.anomalies_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
 CREATE TABLE public.api_keys (
     id bigint NOT NULL,
     user_id bigint,
@@ -47,6 +73,12 @@ CREATE TABLE public.directory_deletion_state (
     state bytea NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT directory_deletion_state_id_check CHECK ((id = 1))
+);
+
+CREATE TABLE public.forfait_state (
+    id bigint NOT NULL,
+    document text NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public.goals (
@@ -319,6 +351,12 @@ ALTER TABLE ONLY public.workspace_members ALTER COLUMN id SET DEFAULT nextval('p
 
 ALTER TABLE ONLY public.workspaces ALTER COLUMN id SET DEFAULT nextval('public.workspaces_id_seq'::regclass);
 
+ALTER TABLE ONLY public.anomalies
+    ADD CONSTRAINT anomalies_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.anomalies
+    ADD CONSTRAINT anomalies_unique UNIQUE (site_id, metric, goal_id, day);
+
 ALTER TABLE ONLY public.api_keys
     ADD CONSTRAINT api_keys_pkey PRIMARY KEY (id);
 
@@ -327,6 +365,9 @@ ALTER TABLE ONLY public.custom_events
 
 ALTER TABLE ONLY public.directory_deletion_state
     ADD CONSTRAINT directory_deletion_state_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.forfait_state
+    ADD CONSTRAINT forfait_state_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.goals
     ADD CONSTRAINT goals_pkey PRIMARY KEY (id);
@@ -369,6 +410,8 @@ ALTER TABLE ONLY public.workspace_members
 
 ALTER TABLE ONLY public.workspaces
     ADD CONSTRAINT workspaces_pkey PRIMARY KEY (id);
+
+CREATE INDEX idx_anomalies_site_day ON public.anomalies USING btree (site_id, day DESC);
 
 CREATE UNIQUE INDEX idx_api_keys_key_hash ON public.api_keys USING btree (key_hash);
 
@@ -433,6 +476,9 @@ CREATE INDEX porte_magic_links_user_idx ON public.porte_magic_links USING btree 
 CREATE INDEX porte_sessions_expiry_idx ON public.porte_sessions USING btree (expires_at) WHERE (expires_at IS NOT NULL);
 
 CREATE INDEX porte_sessions_user_idx ON public.porte_sessions USING btree (user_id);
+
+ALTER TABLE ONLY public.anomalies
+    ADD CONSTRAINT anomalies_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.workspace_members
     ADD CONSTRAINT fk_workspace_members_user FOREIGN KEY (user_id) REFERENCES public.users(id);

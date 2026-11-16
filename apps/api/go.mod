@@ -7,7 +7,7 @@ require (
 	github.com/FacileStudio/porte v0.20.1
 	github.com/FacileStudio/porte/directory v0.5.0
 	github.com/FacileStudio/porte/mcpauth v0.3.1
-	github.com/FacileStudio/tronc v0.23.1
+	github.com/FacileStudio/tronc v0.27.0
 	github.com/FacileStudio/tronc/migrate v0.1.1
 	github.com/FacileStudio/tronc/testdb v0.1.2
 	github.com/go-chi/chi/v5 v5.5.0
@@ -17,7 +17,7 @@ require (
 )
 
 require (
-	github.com/FacileStudio/porte/forfait v0.1.3 // indirect
+	github.com/FacileStudio/porte/forfait v0.1.3
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect

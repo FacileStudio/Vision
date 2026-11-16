@@ -45,6 +45,7 @@ Key variables:
 - `DOMAIN` -- Frontend origin for CORS (default: `http://localhost:5173`)
 - `CLIENT_DIR` -- where the built SPA lives (`/client` in the image, `./client` by default)
 - `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URL` -- optional OIDC/SSO config
+- `BULLE_URL` -- optional; with SSO on it mounts `/api/ideas*` and `POST /api/anomalies/{id}/explain` behind the `ai.access` plan
 
 ## Project Structure
 
@@ -87,6 +88,8 @@ Vision/
 - Tracker script lives in two places: `apps/api/tracker/tracker.js` (source) and `apps/client/static/s.js` (served to browsers). The path is intentionally short/renamed to resist ad blockers.
 - Real-time active visitors use in-memory heartbeat tracking (30s pings, 60s expiry window).
 - With OIDC on, Registre owns shared workspaces (`modules/workspaces/directory.go`, `apply.go`, porte/directory). At boot Vision imports every unlinked workspace with more than one member once, retrying with backoff while Registre answers 404, then applies Registre's snapshot at boot, every 5 minutes and after a nudge on `POST /api/registre/sync`. `workspaces.registre_space_id` links a workspace to its space. Registre `member` is Vision `editor`. `viewer` is Vision-only: never imported, never removed or changed by a sync unless Registre lists that person. Single-member workspaces are personal: never imported, never linked by name. Membership writes answer 409 for every workspace, and renaming or deleting answers 409 for linked ones. A user in no workspace gets a personal one on their first list.
+- Anomalies: `modules/analytics/anomalies*.go` compare each completed UTC day with the same weekday of the previous 4 to 8 weeks (median and MAD, minimum volume) for visitors, pageviews, goal conversions and the top referrer's share, and store the result in `anomalies` with a breakdown of the paths, referrers, countries and devices that moved most. `Service.StartAnomalies` runs it at boot (last 7 days) and hourly (last 2). Vision records no status codes, so there is no 404 share. Breakdown values come from visitors: they go to Bulle only as `input` (`modules/ideas/explain.go`), never in the prompt.
+- Bulle: `main.go` calls `newIdeas` (`ideas.go`) only with SSO and `BULLE_URL`. The Registre token exchange for audience `bulle` needs a `token_exchange` entry in Registre's seed. `internal/plans` keeps the `ai.access` entitlements from every directory snapshot (`workspaces.Directory.OnSnapshot`) in `forfait_state`, and fails open until the first snapshot. `MountBulle` adds `/api/bulle/profile` and `/api/bulle/runs*`; the site page starts ask-your-data runs through them with a fixed instruction (`lib/bulle.ts` `askPrompt`). Decision use is not wired: a Bulle decide call fits where an anomaly is judged worth a notification or its cause family is chosen (campaign, bot traffic, outage, tracking break, seasonal), once the two-judge route is released. muse's `LineChart` has no marker API, so anomalies are not drawn on the chart.
 
 ## Conventions
 

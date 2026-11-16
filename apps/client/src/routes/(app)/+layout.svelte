@@ -3,13 +3,14 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { api, currentUser, logout } from '$lib';
-	import { MobileNav, PageTransition, SideBar, icons } from '@facile/muse';
+	import { MobileNav, PageTransition, SideBar, getI18n, icons, ideasNavItem } from '@facile/muse';
 	import { userStore } from '$lib/stores/user.svelte';
 	import { workspaceStore } from '$lib/stores/workspace.svelte';
-	import { rememberLocale, setSessionLocale, t } from '$lib/i18n/index.svelte';
-	import { theme, type ThemeMode } from '$lib/theme.svelte';
+	import { setSessionLocale, t } from '$lib/i18n/index.svelte';
 
 	let { children } = $props();
+
+	const i18n = getI18n();
 
 	let collapsed = $state(false);
 	let invitations = $state<{ count: number; href: string } | null>(null);
@@ -82,7 +83,9 @@
 	 * No Settings row here, by design — the user card at the bottom of the rail is the only
 	 * way in, and the avatar on MobileNav is its phone counterpart. See CHARTE §14.
 	 */
+	const ideasEntry = $derived(ideasNavItem({ href: '/ideas', i18n }));
 	const links = $derived([
+		{ href: ideasEntry.href, label: ideasEntry.label, icon: ideasEntry.icon },
 		{ href: '/sites', label: t('nav.sites'), icon: icons.globe },
 		{ href: '/team', label: t('nav.teams'), icon: icons.space }
 	]);
@@ -109,12 +112,8 @@
 	}
 
 	const userMenu = $derived({
-		subscription: { href: 'https://sso.facile.studio/spaces' },
 		helpHref: `${page.url.origin}/docs`,
 		onSignOut: signOut,
-		theme: theme.mode,
-		onThemeChange: (next: ThemeMode) => theme.set(next),
-		onLocaleChange: rememberLocale,
 		invitations
 	});
 </script>

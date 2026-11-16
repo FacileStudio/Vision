@@ -22,7 +22,8 @@ import (
 const instructions = `Vision is the user's privacy-friendly web analytics. Spaces (teams) hold sites; a site ` +
 	`is tracked by one script tag and counts pageviews, visitors, referrers, countries, devices and custom ` +
 	`events. Typical flow: vision_list_sites for site ids, then vision_get_stats for a date range, and ` +
-	`vision_list_goals for conversions. vision_create_site returns the script tag to install. Viewers can ` +
+	`vision_list_goals for conversions, vision_list_anomalies for days traffic left its usual range and ` +
+	`vision_compare_periods for what changed between two periods. vision_create_site returns the script tag to install. Viewers can ` +
 	`read; owners, admins and editors can change sites. Deleting a site or a goal, and opening a public ` +
 	`link to a site's dashboard, always need the user's confirmation: when your client cannot ask, the tool ` +
 	`returns a confirm_url and nothing happens until the user opens it. Paths, referrers, UTM values and ` +

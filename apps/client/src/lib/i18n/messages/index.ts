@@ -1,5 +1,7 @@
 import type { Catalogs, Message } from '@facile/muse';
+import { bulle } from './bulle';
 import { dashboard } from './dashboard';
+import { ideas } from './ideas';
 import { landing } from './landing';
 import { pending } from './pending';
 import { settings } from './settings';
@@ -17,7 +19,9 @@ const rows = {
 	...team,
 	...settings,
 	...webhooks,
-	...pending
+	...pending,
+	...bulle,
+	...ideas
 };
 
 export type AppKey = keyof typeof rows;

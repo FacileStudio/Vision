@@ -138,27 +138,8 @@ func (s *Service) conversions(ctx context.Context, ownerID string, siteID string
 	result := make([]GoalConversion, 0, len(goals))
 	for _, g := range goals {
 		var conversions int64
-
-		if g.GoalType == "event" && g.EventName != nil {
-			s.orm.WithContext(ctx).Table("custom_events").
-				Where("site_id = ? AND created_at >= ? AND created_at <= ? AND name = ?", sid, from, to, *g.EventName).
-				Distinct("visitor_id").
-				Count(&conversions)
-		} else if g.PagePath != nil {
-			q := s.orm.WithContext(ctx).Table("pageviews").
-				Where("site_id = ? AND created_at >= ? AND created_at <= ? AND visitor_id != ''", sid, from, to)
-
-			escaped := escapeLike(*g.PagePath)
-			switch g.MatchType {
-			case "starts_with":
-				q = q.Where("path LIKE ?", escaped+"%")
-			case "contains":
-				q = q.Where("path LIKE ?", "%"+escaped+"%")
-			default:
-				q = q.Where("path = ?", *g.PagePath)
-			}
-
-			q.Distinct("visitor_id").Count(&conversions)
+		if query := MatchQuery(s.orm.WithContext(ctx), g, sid, from, to); query != nil {
+			query.Distinct("visitor_id").Count(&conversions)
 		}
 
 		var cr float64

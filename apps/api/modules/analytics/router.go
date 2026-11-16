@@ -67,6 +67,7 @@ func RegisterRoutes(router chi.Router, service *Service, tracker *events.ActiveT
 		router.Use(middleware.RequireAuth(authService))
 
 		router.Get("/summary", summaryHandler(service, tracker))
+		registerInsightRoutes(router, service, orm)
 
 		router.With(siteaccess.KeyGuard(orm, "siteId")).Get("/{siteId}/overview", func(w http.ResponseWriter, request *http.Request) {
 			identity, _ := authcontext.IdentityFromContext(request.Context())
