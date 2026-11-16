@@ -6,6 +6,8 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-16
+
 ### Added
 
 - The traffic chart shows the period's anomalies as dots on their line, named in the tooltip. Finding them stays free. Clicking a dot opens the Insights panel on that anomaly.
