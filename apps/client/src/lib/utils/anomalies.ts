@@ -39,3 +39,32 @@ export function movers(anomaly: Pick<Anomaly, 'breakdown'>, dimension: Dimension
 export function signed(value: number, locale: string): string {
 	return new Intl.NumberFormat(locale, { maximumFractionDigits: 0, signDisplay: 'exceptZero' }).format(value);
 }
+
+/** Where an anomaly's day sits among the chart's buckets: its own day, or its month. Hour and week buckets get no marker. */
+export function anomalyIndex(day: string, buckets: string[], granularity: string): number {
+	if (granularity === 'day') return buckets.indexOf(day);
+	if (granularity === 'month') return buckets.indexOf(day.slice(0, 7));
+	return -1;
+}
+
+/** The anomalies that land on the traffic chart, as LineChart markers: visitors on the visitors line, the rest on pageviews. */
+export function anomalyMarkers(
+	anomalies: Anomaly[],
+	buckets: string[],
+	granularity: string,
+	label: (anomaly: Anomaly) => string
+): { index: number; label: string; tone: 'info' | 'warning'; series: number; id: number }[] {
+	return anomalies.flatMap((anomaly) => {
+		const index = anomalyIndex(anomaly.day, buckets, granularity);
+		if (index < 0) return [];
+		return [
+			{
+				index,
+				label: label(anomaly),
+				tone: anomaly.direction === 'up' ? ('info' as const) : ('warning' as const),
+				series: anomaly.metric === 'visitors' ? 1 : 0,
+				id: anomaly.id
+			}
+		];
+	});
+}

@@ -6,6 +6,14 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The traffic chart shows the period's anomalies as dots on their line, named in the tooltip. Finding them stays free. Clicking a dot opens the Insights panel on that anomaly.
+
+### Changed
+
+- The Insights panel opens at the right of the screen from 768px wide, at full height; on phones it stays a bottom sheet. muse v0.31.0.
+
 ## [0.13.0] - 2026-11-16
 
 ### Changed

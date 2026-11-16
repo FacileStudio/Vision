@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
 	import { BulleButton, BullePanel, Drawer, Skeleton, Alert } from '@facile/muse';
 	import { upgradeLink, type Anomaly, type BulleProfile, type Explanation } from '$lib/bulle';
 	import { bulleApi } from '$lib/bulle-api';
@@ -10,12 +10,21 @@
 	import AnomalyCard from './anomaly-card.svelte';
 	import AskData from './ask-data.svelte';
 
-	let { site }: { site: { id: number; name: string; workspace_id: number } } = $props();
+	let {
+		site,
+		open = $bindable(false),
+		ready = $bindable(false),
+		focus = null
+	}: {
+		site: { id: number; name: string; workspace_id: number };
+		open?: boolean;
+		ready?: boolean;
+		focus?: Anomaly | null;
+	} = $props();
 
 	const LANGUAGES = ['en', 'fr', 'es', 'de'];
 
 	let profile = $state<BulleProfile | null>(null);
-	let open = $state(false);
 	let anomalies = $state<Anomaly[] | null>(null);
 	let loadFailed = $state(false);
 	let loadedFor = 0;
@@ -36,6 +45,7 @@
 	onMount(async () => {
 		try {
 			profile = await bulleApi.profile();
+			ready = true;
 		} catch {
 			return;
 		}
@@ -50,6 +60,16 @@
 	$effect(() => {
 		if (open && loadedFor !== site.id) void loadAnomalies();
 	});
+
+	$effect(() => {
+		if (open && focus && anomalies) void reveal(focus);
+	});
+
+	async function reveal(anomaly: Anomaly) {
+		if (anomalies && !anomalies.some((item) => item.id === anomaly.id)) anomalies = [anomaly, ...anomalies];
+		await tick();
+		document.getElementById(`anomaly-${anomaly.id}`)?.scrollIntoView({ block: 'center' });
+	}
 
 	async function loadAnomalies() {
 		loadedFor = site.id;
@@ -93,7 +113,7 @@
 {#if profile}
 	<BulleButton {name} {mood} label={t('bulle.label')} onclick={() => (open = true)} />
 
-	<Drawer bind:open title={name} showClose>
+	<Drawer bind:open side title={name} showClose>
 		<div class="flex min-w-0 flex-col gap-8">
 			<section class="flex min-w-0 flex-col gap-3" aria-labelledby="bulle-anomalies">
 				<h3 id="bulle-anomalies" class="m-0 text-fc-lg font-medium text-fc-fg">{t('bulle.anomalies.heading')}</h3>

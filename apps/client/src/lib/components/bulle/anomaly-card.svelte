@@ -51,7 +51,7 @@
 	}
 </script>
 
-<li class="flex min-w-0 list-none flex-col gap-3 rounded-fc-md bg-fc-component p-4">
+<li id="anomaly-{anomaly.id}" class="flex min-w-0 list-none flex-col gap-3 rounded-fc-md bg-fc-component p-4">
 	<div class="flex min-w-0 flex-wrap items-center gap-2">
 		<span class="min-w-0 flex-1 text-fc-sm font-medium wrap-anywhere text-fc-fg">{metric}</span>
 		<Badge tone={anomaly.direction === 'up' ? 'info' : 'warning'}>{t(`bulle.direction.${anomaly.direction}`)}</Badge>
