@@ -6,10 +6,17 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- muse v0.30.0: the avatar menu keeps Account, Invitations, Settings, Help and Sign out. The plan link moved to Settings, Preferences. tronc v0.27.0.
+
 ### Added
 
 - Anomaly detection with no model. Each completed UTC day of a site is compared with the same weekday of the previous four to eight weeks (median and MAD) for visitors, pageviews, goal conversions and the top referrer's share, with a minimum volume. Findings are stored with their direction, size, baseline and the paths, referrers, countries and devices that moved most. `GET /api/analytics/{siteId}/anomalies` lists them and `GET /api/analytics/{siteId}/compare` sets two periods side by side. Migration `00003_anomalies.sql`.
 - MCP tools `vision_list_anomalies` and `vision_compare_periods`, read-only, typed parameters.
+- Site page: an Insights button with the user's assistant (name from `GET /api/bulle/profile`) opens a panel with the anomaly cards (what moved, with an Explain button), an ask-your-data box that starts a Bulle run limited to the stats, comparison, anomaly and goal tools, and the plan upsell on a 402. Every value from a visitor or the model is printed as text, never as markup or a link. Needs `BULLE_URL`.
+- Ideas page (`/ideas`) and sidebar entry for the ideas Bulle makes about a workspace's sites.
+- `/api/bulle/profile` and `/api/bulle/runs*` through `tronc/bulle` `MountBulle`.
 - Bulle in the API when `BULLE_URL` is set and SSO is on: `/api/ideas*` through `tronc/bulle`, and `POST /api/anomalies/{id}/explain`, which asks Bulle for a schema-validated explanation of one anomaly. Both need the `ai.access` plan and answer 402 with an upgrade URL without it. The plan comes from Registre's directory snapshots (migration `00004_forfait_state.sql`).
 
 ## [0.12.0] - 2026-11-14
