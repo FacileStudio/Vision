@@ -6,6 +6,8 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-16
+
 ### Changed
 
 - muse v0.30.0: the avatar menu keeps Account, Invitations, Settings, Help and Sign out. The plan link moved to Settings, Preferences. tronc v0.27.0.
