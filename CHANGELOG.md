@@ -6,6 +6,12 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-11-16
+
+### Changed
+
+- muse v0.32.0: tabs and segmented option cards match the default button height, 36px on pointer devices and 44px on touch.
+
 ## [0.14.0] - 2026-11-16
 
 ### Added
