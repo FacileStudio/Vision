@@ -205,14 +205,7 @@ func run() int {
 	}
 
 	addr := ":" + appEnv.Port
-	server := &http.Server{
-		Addr:              addr,
-		Handler:           events.Preflight(router, "/api/e/"),
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      15 * time.Second,
-		IdleTimeout:       60 * time.Second,
-	}
+	server := newServer(addr, router)
 	serverErrCh := make(chan error, 1)
 	go func() {
 		serverErrCh <- server.ListenAndServe()
@@ -291,5 +284,19 @@ func referenceConfig() apiref.Config {
 			webhooks.Documentation,
 			mcp.Documentation,
 		}},
+	}
+}
+
+// newServer is the HTTP server every route runs behind, with the timeouts production
+// uses. The write timeout is 15 seconds, so a handler that waits on Bulle for longer must
+// extend its own deadline.
+func newServer(addr string, router http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           events.Preflight(router, "/api/e/"),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 }

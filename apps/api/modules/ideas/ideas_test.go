@@ -436,3 +436,35 @@ func TestIdeasAnswerUpgradeWithoutCallingBulleOnAFreePlan(t *testing.T) {
 		t.Fatalf("generate on a free plan = %d, Bulle calls %d -> %d", recorder.Code, before, h.bulle.count())
 	}
 }
+
+func TestBulleProfileIsFreeAndRunsNeedAIAccess(t *testing.T) {
+	h := newHarness(t)
+	h.plans.allow["spc_paid"] = false
+	h.bulle.reply(200, `{"name":"Pixel","avatar_url":""}`)
+	recorder := h.do(http.MethodGet, "/api/bulle/profile", h.member)
+	if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), "Pixel") || h.bulle.last().Path != "/api/assistant/profile" {
+		t.Fatalf("profile = %d %s via %s", recorder.Code, recorder.Body, h.bulle.last().Path)
+	}
+	before := h.bulle.count()
+	space := "?space_id=" + strconv.FormatInt(h.shared, 10)
+	if code := h.do(http.MethodPost, "/api/bulle/runs"+space, h.member).Code; code != http.StatusPaymentRequired || h.bulle.count() != before {
+		t.Fatalf("a free plan cannot start a run: %d, Bulle calls %d -> %d", code, before, h.bulle.count())
+	}
+	h.plans.allow["spc_paid"] = true
+	h.bulle.reply(202, `{"run_id":"r1","session_id":"s1"}`)
+	post := func(body string) *httptest.ResponseRecorder {
+		request := httptest.NewRequest(http.MethodPost, "/api/bulle/runs"+space, strings.NewReader(body))
+		request.Header.Set("X-Test-User", strconv.FormatInt(h.member, 10))
+		recorder := httptest.NewRecorder()
+		h.router.ServeHTTP(recorder, request)
+		return recorder
+	}
+	if code := post(`{"prompt":"x","app":"agenda","space_id":"evil"}`).Code; code != http.StatusBadRequest {
+		t.Fatalf("the browser cannot name the app or the space: %d", code)
+	}
+	answered := post(`{"prompt":"How many visitors?"}`)
+	call := h.bulle.last()
+	if answered.Code != http.StatusAccepted || call.Path != "/api/runs" || call.Body["app"] != "vision" || call.Body["space_id"] != "spc_paid" || call.Body["prompt"] != "How many visitors?" {
+		t.Fatalf("run = %d, Bulle got %+v", answered.Code, call)
+	}
+}

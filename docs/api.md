@@ -114,6 +114,10 @@ updated_at }`.
 | GET | `/analytics/{siteId}/export` | yes | `?format=csv` for CSV, otherwise JSON. Both sent as an attachment |
 | GET | `/analytics/{siteId}/anomalies` | yes | `?from=&to=` (YYYY-MM-DD), `metric` (`visitors`, `pageviews`, `goal_conversions`, `top_referrer_share`), `limit` (50, max 200). `{ anomalies: [...] }`, newest day first |
 | GET | `/analytics/{siteId}/compare` | yes | `?from=&to=&compare_from=&compare_to=&limit=` (YYYY-MM-DD, `compare_*` default to the period of equal length right before, `limit` 10, max 50). Totals, per-goal conversions and the biggest movers per path, referrer, country and device |
+| GET | `/bulle/profile` | session | The user's assistant, `{ name, avatar_url }`. Free |
+| POST | `/bulle/runs?space_id=` | session | `{ title?, prompt, page? }` starts a Bulle run. 402 without `ai.access` |
+| GET | `/bulle/runs/{run}` | session | State, summary, outputs, approvals, `continue_url` |
+| POST | `/bulle/runs/{run}/approvals/{call}` | session | `{ approve }` |
 | POST | `/anomalies/{id}/explain` | session | Needs `ai.access`, 402 with an upgrade URL otherwise. Bulle writes `{ summary, likely_causes, what_to_check }` from the anomaly's numbers. Only on with `BULLE_URL` |
 | GET | `/share/{token}` | no | Overview for a shared site, by share token |
 | GET | `/share/{token}/realtime` | no | Live count for a shared site |

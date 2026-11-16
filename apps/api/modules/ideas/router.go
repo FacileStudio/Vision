@@ -1,5 +1,5 @@
-// Package ideas serves Bulle to Vision's own client: the per-app Ideas API and the
-// explanation of one anomaly.
+// Package ideas serves Bulle to Vision's own client: the per-app Ideas API, the Bulle
+// button's profile and runs, and the explanation of one anomaly.
 //
 // The routes call Bulle with a token exchanged for the signed-in user. The package decides
 // the two things Bulle cannot know: which Registre space the request is for, taken from a
@@ -39,7 +39,7 @@ type Authenticator interface {
 	RequireAuth(http.Handler) http.Handler
 }
 
-// RegisterRoutes serves /ideas and /anomalies/{id}/explain behind a signed-in session on
+// RegisterRoutes serves /ideas, /bulle and /anomalies/{id}/explain behind a signed-in session on
 // router. An API key never reaches them: AI is the person's own plan.
 func RegisterRoutes(router chi.Router, service *Service, authService Authenticator) error {
 	explainer, err := service.explainer()
@@ -54,7 +54,9 @@ func RegisterRoutes(router chi.Router, service *Service, authService Authenticat
 	router.Group(func(group chi.Router) {
 		group.Use(authService.RequireAuth)
 		group.Use(service.resolve)
-		mountErr = bulle.MountIdeas(group, service.options())
+		if mountErr = bulle.MountIdeas(group, service.options()); mountErr == nil {
+			mountErr = bulle.MountBulle(group, service.options())
+		}
 	})
 	return mountErr
 }
