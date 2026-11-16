@@ -14,7 +14,6 @@
 		Drawer,
 		Field,
 		Input,
-		LineChart,
 		SecretField,
 		Select,
 		SettingsRow,
@@ -30,6 +29,8 @@
 	import StatsDrawer from '$lib/components/stats-drawer.svelte';
 	import SiteFavicon from '$lib/components/site-favicon.svelte';
 	import SiteBulle from '$lib/components/bulle/site-bulle.svelte';
+	import TrafficChart from '$lib/components/bulle/traffic-chart.svelte';
+	import type { Anomaly } from '$lib/bulle';
 	import BarList from '$lib/components/bar-list.svelte';
 	import {
 		type RangeKey,
@@ -52,6 +53,9 @@
 	let goalConversions = $state<GoalConversionsResponse | null>(null);
 	let siteGoals = $state<Goal[]>([]);
 	let live = $state(false);
+	let bulleOpen = $state(false);
+	let bulleReady = $state(false);
+	let focusAnomaly = $state<Anomaly | null>(null);
 	let realtimeCount = $state(0);
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 	let realtimeTimer: ReturnType<typeof setInterval> | null = null;
@@ -455,7 +459,7 @@
 					label={live ? t('site.live') : t('site.reconnecting')}
 					pulse={!live}
 				/>
-				<SiteBulle {site} />
+				<SiteBulle {site} bind:open={bulleOpen} bind:ready={bulleReady} focus={focusAnomaly} />
 				<Button variant="ghost" icon={icons.download} onclick={exportCSV}>{t('site.export')}</Button>
 			</div>
 		</div>
@@ -581,7 +585,15 @@
 				</div>
 
 				<Card class="flex flex-col gap-4">
-					<LineChart series={trafficSeries} labels={chartLabels} area height={280} />
+					<TrafficChart
+						siteId={site.id}
+						{...rangeDates(selectedRange, customFrom, customTo)}
+						buckets={(overview?.pageviews_per_day ?? []).map((d) => d.date)}
+						granularity={selectedGranularity}
+						series={trafficSeries}
+						labels={chartLabels}
+						onPick={bulleReady ? (anomaly) => ((focusAnomaly = anomaly), (bulleOpen = true)) : undefined}
+					/>
 				</Card>
 
 				<div class="grid gap-4 lg:grid-cols-2">

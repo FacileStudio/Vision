@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { Anomaly } from '../bulle';
-import { formatChange, formatDay, formatMetric, movers, signed } from './anomalies';
+import { anomalyMarkers, formatChange, formatDay, formatMetric, movers, signed } from './anomalies';
 
 const rows = (deltas: number[]) => deltas.map((delta, i) => ({ value: `v${i}`, count: 10, baseline: 0, delta }));
 
@@ -46,5 +46,29 @@ describe('signed', () => {
 		expect(signed(200, 'en')).toBe('+200');
 		expect(signed(-40, 'en')).toBe('-40');
 		expect(signed(0, 'en')).toBe('0');
+	});
+});
+
+describe('anomalyMarkers', () => {
+	const anomaly = (id: number, day: string, metric: Anomaly['metric'], direction: Anomaly['direction']) =>
+		({ id, day, metric, direction }) as Anomaly;
+	const anomalies = [
+		anomaly(1, '2026-11-03', 'visitors', 'up'),
+		anomaly(2, '2026-11-04', 'pageviews', 'down'),
+		anomaly(3, '2026-10-01', 'visitors', 'up')
+	];
+
+	it('puts each anomaly on its day and its line, and drops the ones off the chart', () => {
+		const markers = anomalyMarkers(anomalies, ['2026-11-02', '2026-11-03', '2026-11-04'], 'day', (a) => `#${a.id}`);
+		expect(markers).toEqual([
+			{ index: 1, label: '#1', tone: 'info', series: 1, id: 1 },
+			{ index: 2, label: '#2', tone: 'warning', series: 0, id: 2 }
+		]);
+	});
+
+	it('maps a day to its month bucket and skips hour and week buckets', () => {
+		expect(anomalyMarkers(anomalies, ['2026-10', '2026-11'], 'month', () => '').map((m) => m.index)).toEqual([1, 1, 0]);
+		expect(anomalyMarkers(anomalies, ['2026-W45'], 'week', () => '')).toEqual([]);
+		expect(anomalyMarkers(anomalies, ['2026-11-03 10:00'], 'hour', () => '')).toEqual([]);
 	});
 });
