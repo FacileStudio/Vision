@@ -59,6 +59,7 @@ type OverviewResponse struct {
 	PrevUniqueVisitorsPerDay []DayStat         `json:"prev_unique_visitors_per_day"`
 	Performance              *PerformanceStats `json:"performance"`
 	TopEvents                []EventStat       `json:"top_events"`
+	InteractedVisitors       int64             `json:"interacted_visitors"`
 }
 
 // PageStat counts pageviews for one path.

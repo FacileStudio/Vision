@@ -136,7 +136,9 @@ export const api = {
 				request<{ visitors: number }>('GET', `/analytics/${siteId}/realtime`)
 		},
 		summary: (space: string, from: string, to: string) =>
-			request<SummaryResponse>('GET', `/analytics/summary?${new URLSearchParams({ space, from, to })}`)
+			request<SummaryResponse>('GET', `/analytics/summary?${new URLSearchParams({ space, from, to })}`),
+		bots: (siteId: number, from: string, to: string) =>
+			request<BotsResponse>('GET', `/analytics/${siteId}/bots?${new URLSearchParams({ from, to })}`)
 	},
 	share: {
 		overview: async (token: string, from?: string, to?: string, granularity?: string) => {
@@ -368,9 +370,20 @@ export interface SummaryResponse {
 	sites: SiteSummary[];
 }
 
+export type BotCategory = 'search' | 'ai' | 'social' | 'monitor' | 'tool' | 'headless' | 'automation' | 'spoofed';
+
+export interface BotsResponse {
+	total: number;
+	categories: { name: string; hits: number }[];
+	bots: { name: string; category: string; hits: number }[];
+	paths: { path: string; hits: number }[];
+	series: { day: string; hits: number }[];
+}
+
 export interface AnalyticsOverview {
 	total_pageviews: number;
 	unique_visitors: number;
+	interacted_visitors?: number;
 	prev_total_pageviews: number;
 	prev_unique_visitors: number;
 	top_pages: { path: string; count: number }[];

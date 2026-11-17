@@ -8,17 +8,29 @@ type Run = {
 	navigate: (path: string) => void;
 	replace: (path: string) => void;
 	track: (name: string) => void;
+	fire: (type: string) => void;
 };
 
 /**
  * Runs the served tracker against a fake page and returns every beacon URL it built.
  * Timers are inert, so only the pageview, SPA navigations and custom events show up.
  */
-function runTracker(href: string, opts: { mask?: boolean; exclude?: string; referrer?: string } = {}): Run {
+function runTracker(href: string, opts: { mask?: boolean; exclude?: string; referrer?: string; webdriver?: boolean } = {}): Run {
 	const sent: string[] = [];
 	const location = new URL(href);
 	const store = new Map<string, string>([['_vs_id', 'visitor']]);
-	const window: Record<string, unknown> = { innerWidth: 1280, addEventListener() {} };
+	const listeners = new Map<string, Set<() => void>>();
+	const window: Record<string, unknown> = {
+		innerWidth: 1280,
+		outerWidth: 1280,
+		outerHeight: 800,
+		addEventListener(type: string, fn: () => void) {
+			listeners.set(type, (listeners.get(type) ?? new Set()).add(fn));
+		},
+		removeEventListener(type: string, fn: () => void) {
+			listeners.get(type)?.delete(fn);
+		}
+	};
 	const history = {
 		pushState(_state: unknown, _title: string, path: string) {
 			location.pathname = path;
@@ -61,7 +73,7 @@ function runTracker(href: string, opts: { mask?: boolean; exclude?: string; refe
 		document,
 		window,
 		history,
-		{ language: 'en' },
+		{ language: 'en', webdriver: opts.webdriver ?? false },
 		{ getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => store.set(k, v) },
 		Image,
 		() => 0,
@@ -73,7 +85,8 @@ function runTracker(href: string, opts: { mask?: boolean; exclude?: string; refe
 		sent,
 		navigate: (path) => history.pushState(null, '', path),
 		replace: (path) => history.replaceState(null, '', path),
-		track: (name) => vision?.track(name)
+		track: (name) => vision?.track(name),
+		fire: (type) => [...(listeners.get(type) ?? [])].forEach((fn) => fn())
 	};
 }
 
@@ -106,6 +119,7 @@ describe('s.js', () => {
 			language: 'en',
 			screen_width: 1280,
 			visitor_id: 'visitor',
+			b: 0,
 			utm_source: '',
 			utm_medium: '',
 			utm_campaign: '',
@@ -161,5 +175,32 @@ describe('s.js', () => {
 		const run = runTracker('https://field.test/', { exclude: '/room/' });
 		expect(beacons(run, 'p')).toHaveLength(1);
 		expect(beacons(run, 'h')).toHaveLength(1);
+	});
+
+	it('flags a webdriver browser in every payload', () => {
+		const run = runTracker('https://shop.test/', { webdriver: true });
+		run.track('signup');
+		expect(pageviews(run)[0].b).toBe(1);
+		expect(payload(beacons(run, 'h')[0]).b).toBe(1);
+		expect(payload(beacons(run, 't')[0]).b).toBe(1);
+		expect(pageviews(runTracker('https://shop.test/'))[0].b).toBe(0);
+	});
+
+	it('sends one interacted heartbeat on the first gesture only', () => {
+		const run = runTracker('https://shop.test/');
+		const interacted = () => beacons(run, 'h').map(payload).filter((p) => p.interacted === true);
+		run.fire('scroll');
+		expect(interacted()).toHaveLength(0);
+		run.fire('pointerdown');
+		expect(interacted()).toEqual([{ hostname: 'shop.test', visitor_id: 'visitor', b: 0, interacted: true }]);
+		run.fire('keydown');
+		run.fire('pointerdown');
+		expect(interacted()).toHaveLength(1);
+	});
+
+	it('sends no interacted heartbeat on an excluded path', () => {
+		const run = runTracker('https://field.test/room/abc1234', { exclude: '/room/' });
+		run.fire('pointerdown');
+		expect(run.sent).toEqual([]);
 	});
 });

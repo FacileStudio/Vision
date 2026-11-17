@@ -12,11 +12,18 @@ import (
 	troncmiddleware "github.com/FacileStudio/tronc/middleware"
 	"github.com/FacileStudio/tronc/testdb"
 	"github.com/go-chi/chi/v5"
+	"gorm.io/gorm"
 )
 
 var testConfig = testdb.Config{Prefix: "vision_events_test", Migrate: schemas.Migrate}
 
 func ingestRouter(t *testing.T) http.Handler {
+	t.Helper()
+	handler, _ := ingestRouterWithDB(t)
+	return handler
+}
+
+func ingestRouterWithDB(t *testing.T) (http.Handler, *gorm.DB) {
 	t.Helper()
 	dbURL, ok := testdb.URL()
 	if !ok {
@@ -37,7 +44,7 @@ func ingestRouter(t *testing.T) http.Handler {
 		CORS:      troncmiddleware.CORSConfig{AllowedOrigins: []string{"https://vision.test"}},
 	})
 	RegisterRoutes(router, NewService(db), NewHub(), NewActiveTracker(), nil, db)
-	return router
+	return router, db
 }
 
 func ingest(handler http.Handler, method, target, origin, body string) *httptest.ResponseRecorder {
@@ -127,5 +134,61 @@ func TestTrackerAnswersCarryTheHeadersTheOldProxyAdded(t *testing.T) {
 	header := recorder.Header()
 	if header.Get("Content-Type") != "application/json" || header.Get("Cache-Control") != "no-cache, no-store" || header.Get("Access-Control-Allow-Origin") != "*" {
 		t.Errorf("headers: %v", header)
+	}
+}
+
+func ingestAs(handler http.Handler, userAgent, body string) *httptest.ResponseRecorder {
+	request := httptest.NewRequest(http.MethodPost, "/e/p", strings.NewReader(body))
+	request.Header.Set("Origin", "https://blog.example")
+	request.Header.Set("User-Agent", userAgent)
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	return recorder
+}
+
+func TestBotPageviewsCountAsBotHitsNotPageviews(t *testing.T) {
+	handler, db := ingestRouterWithDB(t)
+	gptBot := "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"
+	body := `{"hostname":"blog.example","path":"/a","visitor_id":"v1"}`
+	for range 2 {
+		if recorder := ingestAs(handler, gptBot, body); recorder.Code != http.StatusNoContent {
+			t.Fatalf("bot ingest: %d %s", recorder.Code, recorder.Body.String())
+		}
+	}
+	var pageviews int64
+	db.Model(&schemas.Pageview{}).Count(&pageviews)
+	var hits []schemas.BotHit
+	db.Find(&hits)
+	if pageviews != 0 {
+		t.Errorf("a bot made %d pageviews", pageviews)
+	}
+	if len(hits) != 1 || hits[0].Hits != 2 || hits[0].Category != "ai" || hits[0].Name != "GPTBot" || hits[0].Path != "/a" {
+		t.Fatalf("bot hits: %+v", hits)
+	}
+
+	chrome := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+	if recorder := ingestAs(handler, chrome, body); recorder.Code != http.StatusNoContent {
+		t.Fatalf("human ingest: %d %s", recorder.Code, recorder.Body.String())
+	}
+	db.Model(&schemas.Pageview{}).Count(&pageviews)
+	if pageviews != 1 {
+		t.Errorf("a human made %d pageviews", pageviews)
+	}
+}
+
+func TestHeartbeatMarksTheSessionInteracted(t *testing.T) {
+	handler, db := ingestRouterWithDB(t)
+	chrome := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+	ingestAs(handler, chrome, `{"hostname":"blog.example","path":"/a","visitor_id":"v1"}`)
+	data := url.QueryEscape(`{"hostname":"blog.example","visitor_id":"v1","interacted":true}`)
+	request := httptest.NewRequest(http.MethodGet, "/e/h?data="+data, nil)
+	request.Header.Set("User-Agent", chrome)
+	handler.ServeHTTP(httptest.NewRecorder(), request)
+	var session schemas.VisitorSession
+	if err := db.Where("visitor_id = ?", "v1").First(&session).Error; err != nil {
+		t.Fatalf("session: %v", err)
+	}
+	if !session.Interacted {
+		t.Error("the heartbeat did not mark the session interacted")
 	}
 }

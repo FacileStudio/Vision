@@ -49,6 +49,25 @@ CREATE SEQUENCE public.api_keys_id_seq
 
 ALTER SEQUENCE public.api_keys_id_seq OWNED BY public.api_keys.id;
 
+CREATE TABLE public.bot_hits (
+    id bigint NOT NULL,
+    site_id bigint NOT NULL,
+    day timestamp with time zone NOT NULL,
+    category text NOT NULL,
+    name text NOT NULL,
+    path text NOT NULL,
+    hits bigint DEFAULT 0 NOT NULL
+);
+
+ALTER TABLE public.bot_hits ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.bot_hits_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
 CREATE TABLE public.custom_events (
     id bigint NOT NULL,
     site_id bigint,
@@ -259,7 +278,8 @@ CREATE TABLE public.visitor_sessions (
     pageview_count bigint DEFAULT 1,
     duration bigint DEFAULT 0,
     is_bounce boolean DEFAULT true,
-    created_at timestamp with time zone DEFAULT now()
+    created_at timestamp with time zone DEFAULT now(),
+    interacted boolean DEFAULT false NOT NULL
 );
 
 CREATE SEQUENCE public.visitor_sessions_id_seq
@@ -360,6 +380,12 @@ ALTER TABLE ONLY public.anomalies
 ALTER TABLE ONLY public.api_keys
     ADD CONSTRAINT api_keys_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.bot_hits
+    ADD CONSTRAINT bot_hits_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.bot_hits
+    ADD CONSTRAINT bot_hits_unique UNIQUE (site_id, day, category, name, path);
+
 ALTER TABLE ONLY public.custom_events
     ADD CONSTRAINT custom_events_pkey PRIMARY KEY (id);
 
@@ -421,6 +447,8 @@ CREATE INDEX idx_api_keys_user_id ON public.api_keys USING btree (user_id);
 
 CREATE INDEX idx_api_keys_workspace_id ON public.api_keys USING btree (workspace_id);
 
+CREATE INDEX idx_bot_hits_site_day ON public.bot_hits USING btree (site_id, day DESC);
+
 CREATE INDEX idx_custom_events_name ON public.custom_events USING btree (name);
 
 CREATE INDEX idx_event_site_created ON public.custom_events USING btree (site_id, created_at);
@@ -479,6 +507,9 @@ CREATE INDEX porte_sessions_user_idx ON public.porte_sessions USING btree (user_
 
 ALTER TABLE ONLY public.anomalies
     ADD CONSTRAINT anomalies_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.bot_hits
+    ADD CONSTRAINT bot_hits_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.workspace_members
     ADD CONSTRAINT fk_workspace_members_user FOREIGN KEY (user_id) REFERENCES public.users(id);

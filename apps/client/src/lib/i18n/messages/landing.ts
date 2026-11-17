@@ -54,6 +54,18 @@ export const landing = {
 		'Elige tu página de agradecimiento como objetivo y Vision cuenta cada visita.',
 		'Wählen Sie Ihre Dankeseite als Ziel, Vision zählt jeden Besuch.'
 	],
+	'landing.card.bots.title': ['Bots kept out', 'Les robots restent dehors', 'Los bots se quedan fuera', 'Bots bleiben draußen'],
+	'landing.card.bots.text': [
+		'Crawlers, AI bots and automated browsers are spotted and counted apart, so your numbers are people.',
+		'Les crawlers, les robots d’IA et les navigateurs automatisés sont repérés et comptés à part. Vos chiffres, ce sont des gens.',
+		'Los rastreadores, los bots de IA y los navegadores automatizados se detectan y se cuentan aparte. Tus cifras son personas.',
+		'Crawler, KI-Bots und automatisierte Browser werden erkannt und getrennt gezählt. Ihre Zahlen sind Menschen.'
+	],
+	'landing.demo.botAi': ['AI crawler', 'Crawler d’IA', 'Rastreador de IA', 'KI-Crawler'],
+	'landing.demo.botSearch': ['Search engine', 'Moteur de recherche', 'Buscador', 'Suchmaschine'],
+	'landing.demo.botHeadless': ['Headless browser', 'Navigateur headless', 'Navegador headless', 'Headless-Browser'],
+	'landing.demo.filtered': ['Filtered', 'Filtré', 'Filtrado', 'Gefiltert'],
+	'landing.demo.realOnly': ['Real visitors only', 'Seulement de vrais visiteurs', 'Solo visitantes reales', 'Nur echte Besucher'],
 	'landing.demo.cookies': ['0 tracking cookies', '0 cookie de suivi', '0 cookies de seguimiento', '0 Tracking-Cookies'],
 	'landing.demo.adTrackers': ['0 ad trackers', '0 traceur publicitaire', '0 rastreadores publicitarios', '0 Werbe-Tracker'],
 	'landing.demo.noCookie': ['No tracking cookies', 'Aucun cookie de suivi', 'Sin cookies de seguimiento', 'Keine Tracking-Cookies'],
