@@ -6,6 +6,20 @@ All notable changes to Vision are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-17
+
+### Added
+
+- Bot detection at ingest. Search engines, AI crawlers, social previews, uptime monitors, scripts, headless and automated browsers, and browsers with an impossible Chrome version are counted in their own table, never as pageviews, sessions or live visitors. Counts are kept per day, bot and path; no address or visitor id is stored.
+- Bots panel on the site page: hits by kind, top bots and the pages they hit. `GET /api/analytics/{siteId}/bots`.
+- Engaged visitors: the tracker sends one beacon on the visitor's first click, key press, touch or wheel, and the overview returns `interacted_visitors`.
+- The tracker sends `b`, two flags: `navigator.webdriver` and a 0x0 outer window.
+- Landing tile "Bots kept out".
+
+### Changed
+
+- A tracker request with no User-Agent counts as a bot.
+
 ## [0.14.1] - 2026-11-16
 
 ### Changed
