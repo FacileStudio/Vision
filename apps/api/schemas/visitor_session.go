@@ -14,6 +14,7 @@ type VisitorSession struct {
 	PageviewCount int       `gorm:"column:pageview_count;default:1"`
 	Duration      int       `gorm:"column:duration;default:0"`
 	IsBounce      bool      `gorm:"column:is_bounce;default:true"`
+	Interacted    bool      `gorm:"column:interacted;default:false"`
 	CreatedAt     time.Time `gorm:"column:created_at;autoCreateTime"`
 }
 
