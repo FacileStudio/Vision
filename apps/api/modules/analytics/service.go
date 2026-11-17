@@ -340,6 +340,11 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		topEvents = []EventStat{}
 	}
 
+	interacted, err := s.interactedVisitors(ctx, siteID, from, to)
+	if err != nil {
+		return nil, err
+	}
+
 	return &OverviewResponse{
 		TotalPageviews:           totalPageviews,
 		UniqueVisitors:           uniqueVisitors,
@@ -370,5 +375,6 @@ func (s *Service) Overview(ctx context.Context, siteID int64, from time.Time, to
 		PrevUniqueVisitorsPerDay: prevUniqueVisitorsPerDay,
 		Performance:              &perf,
 		TopEvents:                topEvents,
+		InteractedVisitors:       interacted,
 	}, nil
 }

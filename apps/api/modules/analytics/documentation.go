@@ -25,7 +25,7 @@ var Documentation = documentation.Module{
 			Method:       "GET",
 			Path:         "/analytics/{siteId}/overview",
 			Summary:      "Site analytics overview",
-			Description:  "Returns aggregated stats: total pageviews, unique visitors, top pages, referrers, countries, and daily breakdown.",
+			Description:  "Returns aggregated stats: total pageviews, unique visitors, top pages, referrers, countries, and daily breakdown. interacted_visitors counts the distinct visitors with a session in the period that made a real gesture; like the other session figures it ignores the pageview filters.",
 			Auth:         "bearer",
 			QueryParams:  []documentation.Field{{Name: "from", Type: "string", Description: "Start date (YYYY-MM-DD)"}, {Name: "to", Type: "string", Description: "End date (YYYY-MM-DD)"}, {Name: "granularity", Type: "string", Description: "day/hour"}},
 			ResponseBody: OverviewResponse{},
@@ -68,6 +68,19 @@ var Documentation = documentation.Module{
 				{Name: "limit", Type: "number", Description: "Values per dimension (default 10, max 50)"},
 			},
 			ResponseBody: CompareResponse{},
+			PathParams:   []documentation.Field{{Name: "siteId", Type: "string", Description: "Site ID"}},
+		},
+		{
+			Method:      "GET",
+			Path:        "/analytics/{siteId}/bots",
+			Summary:     "Bot and crawler traffic of a site",
+			Description: "Sums the bot hits Vision kept apart from pageviews, per UTC day: the total, hits per category (search, ai, social, monitor, tool, headless, automation, spoofed), the top 20 bots and the top 20 paths, sorted by hits then name, and a zero-filled series with one entry per day. The period is at most 366 days. Bot names and paths were sent by the clients.",
+			Auth:        "bearer",
+			QueryParams: []documentation.Field{
+				{Name: "from", Type: "string", Description: "First day (YYYY-MM-DD, default 30 days ago)"},
+				{Name: "to", Type: "string", Description: "Last day, included (YYYY-MM-DD, default today)"},
+			},
+			ResponseBody: BotsResponse{},
 			PathParams:   []documentation.Field{{Name: "siteId", Type: "string", Description: "Site ID"}},
 		},
 		{
