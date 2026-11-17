@@ -10,6 +10,7 @@ import (
 
 	"github.com/FacileStudio/Vision/apps/api/internal/middleware"
 	"github.com/FacileStudio/Vision/apps/api/internal/siteaccess"
+	"github.com/FacileStudio/Vision/apps/api/schemas"
 	"github.com/FacileStudio/tronc/errors"
 	"github.com/FacileStudio/tronc/httpjson"
 	troncmiddleware "github.com/FacileStudio/tronc/middleware"
@@ -84,6 +85,31 @@ func Preflight(next http.Handler, prefix string) http.Handler {
 	})
 }
 
+// writePixel answers with the transparent 1x1 GIF the tracker loads as an image.
+func writePixel(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "image/gif")
+	_, _ = w.Write(pixel)
+}
+
+// decodePixelData decodes the JSON in the data query parameter into target and reports
+// whether there was any to decode.
+func decodePixelData(request *http.Request, target any) bool {
+	data := request.URL.Query().Get("data")
+	return data != "" && json.Unmarshal([]byte(data), target) == nil
+}
+
+// siteForPixel resolves the site a pixel request names by hostname, falling back to the
+// host of its Referer.
+func (in ingestor) siteForPixel(request *http.Request, hostname string) (*schemas.Site, error) {
+	if hostname == "" {
+		hostname = extractHost(request.Header.Get("Referer"))
+	}
+	if hostname == "" {
+		return nil, errors.Forbidden("missing origin")
+	}
+	return in.service.resolveSiteByOrigin(request.Context(), "", "https://"+hostname)
+}
+
 // RegisterRoutes mounts the event ingestion and live-stream routes.
 //
 // The live stream accepts the credential as ?token= instead of a header:
@@ -93,148 +119,12 @@ func Preflight(next http.Handler, prefix string) http.Handler {
 func RegisterRoutes(router chi.Router, service *Service, hub *Hub, tracker *ActiveTracker, authService middleware.Authenticator, orm *gorm.DB) {
 	router.Route("/e", func(router chi.Router) {
 		router.Use(trackerHeaders, trackerLimiter())
-		router.Post("/p", func(w http.ResponseWriter, request *http.Request) {
-			origin := request.Header.Get("Origin")
-			referer := request.Header.Get("Referer")
-			site, err := service.resolveSiteByOrigin(request.Context(), origin, referer)
-			if err != nil {
-				httpjson.WriteError(w, err)
-				return
-			}
-
-			var req PageviewRequest
-			if err := httpjson.DecodeJSON(w, request, &req); err != nil {
-				httpjson.WriteError(w, err)
-				return
-			}
-
-			userAgent := request.UserAgent()
-			country := request.Header.Get("CF-IPCountry")
-
-			if err := service.recordPageview(request.Context(), site, &req, userAgent, country); err != nil {
-				httpjson.WriteError(w, err)
-				return
-			}
-			tracker.Touch(site.ID, req.VisitorID)
-
-			httpjson.WriteJSON(w, http.StatusNoContent, nil)
-		})
-
-		router.Get("/p", func(w http.ResponseWriter, request *http.Request) {
-
-			dataParam := request.URL.Query().Get("data")
-			if dataParam == "" {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-
-			var req PageviewRequest
-			if err := json.Unmarshal([]byte(dataParam), &req); err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-
-			if request.URL.Query().Get("type") == "perf" {
-				host := req.Hostname
-				if host == "" {
-					host = extractHost(request.Header.Get("Referer"))
-				}
-				if host != "" {
-					site, err := service.resolveSiteByOrigin(request.Context(), "", "https://"+host)
-					if err == nil {
-						service.updatePerformance(request.Context(), site, req.VisitorID, req.Path, req.Performance)
-					}
-				}
-				w.Header().Set("Content-Type", "image/gif")
-				w.Write(pixel)
-				return
-			}
-
-			origin := req.Hostname
-			if origin == "" {
-				origin = extractHost(request.Header.Get("Referer"))
-			}
-			site, err := service.resolveSiteByOrigin(request.Context(), "", "https://"+origin)
-			if err != nil {
-				w.WriteHeader(http.StatusForbidden)
-				return
-			}
-
-			userAgent := request.UserAgent()
-			country := request.Header.Get("CF-IPCountry")
-			_ = service.recordPageview(request.Context(), site, &req, userAgent, country)
-			tracker.Touch(site.ID, req.VisitorID)
-
-			w.Header().Set("Content-Type", "image/gif")
-			w.Write(pixel)
-		})
-
-		router.Get("/t", func(w http.ResponseWriter, request *http.Request) {
-
-			dataParam := request.URL.Query().Get("data")
-			if dataParam == "" {
-				w.Header().Set("Content-Type", "image/gif")
-				w.Write(pixel)
-				return
-			}
-
-			var req CustomEventRequest
-			if err := json.Unmarshal([]byte(dataParam), &req); err != nil {
-				w.Header().Set("Content-Type", "image/gif")
-				w.Write(pixel)
-				return
-			}
-
-			host := req.Hostname
-			if host == "" {
-				host = extractHost(request.Header.Get("Referer"))
-			}
-			if host != "" {
-				site, err := service.resolveSiteByOrigin(request.Context(), "", "https://"+host)
-				if err == nil {
-					_ = service.recordCustomEvent(request.Context(), site, &req)
-				}
-			}
-
-			w.Header().Set("Content-Type", "image/gif")
-			w.Write(pixel)
-		})
-
+		in := ingestor{service: service, tracker: tracker}
+		router.Post("/p", in.postPageview)
+		router.Get("/p", in.pixelPageview)
+		router.Get("/t", in.pixelEvent)
 		router.Options("/p", answerPreflight)
-
-		router.Get("/h", func(w http.ResponseWriter, request *http.Request) {
-
-			dataParam := request.URL.Query().Get("data")
-			if dataParam == "" {
-				w.Header().Set("Content-Type", "image/gif")
-				w.Write(pixel)
-				return
-			}
-
-			var req struct {
-				Hostname  string `json:"hostname"`
-				VisitorID string `json:"visitor_id"`
-			}
-			if err := json.Unmarshal([]byte(dataParam), &req); err != nil {
-				w.Header().Set("Content-Type", "image/gif")
-				w.Write(pixel)
-				return
-			}
-
-			host := req.Hostname
-			if host == "" {
-				host = extractHost(request.Header.Get("Referer"))
-			}
-			if host != "" {
-				site, err := service.resolveSiteByOrigin(request.Context(), "", "https://"+host)
-				if err == nil {
-					tracker.Touch(site.ID, req.VisitorID)
-				}
-			}
-
-			w.Header().Set("Content-Type", "image/gif")
-			w.Write(pixel)
-		})
+		router.Get("/h", in.heartbeat)
 	})
 
 	router.Route("/events", func(router chi.Router) {
