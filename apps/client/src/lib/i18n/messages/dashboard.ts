@@ -239,6 +239,45 @@ export const dashboard = {
 	'block.utmCampaigns': ['UTM campaigns', 'Campagnes UTM', 'Campañas UTM', 'UTM-Kampagnen'],
 	'block.events': ['Custom events', 'Événements personnalisés', 'Eventos personalizados', 'Benutzerdefinierte Ereignisse'],
 
+	'stat.engaged': [
+		{ one: '{count} engaged', other: '{count} engaged' },
+		{ one: '{count} engagé', other: '{count} engagés' },
+		{ one: '{count} activo', other: '{count} activos' },
+		{ one: '{count} aktiv', other: '{count} aktiv' }
+	],
+	'stat.engagedHint': [
+		'Visitors who clicked, typed, touched or scrolled with a wheel.',
+		'Visiteurs qui ont cliqué, tapé, touché l’écran ou utilisé la molette.',
+		'Visitantes que hicieron clic, escribieron, tocaron la pantalla o usaron la rueda.',
+		'Besucher, die geklickt, getippt, den Bildschirm berührt oder das Mausrad benutzt haben.'
+	],
+
+	'bots.title': ['Bots and crawlers', 'Robots et crawlers', 'Bots y rastreadores', 'Bots und Crawler'],
+	'bots.text': [
+		'Bots are counted apart and never in your visitors.',
+		'Les robots sont comptés à part, jamais dans vos visiteurs.',
+		'Los bots se cuentan aparte y nunca en tus visitantes.',
+		'Bots werden getrennt gezählt und nie bei Ihren Besuchern.'
+	],
+	'bots.total': ['Bot hits', 'Passages de robots', 'Visitas de bots', 'Bot-Zugriffe'],
+	'bots.empty': [
+		'No bots seen in this period.',
+		'Aucun robot vu sur cette période.',
+		'No se vieron bots en este periodo.',
+		'Keine Bots in diesem Zeitraum.'
+	],
+	'bots.byCategory': ['By kind', 'Par type', 'Por tipo', 'Nach Art'],
+	'bots.top': ['Top bots', 'Robots les plus actifs', 'Bots principales', 'Top-Bots'],
+	'bots.paths': ['Pages they hit', 'Pages visitées', 'Páginas visitadas', 'Aufgerufene Seiten'],
+	'bots.cat.search': ['Search engines', 'Moteurs de recherche', 'Buscadores', 'Suchmaschinen'],
+	'bots.cat.ai': ['AI crawlers', 'Crawlers d’IA', 'Rastreadores de IA', 'KI-Crawler'],
+	'bots.cat.social': ['Social previews', 'Aperçus de réseaux sociaux', 'Vistas previas sociales', 'Social-Media-Vorschauen'],
+	'bots.cat.monitor': ['Uptime monitors', 'Sondes de disponibilité', 'Monitores de disponibilidad', 'Uptime-Monitore'],
+	'bots.cat.tool': ['Scripts and tools', 'Scripts et outils', 'Scripts y herramientas', 'Skripte und Tools'],
+	'bots.cat.headless': ['Headless browsers', 'Navigateurs headless', 'Navegadores headless', 'Headless-Browser'],
+	'bots.cat.automation': ['Automated browsers', 'Navigateurs automatisés', 'Navegadores automatizados', 'Automatisierte Browser'],
+	'bots.cat.spoofed': ['Spoofed browsers', 'Faux navigateurs', 'Navegadores falsificados', 'Gefälschte Browser'],
+
 	'public.notFoundTitle': ['Dashboard not found', 'Tableau de bord introuvable', 'Panel no encontrado', 'Dashboard nicht gefunden'],
 	'public.notFoundText': [
 		'This link has been revoked, or it never existed. Ask whoever shared it for a new one.',

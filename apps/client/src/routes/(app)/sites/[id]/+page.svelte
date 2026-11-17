@@ -32,6 +32,7 @@
 	import TrafficChart from '$lib/components/bulle/traffic-chart.svelte';
 	import type { Anomaly } from '$lib/bulle';
 	import BarList from '$lib/components/bar-list.svelte';
+	import BotsPanel from '$lib/components/bots-panel.svelte';
 	import {
 		type RangeKey,
 		type Granularity,
@@ -102,10 +103,8 @@
 
 	const activeFilterCount = $derived(Object.values(activeFilters).filter(Boolean).length);
 	const visibleGranularities = $derived(allowedGranularities(selectedRange));
-	const dateRangeLabel = $derived.by(() => {
-		const { from, to } = rangeDates(selectedRange, customFrom, customTo);
-		return dateRange(from, to);
-	});
+	const range = $derived(rangeDates(selectedRange, customFrom, customTo));
+	const dateRangeLabel = $derived(dateRange(range.from, range.to));
 
 	function selectRange(key: string) {
 		selectedRange = key as RangeKey;
@@ -553,6 +552,11 @@
 					</StatCard>
 					<StatCard label={t('stat.visitors')} value={fmt(overview.unique_visitors)}>
 						<span class="text-fc-xs {visitorsTrend.color}">{visitorsTrend.text}</span>
+						{#if overview.interacted_visitors !== undefined}
+							<span class="text-fc-xs text-fc-fg-muted" title={t('stat.engagedHint')}>
+								{t('stat.engaged', { count: overview.interacted_visitors })}
+							</span>
+						{/if}
 					</StatCard>
 					<StatCard label={t('stat.viewsPerVisitor')} value={decimal(viewsPerVisitor, locale())}>
 						<span class="text-fc-xs {vpvTrend.color}">{vpvTrend.text}</span>
@@ -829,6 +833,8 @@
 					</div>
 				</section>
 			{/if}
+
+			<BotsPanel {siteId} from={range.from} to={range.to} />
 		{/if}
 	</div>
 {/if}
